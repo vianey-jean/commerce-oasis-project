@@ -1,5 +1,4 @@
-
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
@@ -9,7 +8,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/use-toast';
 import { ordersAPI, Order } from '@/services/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
@@ -30,31 +29,32 @@ const AdminOrdersPage = () => {
     queryFn: async () => {
       const response = await ordersAPI.getAll();
       return response.data;
-    }
+    },
+    refetchInterval: 10000 // Refetch every 10 seconds
   });
 
   // Marquer les notifications de commandes comme lues lorsque la page est chargée
-  useEffect(() => {
-    const markOrderNotificationsRead = async () => {
-      if (!user?.id || user.role !== 'admin') return;
-      
-      try {
-        const token = localStorage.getItem('authToken');
-        if (!token) return;
-        
-        await axios.post(`${AUTH_BASE_URL}/api/notifcommandes/admin/commandes/read`, {}, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-      } catch (error) {
-        console.error("Erreur lors du marquage des notifications comme lues:", error);
-        // Ne pas afficher de toast pour cette erreur
-      }
-    };
+  const markOrderNotificationsRead = useCallback(async () => {
+    if (!user?.id || user.role !== 'admin') return;
     
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+      
+      await axios.post(`${AUTH_BASE_URL}/api/notifcommandes/admin/commandes/read`, {}, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+    } catch (error) {
+      console.error("Erreur lors du marquage des notifications comme lues:", error);
+      // Silent error - don't show toast for this expected error
+    }
+  }, [user, AUTH_BASE_URL]);
+
+  useEffect(() => {
     markOrderNotificationsRead();
-  }, [user]);
+  }, [markOrderNotificationsRead]);
 
   const updateOrderStatus = useMutation({
     mutationFn: async ({ orderId, status }: { orderId: string, status: string }) => {
@@ -62,10 +62,17 @@ const AdminOrdersPage = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
-      toast.success('Statut de la commande mis à jour');
+      toast({ 
+        title: "Succès",
+        description: 'Statut de la commande mis à jour' 
+      });
     },
     onError: () => {
-      toast.error('Erreur lors de la mise à jour du statut');
+      toast({
+        title: "Erreur",
+        description: 'Erreur lors de la mise à jour du statut',
+        variant: "destructive"
+      });
     }
   });
 

@@ -1,5 +1,4 @@
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,7 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import axios from 'axios';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/use-toast';
 import _ from 'lodash';
 
 const OrdersPage = () => {
@@ -19,15 +18,8 @@ const OrdersPage = () => {
   const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
   const [notificationCount, setNotificationCount] = useState(0);
 
-  useEffect(() => {
-    fetchOrders();
-    if (user?.id) {
-      fetchNotifications();
-    }
-  }, [user]);
-
-  // Fonction pour récupérer les notifications
-  const fetchNotifications = async () => {
+  // Fonction pour récupérer les notifications avec gestion optimisée des erreurs
+  const fetchNotifications = useCallback(async () => {
     if (!user?.id) return;
     
     try {
@@ -44,12 +36,12 @@ const OrdersPage = () => {
       }
     } catch (error) {
       console.error("Erreur lors de la récupération des notifications:", error);
-      // Ne pas afficher de toast pour cette erreur qui peut être normale
+      // Silent error - don't show toast for this expected error
     }
-  };
+  }, [user, AUTH_BASE_URL]);
 
   // Fonction pour marquer les notifications comme lues
-  const markNotificationsAsRead = async () => {
+  const markNotificationsAsRead = useCallback(async () => {
     try {
       if (user?.id && notificationCount > 0) {
         const token = localStorage.getItem('authToken');
@@ -61,19 +53,41 @@ const OrdersPage = () => {
           }
         });
         setNotificationCount(0);
-        toast.success("Notifications marquées comme lues");
+        toast({
+          title: "Notifications",
+          description: "Notifications marquées comme lues"
+        });
       }
     } catch (error) {
       console.error("Erreur lors du marquage des notifications:", error);
-      // Ne pas afficher de toast pour cette erreur
+      // Silent error
     }
-  };
+  }, [notificationCount, user, AUTH_BASE_URL]);
 
+  // Effet pour charger les commandes et les notifications au démarrage
+  useEffect(() => {
+    fetchOrders();
+    if (user?.id) {
+      fetchNotifications();
+    }
+  }, [user, fetchOrders, fetchNotifications]);
+
+  // Effet pour mettre en place une vérification périodique des notifications
+  useEffect(() => {
+    // Vérifier les notifications toutes les 5 secondes
+    const intervalId = setInterval(() => {
+      fetchNotifications();
+    }, 5000);
+    
+    return () => clearInterval(intervalId);
+  }, [fetchNotifications]);
+
+  // Effet pour marquer les notifications comme lues quand leur nombre change
   useEffect(() => {
     if (notificationCount > 0) {
       markNotificationsAsRead();
     }
-  }, [notificationCount]);
+  }, [notificationCount, markNotificationsAsRead]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('fr-FR', {

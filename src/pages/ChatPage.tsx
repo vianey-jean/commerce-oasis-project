@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -28,6 +27,7 @@ const ChatPage = () => {
   const [editText, setEditText] = useState('');
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const queryClient = useQueryClient();
+  const [unreadCount, setUnreadCount] = useState(0);
 
   // Récupérer la conversation avec le service client
   const { data: conversation, isLoading: isLoadingConversation } = useQuery({
@@ -35,6 +35,11 @@ const ChatPage = () => {
     queryFn: async () => {
       try {
         const response = await clientChatAPI.getServiceChat();
+        // Calculer le nombre de messages non lus
+        const unread = (response.data?.messages || [])
+          .filter(m => !m.read && m.senderId !== user?.id)
+          .length;
+        setUnreadCount(unread);
         return response.data || { messages: [] };
       } catch (error) {
         console.error("Erreur lors du chargement du chat:", error);
@@ -43,7 +48,7 @@ const ChatPage = () => {
       }
     },
     enabled: !!user,
-    refetchInterval: 5000 // Rafraîchir toutes les 5 secondes
+    refetchInterval: 3000 // Rafraîchir toutes les 3 secondes pour avoir des mises à jour en temps réel
   });
 
   // Mutation pour envoyer un message
@@ -104,6 +109,26 @@ const ChatPage = () => {
       }
     };
   }, [user]);
+
+  // Marquer tous les messages non lus comme lus lorsque l'utilisateur est sur la page
+  useEffect(() => {
+    if (!user || !conversation?.messages || !conversation.messages.length) return;
+    
+    const unreadMessages = conversation.messages.filter(
+      m => !m.read && m.senderId !== user.id
+    );
+    
+    if (unreadMessages.length > 0) {
+      const conversationId = `client-${user.id}-service`;
+      
+      unreadMessages.forEach(message => {
+        clientChatAPI.markAsRead(message.id, conversationId)
+          .catch(err => console.error("Erreur lors du marquage des messages comme lus:", err));
+      });
+      
+      queryClient.invalidateQueries({ queryKey: ['serviceChat'] });
+    }
+  }, [conversation?.messages, user, queryClient]);
 
   // Défiler vers le bas quand de nouveaux messages arrivent
   useEffect(() => {

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   ShoppingBag,
@@ -14,7 +14,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import axios from 'axios';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/use-toast';
 import _ from 'lodash';
 
 interface AdminLayoutProps {
@@ -46,62 +46,54 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       setIsServiceAdmin(true);
     }
   }, [user]);
-  
-  useEffect(() => {
-    // Fetch notification counts
-    const fetchNotifications = async () => {
-      if (!user || user.role !== 'admin') return;
-      
-      try {
-        const token = localStorage.getItem('authToken');
-        if (!token) return;
-        
-        const response = await axios.get(`${AUTH_BASE_URL}/api/notifcommandes/admin`, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-        if (response.data) {
-          setNotifications(response.data);
-        }
-      } catch (error) {
-        console.error("Erreur lors de la récupération des notifications:", error);
-        // Ne pas afficher de toast pour cette erreur
-      }
-    };
 
-    fetchNotifications();
-
-    // Setup interval to check for new notifications
-    const intervalId = setInterval(fetchNotifications, 30000); // Check every 30 seconds
+  // Fonction pour récupérer les notifications avec gestion optimisée des erreurs
+  const fetchNotifications = useCallback(async () => {
+    if (!user || user.role !== 'admin') return;
     
-    return () => clearInterval(intervalId);
-  }, [user]);
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+      
+      const response = await axios.get(`${AUTH_BASE_URL}/api/notifcommandes/admin`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      if (response.data) {
+        setNotifications(response.data);
+      }
+    } catch (error) {
+      console.error("Erreur lors de la récupération des notifications:", error);
+      // Silent error
+    }
+  }, [user, AUTH_BASE_URL]);
   
   // Mark notifications as read when navigating to that section
-  useEffect(() => {
-    const markAsRead = async (section: string) => {
-      if (!user || user.role !== 'admin') return;
-      
-      try {
-        const token = localStorage.getItem('authToken');
-        if (!token) return;
-        
-        await axios.post(`${AUTH_BASE_URL}/api/notifcommandes/admin/${section}/read`, {}, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-        setNotifications(prev => ({
-          ...prev,
-          [section]: 0
-        }));
-      } catch (error) {
-        console.error(`Erreur lors du marquage des notifications ${section} comme lues:`, error);
-        // Ne pas afficher de toast pour cette erreur
-      }
-    };
+  const markAsRead = useCallback(async (section: string) => {
+    if (!user || user.role !== 'admin') return;
     
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+      
+      await axios.post(`${AUTH_BASE_URL}/api/notifcommandes/admin/${section}/read`, {}, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+      setNotifications(prev => ({
+        ...prev,
+        [section]: 0
+      }));
+    } catch (error) {
+      console.error(`Erreur lors du marquage des notifications ${section} comme lues:`, error);
+      // Silent error
+    }
+  }, [user, AUTH_BASE_URL]);
+  
+  // Effet pour vérifier les notifications en fonction du pathname
+  useEffect(() => {
     if (location.pathname === '/admin/messages' && notifications.messages > 0) {
       markAsRead('messages');
     } else if (location.pathname === '/admin/commandes' && notifications.commandes > 0) {
@@ -111,7 +103,18 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     } else if (location.pathname === '/admin/service-client' && notifications.serviceClient > 0) {
       markAsRead('serviceClient');
     }
-  }, [location.pathname, notifications]);
+  }, [location.pathname, notifications, markAsRead]);
+  
+  // Effet pour mettre en place une vérification périodique des notifications
+  useEffect(() => {
+    // Vérifier immédiatement
+    fetchNotifications();
+    
+    // Puis vérifier périodiquement
+    const intervalId = setInterval(fetchNotifications, 5000); // Check every 5 seconds
+    
+    return () => clearInterval(intervalId);
+  }, [fetchNotifications]);
   
   const navItems = [
     { name: 'Produits', path: '/admin/produits', icon: Package, notification: 0 },

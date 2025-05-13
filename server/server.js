@@ -40,7 +40,8 @@ const dataFiles = [
   'contacts.json',
   'commandes.json',
   'admin-chat.json',
-  'client-chat.json'
+  'client-chat.json',
+  'notifcommandes.json'
 ];
 
 dataFiles.forEach(file => {
@@ -49,9 +50,24 @@ dataFiles.forEach(file => {
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
   }
   if (!fs.existsSync(filePath)) {
-    const initialData = file === 'admin-chat.json' || file === 'client-chat.json' 
-      ? { conversations: {}, onlineUsers: {}, autoReplySent: {} } 
-      : [];
+    let initialData;
+    
+    if (file === 'admin-chat.json' || file === 'client-chat.json') {
+      initialData = { conversations: {}, onlineUsers: {}, autoReplySent: {}, activeCalls: {} };
+    } else if (file === 'notifcommandes.json') {
+      initialData = {
+        users: {},
+        adminNotifications: {
+          messages: 0,
+          commandes: 0,
+          chat: 0,
+          serviceClient: 0
+        }
+      };
+    } else {
+      initialData = [];
+    }
+    
     fs.writeFileSync(filePath, JSON.stringify(initialData, null, 2));
   }
 });
