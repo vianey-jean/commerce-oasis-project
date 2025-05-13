@@ -1,99 +1,154 @@
 
-import React from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import NavBar from "@/components/NavBar";
-import Footer from "@/components/Footer";
-import { Button } from "@/components/ui/button";
-import { useShop } from "@/context/ShopContext";
-import { ShoppingCart } from "lucide-react";
-import { toast } from "@/components/ui/sonner";
+import React, { useState } from 'react';
+import { useParams } from 'react-router-dom';
+import Layout from '@/components/layout/Layout';
+import { Button } from '@/components/ui/button';
+import { useStore } from '@/contexts/StoreContext';
+import { Heart, ShoppingCart } from 'lucide-react';
+import ProductGrid from '@/components/products/ProductGrid';
 
 const ProductDetail = () => {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const { state, dispatch } = useShop();
-  
-  const productId = parseInt(id || "0");
-  const product = state.products.find(p => p.id === productId);
-  
-  const addToCart = () => {
-    if (product) {
-      dispatch({ type: "ADD_TO_CART", payload: product });
-    }
-  };
-  
-  // If product not found or is loading
-  if (!product && !state.loading) {
+  const { productId } = useParams<{ productId: string }>();
+  const { products, addToCart, toggleFavorite, isFavorite } = useStore();
+  // 🔁 URL de base récupérée depuis le .env
+  const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
+  const product = products.find(p => p.id === productId);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+
+  const relatedProducts = products
+    .filter(p => p.category === product?.category && p.id !== product?.id)
+    .slice(0, 4);
+
+  if (!product) {
     return (
-      <div className="min-h-screen flex flex-col">
-        <NavBar />
-        <main className="flex-grow container mx-auto px-4 py-16 text-center">
-          <h2 className="text-2xl font-bold mb-4">Product Not Found</h2>
-          <p className="mb-8">The product you are looking for does not exist.</p>
-          <Button onClick={() => navigate("/products")}>
-            Browse Products
+      <Layout>
+        <div className="text-center py-20">
+          <h1 className="text-2xl font-bold mb-4">Produit non trouvé</h1>
+          <p className="mb-6">Le produit que vous recherchez n'existe pas ou a été supprimé.</p>
+          <Button asChild>
+            <a href="/">Retour à l'accueil</a>
           </Button>
-        </main>
-        <Footer />
-      </div>
+        </div>
+      </Layout>
     );
   }
 
+  const isProductFavorite = isFavorite(product.id);
+
+  const productImages =
+    product.images && product.images.length > 0
+      ? product.images
+      : product.image
+        ? [product.image]
+        : [];
+
   return (
-    <div className="min-h-screen flex flex-col">
-      <NavBar />
-      
-      <main className="flex-grow container mx-auto px-4 py-8">
-        {state.loading || !product ? (
-          <div className="flex flex-col md:flex-row gap-8">
-            <div className="w-full md:w-1/2 bg-gray-100 animate-pulse h-96 rounded-lg"></div>
-            <div className="w-full md:w-1/2 space-y-6">
-              <div className="h-8 bg-gray-200 animate-pulse rounded w-3/4"></div>
-              <div className="h-4 bg-gray-200 animate-pulse rounded w-1/4"></div>
-              <div className="space-y-2">
-                <div className="h-4 bg-gray-200 animate-pulse rounded"></div>
-                <div className="h-4 bg-gray-200 animate-pulse rounded"></div>
-                <div className="h-4 bg-gray-200 animate-pulse rounded w-3/4"></div>
-              </div>
-              <div className="h-10 bg-gray-200 animate-pulse rounded w-1/3"></div>
-              <div className="h-12 bg-gray-200 animate-pulse rounded w-1/2"></div>
+    <Layout>
+      <div className="py-6">
+        <div className="flex flex-col lg:flex-row gap-10">
+          {/* Images produit */}
+          <div className="flex-1">
+            <div className="mb-4">
+              <img
+                src={`${AUTH_BASE_URL}${productImages[selectedImageIndex]}`}
+                alt={product.name}
+                className="w-full h-[400px] object-contain rounded-lg"
+              />
             </div>
+
+            {productImages.length > 1 && (
+              <div className="flex justify-center space-x-2 mt-2 overflow-x-auto py-2">
+                {productImages.map((image, index) => (
+                  <div
+                    key={index}
+                    className={`w-20 h-20 overflow-hidden rounded cursor-pointer ${
+                      index === selectedImageIndex ? 'ring-2 ring-blue-500' : 'opacity-70'
+                    }`}
+                    onClick={() => setSelectedImageIndex(index)}
+                  >
+                    <img
+                      src={`${AUTH_BASE_URL}${image}`}
+                      alt={`${product.name} - image ${index + 1}`}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="flex flex-col md:flex-row gap-8">
-            <div className="w-full md:w-1/2">
-              <div className="bg-gray-100 rounded-lg overflow-hidden">
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="w-full h-auto object-cover"
-                />
+
+          {/* Infos produit */}
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
+            <p className="text-xl font-bold mb-4">
+              {Number(product.price).toFixed(2)} €
+            </p>
+
+            <div className="border-t border-b py-4 my-6">
+              <p className="text-gray-700 mb-4">{product.description}</p>
+              <p className="text-sm text-muted-foreground mb-2">
+                Catégorie : {product.category}
+              </p>
+
+              <div className="mt-2">
+                {product.stock !== undefined && (
+                  <p className="text-sm mb-2">
+                    Stock disponible : <span className="font-medium">{product.stock}</span>
+                  </p>
+                )}
+                <span className={`px-2 py-1 rounded text-xs ${
+                  product.isSold && (product.stock === undefined || product.stock > 0)
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-red-100 text-red-800'
+                }`}>
+                  {product.isSold && (product.stock === undefined || product.stock > 0)
+                    ? 'En stock'
+                    : 'Rupture de stock'}
+                </span>
               </div>
             </div>
-            
-            <div className="w-full md:w-1/2">
-              <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
-              <p className="text-gray-500 mb-4">
-                {product.category.charAt(0).toUpperCase() + product.category.slice(1)}
-              </p>
-              <p className="text-2xl font-bold mb-6">${product.price.toFixed(2)}</p>
-              
-              <div className="mb-6">
-                <h3 className="font-medium mb-2">Description</h3>
-                <p className="text-gray-700">{product.description}</p>
-              </div>
-              
-              <Button size="lg" onClick={addToCart} className="w-full md:w-auto">
-                <ShoppingCart className="h-5 w-5 mr-2" />
-                Add to Cart
+
+            <div className="flex space-x-4 mt-8">
+              <Button
+                size="lg"
+                onClick={() => addToCart(product)}
+                disabled={!product.isSold || (product.stock !== undefined && product.stock <= 0)}
+                className="flex-1"
+              >
+                <ShoppingCart className="mr-2 h-5 w-5" />
+                Ajouter au panier
+              </Button>
+
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-12 w-12"
+                onClick={() => toggleFavorite(product)}
+              >
+                <Heart
+                  className={`h-5 w-5 ${isProductFavorite ? 'fill-red-500 text-red-500' : ''}`}
+                />
               </Button>
             </div>
+
+            <div className="mt-6">
+              <h3 className="font-medium mb-2">Informations de livraison</h3>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>Livraison gratuite à partir de 50€ d'achat</li>
+                <li>Livraison en 3-5 jours ouvrés</li>
+                <li>Retours gratuits sous 30 jours</li>
+              </ul>
+            </div>
           </div>
-        )}
-      </main>
-      
-      <Footer />
-    </div>
+        </div>
+
+        {/* Produits similaires */}
+        <div className="mt-12">
+          <ProductGrid products={relatedProducts} title="Produits similaires" />
+        </div>
+      </div>
+    </Layout>
   );
 };
 

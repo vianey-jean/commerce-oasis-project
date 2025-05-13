@@ -1,95 +1,190 @@
-
-import React from "react";
-import NavBar from "@/components/NavBar";
-import Hero from "@/components/Hero";
-import FeaturedProducts from "@/components/FeaturedProducts";
-import Footer from "@/components/Footer";
-import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
+import React, { useEffect, useState } from 'react';
+import Layout from '@/components/layout/Layout';
+import ProductGrid from '@/components/products/ProductGrid';
+import { Product } from '@/contexts/StoreContext';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { Card, CardContent } from '@/components/ui/card';
+import { productsAPI } from '@/services/api';
+import { toast } from '@/components/ui/sonner';
+import { useSearchParams } from 'react-router-dom';
 
 const Index = () => {
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [newArrivals, setNewArrivals] = useState<Product[]>([]);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [searchParams] = useSearchParams();
+  const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+  
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const productsResponse = await productsAPI.getAll();
+        if (!productsResponse.data || !Array.isArray(productsResponse.data)) {
+          throw new Error('Format de données incorrect pour les produits');
+        }
+        const products: Product[] = productsResponse.data;
+        const sortedProducts = [...products].sort((a, b) => a.name.localeCompare(b.name));
+        setAllProducts(sortedProducts);
+        setFilteredProducts(sortedProducts);
+
+        try {
+          const featuredResponse = await productsAPI.getMostFavorited();
+          const featured = Array.isArray(featuredResponse.data)
+            ? featuredResponse.data.slice(0, 8)
+            : products.slice(0, 8);
+          setFeaturedProducts(featured);
+        } catch (error) {
+          console.error('Erreur lors du chargement des produits vedettes:', error);
+          setFeaturedProducts(products.slice(0, 8));
+        }
+
+        try {
+          const newArrivalsResponse = await productsAPI.getNewArrivals();
+          const newItems = Array.isArray(newArrivalsResponse.data)
+            ? newArrivalsResponse.data.slice(0, 8)
+            : [];
+          setNewArrivals(newItems);
+        } catch (error) {
+          console.error('Erreur lors du chargement des nouveaux produits:', error);
+          const sortedByDate = [...products].sort((a, b) =>
+            new Date(b.dateAjout || 0).getTime() - new Date(a.dateAjout || 0).getTime()
+          );
+          setNewArrivals(sortedByDate.slice(0, 8));
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des produits:', error);
+        toast.error('Impossible de charger les produits');
+        setFeaturedProducts([]);
+        setNewArrivals([]);
+        setAllProducts([]);
+        setFilteredProducts([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  // Filtre les produits en fonction du paramètre de recherche
+  useEffect(() => {
+    const searchQuery = searchParams.get('q');
+    if (searchQuery && searchQuery.length >= 3) {
+      const filtered = allProducts.filter(
+        product =>
+          product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          product.category.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+      setFilteredProducts(filtered);
+    } else {
+      setFilteredProducts(allProducts);
+    }
+  }, [searchParams, allProducts]);
+
+  // Défilement automatique toutes les 3 secondes pour le carousel
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const nextButton = document.querySelector('[data-carousel-next]') as HTMLElement;
+      if (nextButton) nextButton.click();
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [featuredProducts]);
+
   return (
-    <div className="min-h-screen flex flex-col">
-      <NavBar />
-      
-      <main className="flex-grow">
-        <Hero />
-        <FeaturedProducts />
-        
-        <div className="bg-gray-50 py-16">
-          <div className="container mx-auto px-4 text-center">
-            <h2 className="text-3xl font-bold mb-2">Browse by Category</h2>
-            <p className="text-gray-500 mb-8">Find exactly what you're looking for</p>
-            
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Link to="/products?category=clothing" className="group">
-                <div className="bg-white p-6 rounded-lg shadow-md transition-all duration-200 group-hover:shadow-lg group-hover:scale-105">
-                  <div className="mb-4 h-16 flex items-center justify-center text-3xl text-shop-primary">
-                    👕
-                  </div>
-                  <h3 className="font-medium">Clothing</h3>
-                </div>
-              </Link>
-              
-              <Link to="/products?category=furniture" className="group">
-                <div className="bg-white p-6 rounded-lg shadow-md transition-all duration-200 group-hover:shadow-lg group-hover:scale-105">
-                  <div className="mb-4 h-16 flex items-center justify-center text-3xl text-shop-primary">
-                    🛋️
-                  </div>
-                  <h3 className="font-medium">Furniture</h3>
-                </div>
-              </Link>
-              
-              <Link to="/products?category=electronics" className="group">
-                <div className="bg-white p-6 rounded-lg shadow-md transition-all duration-200 group-hover:shadow-lg group-hover:scale-105">
-                  <div className="mb-4 h-16 flex items-center justify-center text-3xl text-shop-primary">
-                    📱
-                  </div>
-                  <h3 className="font-medium">Electronics</h3>
-                </div>
-              </Link>
-              
-              <Link to="/products?category=accessories" className="group">
-                <div className="bg-white p-6 rounded-lg shadow-md transition-all duration-200 group-hover:shadow-lg group-hover:scale-105">
-                  <div className="mb-4 h-16 flex items-center justify-center text-3xl text-shop-primary">
-                    👜
-                  </div>
-                  <h3 className="font-medium">Accessories</h3>
-                </div>
-              </Link>
-            </div>
+    <Layout>
+      <div className="container mx-auto px-4 py-8">
+        <h1 className="text-4xl font-bold mb-8 text-red-800 flex items-center justify-center">
+          Bienvenue sur Riziky Boutique
+        </h1>
+
+        {/* 🔍 Résultats de recherche */}
+        {searchParams.get('q') && (
+          <div className="mb-12">
+            <ProductGrid
+              products={filteredProducts}
+              title={`Résultats pour : "${searchParams.get('q')}"`}
+            />
           </div>
+        )}
+
+        {/* 🔥 Produits Vedettes */}
+        {!searchParams.get('q') && featuredProducts.length > 0 && (
+          <div className="mb-12">
+            <h2 className="text-2xl font-semibold mb-6 text-red-800">Produits Vedettes</h2>
+            {isLoading ? (
+              <div className="text-center py-10">Chargement des produits vedettes...</div>
+            ) : (
+              <Carousel>
+                <CarouselContent>
+                  {featuredProducts.map(product => (
+                    <CarouselItem
+                      key={product.id}
+                      className="md:basis-1/2 lg:basis-1/4"
+                    >
+                      <div className="p-1">
+                        <Card>
+                          <CardContent className="flex aspect-square items-center justify-center p-0">
+                            <div className="w-full">
+                              <img
+                                src={`${AUTH_BASE_URL}${product.image}`}
+                                alt={product.name}
+                                className="w-full h-48 object-contain"
+                                onError={e => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.src = `${AUTH_BASE_URL}/uploads/placeholder.jpg`;
+                                }}
+                              />
+                              <div className="p-4">
+                                <h3 className="font-medium">{product.name}</h3>
+                                {product.promotion ? (
+                                  <div className="flex items-center gap-2 px-[19px]">
+                                    <p className="mt-1 text-sm text-gray-500 line-through">
+                                      {typeof product.originalPrice === 'number'
+                                        ? product.originalPrice.toFixed(2)
+                                        : product.price.toFixed(2)}{' '}
+                                      €
+                                    </p>
+                                    <span className="inline-block px-2 py-1 bg-red-100 text-red-800 rounded text-xs font-medium">
+                                      -{product.promotion}%
+                                    </span>
+                                    <p className="mt-1 font-bold my-0 mx-0 px-0 text-right">
+                                      {product.price.toFixed(2)} €
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <p className="mt-1 font-bold">
+                                    {product.price.toFixed(2)} €
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <CarouselPrevious data-carousel-previous />
+                <CarouselNext data-carousel-next />
+              </Carousel>
+            )}
+          </div>
+        )}
+
+        {/* 🆕 Nouveautés */}
+        <div className="mb-12">
+          <ProductGrid products={newArrivals} title="Nouveautés" />
         </div>
-        
-        <section className="py-12">
-          <div className="container mx-auto px-4">
-            <div className="flex flex-col md:flex-row items-center justify-between bg-shop-primary/10 p-8 rounded-lg">
-              <div className="md:w-2/3 md:pr-8 mb-6 md:mb-0">
-                <h2 className="text-2xl font-bold mb-2">Subscribe to Our Newsletter</h2>
-                <p className="mb-4">Stay updated with our latest products and exclusive offers</p>
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <input
-                    type="email"
-                    placeholder="Your email address"
-                    className="px-4 py-2 rounded-md border flex-grow"
-                  />
-                  <Button>Subscribe</Button>
-                </div>
-              </div>
-              <div className="md:w-1/3">
-                <img
-                  src="https://images.unsplash.com/photo-1535268647677-300dbf3d78d1"
-                  alt="Newsletter"
-                  className="rounded-md max-h-40 w-full object-cover"
-                />
-              </div>
-            </div>
-          </div>
-        </section>
-      </main>
-      
-      <Footer />
-    </div>
+
+        {/* 📦 Tous les Produits */}
+        <div className="mb-12">
+          <ProductGrid products={allProducts} title="Tous nos produits" />
+        </div>
+      </div>
+    </Layout>
   );
 };
 
