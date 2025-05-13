@@ -1,4 +1,3 @@
-
 require('dotenv').config();
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -57,16 +56,17 @@ dataFiles.forEach(file => {
   }
 });
 
-// Routes
-app.use('/api/users', require('./routes/users'));
+// Routes API
+app.use('/api/auth', require('./routes/auth'));
 app.use('/api/products', require('./routes/products'));
+app.use('/api/users', require('./routes/users'));
+app.use('/api/contacts', require('./routes/contacts'));
 app.use('/api/panier', require('./routes/panier'));
 app.use('/api/favorites', require('./routes/favorites'));
-app.use('/api/contacts', require('./routes/contacts'));
-app.use('/api/auth', require('./routes/auth'));
 app.use('/api/orders', require('./routes/orders'));
 app.use('/api/admin-chat', require('./routes/admin-chat'));
 app.use('/api/client-chat', require('./routes/client-chat'));
+app.use('/api/notifcommandes', require('./routes/notifcommandes'));
 
 // Route pour les images uploadées
 app.use('/uploads', express.static('uploads'));

@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
@@ -9,13 +9,14 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { toast } from '@/components/ui/sonner';
+import { toast } from 'sonner';
 import { ordersAPI, Order } from '@/services/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Check, Package, Truck, ShoppingBag } from 'lucide-react';
 import AdminLayout from './AdminLayout';
+import axios from 'axios';
 
 const AdminOrdersPage = () => {
   const queryClient = useQueryClient();
@@ -28,6 +29,19 @@ const AdminOrdersPage = () => {
       return response.data;
     }
   });
+
+  // Marquer les notifications de commandes comme lues lorsque la page est chargée
+  useEffect(() => {
+    const markOrderNotificationsRead = async () => {
+      try {
+        await axios.post(`${AUTH_BASE_URL}/api/notifcommandes/admin/commandes/read`);
+      } catch (error) {
+        console.error("Erreur lors du marquage des notifications comme lues:", error);
+      }
+    };
+    
+    markOrderNotificationsRead();
+  }, []);
 
   const updateOrderStatus = useMutation({
     mutationFn: async ({ orderId, status }: { orderId: string, status: string }) => {
