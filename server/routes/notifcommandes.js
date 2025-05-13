@@ -69,8 +69,13 @@ router.post('/user/:userId/read', isAuthenticated, (req, res) => {
 });
 
 // Ajouter une notification pour un utilisateur
-router.post('/user/:userId/add', isAuthenticated, isAdmin, (req, res) => {
+router.post('/user/:userId/add', isAuthenticated, (req, res) => {
   try {
+    // Vérifier si c'est un admin ou si c'est une mise à jour automatique du système
+    if (req.user.role !== 'admin' && !req.body.systemUpdate) {
+      return res.status(403).json({ message: 'Accès non autorisé' });
+    }
+    
     const notifData = JSON.parse(fs.readFileSync(notifCommandesFilePath));
     
     if (!notifData.users[req.params.userId]) {
@@ -88,8 +93,13 @@ router.post('/user/:userId/add', isAuthenticated, isAdmin, (req, res) => {
 });
 
 // Obtenir toutes les notifications admin
-router.get('/admin', isAuthenticated, isAdmin, (req, res) => {
+router.get('/admin', isAuthenticated, (req, res) => {
   try {
+    // Vérifier si l'utilisateur est admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Accès réservé aux administrateurs' });
+    }
+    
     const notifData = JSON.parse(fs.readFileSync(notifCommandesFilePath));
     res.json(notifData.adminNotifications);
   } catch (error) {
@@ -99,8 +109,13 @@ router.get('/admin', isAuthenticated, isAdmin, (req, res) => {
 });
 
 // Marquer les notifications admin comme lues pour une section spécifique
-router.post('/admin/:section/read', isAuthenticated, isAdmin, (req, res) => {
+router.post('/admin/:section/read', isAuthenticated, (req, res) => {
   try {
+    // Vérifier si l'utilisateur est admin
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Accès réservé aux administrateurs' });
+    }
+    
     const { section } = req.params;
     
     if (!['messages', 'commandes', 'chat', 'serviceClient'].includes(section)) {

@@ -14,6 +14,8 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { Badge } from '@/components/ui/badge';
 import axios from 'axios';
+import { toast } from 'sonner';
+import _ from 'lodash';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
@@ -48,13 +50,23 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   useEffect(() => {
     // Fetch notification counts
     const fetchNotifications = async () => {
+      if (!user || user.role !== 'admin') return;
+      
       try {
-        const response = await axios.get(`${AUTH_BASE_URL}/api/notifcommandes/admin`);
+        const token = localStorage.getItem('authToken');
+        if (!token) return;
+        
+        const response = await axios.get(`${AUTH_BASE_URL}/api/notifcommandes/admin`, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
         if (response.data) {
           setNotifications(response.data);
         }
       } catch (error) {
         console.error("Erreur lors de la récupération des notifications:", error);
+        // Ne pas afficher de toast pour cette erreur
       }
     };
 
@@ -64,19 +76,29 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     const intervalId = setInterval(fetchNotifications, 30000); // Check every 30 seconds
     
     return () => clearInterval(intervalId);
-  }, []);
+  }, [user]);
   
   // Mark notifications as read when navigating to that section
   useEffect(() => {
     const markAsRead = async (section: string) => {
+      if (!user || user.role !== 'admin') return;
+      
       try {
-        await axios.post(`${AUTH_BASE_URL}/api/notifcommandes/admin/${section}/read`);
+        const token = localStorage.getItem('authToken');
+        if (!token) return;
+        
+        await axios.post(`${AUTH_BASE_URL}/api/notifcommandes/admin/${section}/read`, {}, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
         setNotifications(prev => ({
           ...prev,
           [section]: 0
         }));
       } catch (error) {
         console.error(`Erreur lors du marquage des notifications ${section} comme lues:`, error);
+        // Ne pas afficher de toast pour cette erreur
       }
     };
     
@@ -129,9 +151,9 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           </div>
           
           <nav className="space-y-1">
-            {navItems.map((item) => (
+            {navItems.map((item, idx) => (
               <Link
-                key={item.path}
+                key={`${item.path}-${idx}`}
                 to={item.path}
                 className={`flex items-center px-4 py-3 rounded-lg transition-colors ${
                   location.pathname === item.path

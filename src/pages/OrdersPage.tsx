@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import axios from 'axios';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import _ from 'lodash';
 
 const OrdersPage = () => {
   const { orders, loadingOrders, fetchOrders } = useStore();
@@ -27,13 +28,23 @@ const OrdersPage = () => {
 
   // Fonction pour récupérer les notifications
   const fetchNotifications = async () => {
+    if (!user?.id) return;
+    
     try {
-      const response = await axios.get(`${AUTH_BASE_URL}/api/notifcommandes/user/${user?.id}`);
+      const token = localStorage.getItem('authToken');
+      if (!token) return;
+      
+      const response = await axios.get(`${AUTH_BASE_URL}/api/notifcommandes/user/${user.id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
       if (response.data && response.data.count) {
         setNotificationCount(response.data.count);
       }
     } catch (error) {
       console.error("Erreur lors de la récupération des notifications:", error);
+      // Ne pas afficher de toast pour cette erreur qui peut être normale
     }
   };
 
@@ -41,12 +52,20 @@ const OrdersPage = () => {
   const markNotificationsAsRead = async () => {
     try {
       if (user?.id && notificationCount > 0) {
-        await axios.post(`${AUTH_BASE_URL}/api/notifcommandes/user/${user?.id}/read`);
+        const token = localStorage.getItem('authToken');
+        if (!token) return;
+        
+        await axios.post(`${AUTH_BASE_URL}/api/notifcommandes/user/${user.id}/read`, {}, {
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
         setNotificationCount(0);
         toast.success("Notifications marquées comme lues");
       }
     } catch (error) {
       console.error("Erreur lors du marquage des notifications:", error);
+      // Ne pas afficher de toast pour cette erreur
     }
   };
 
