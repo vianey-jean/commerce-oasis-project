@@ -1,3 +1,4 @@
+
 const express = require('express');
 const router = express.Router();
 const fs = require('fs');
@@ -51,16 +52,6 @@ router.post('/', (req, res) => {
     contacts.push(newContact);
     fs.writeFileSync(contactsFilePath, JSON.stringify(contacts, null, 2));
     
-    // Incrémenter le compteur de notifications pour l'admin
-    try {
-      const notifCommandesFilePath = path.join(__dirname, '../data/notifcommandes.json');
-      const notifData = JSON.parse(fs.readFileSync(notifCommandesFilePath));
-      notifData.adminNotifications.messages += 1;
-      fs.writeFileSync(notifCommandesFilePath, JSON.stringify(notifData, null, 2));
-    } catch (notifError) {
-      console.error('Erreur lors de l\'ajout de notification admin pour le nouveau contact:', notifError);
-    }
-    
     res.status(201).json(newContact);
   } catch (error) {
     res.status(500).json({ message: 'Erreur lors de l\'ajout du contact' });
@@ -77,8 +68,6 @@ router.put('/:id', isAuthenticated, isAdmin, (req, res) => {
       return res.status(404).json({ message: 'Contact non trouvé' });
     }
     
-    const wasUnread = !contacts[index].read;
-    
     contacts[index] = {
       ...contacts[index],
       ...req.body,
@@ -86,21 +75,6 @@ router.put('/:id', isAuthenticated, isAdmin, (req, res) => {
     };
     
     fs.writeFileSync(contactsFilePath, JSON.stringify(contacts, null, 2));
-    
-    // Si le message était non lu et est maintenant marqué comme lu, décrémenter la notification
-    if (wasUnread && req.body.read === true) {
-      try {
-        const notifCommandesFilePath = path.join(__dirname, '../data/notifcommandes.json');
-        const notifData = JSON.parse(fs.readFileSync(notifCommandesFilePath));
-        if (notifData.adminNotifications.messages > 0) {
-          notifData.adminNotifications.messages -= 1;
-          fs.writeFileSync(notifCommandesFilePath, JSON.stringify(notifData, null, 2));
-        }
-      } catch (notifError) {
-        console.error('Erreur lors de la mise à jour des notifications pour le contact lu:', notifError);
-      }
-    }
-    
     res.json(contacts[index]);
   } catch (error) {
     res.status(500).json({ message: 'Erreur lors de la mise à jour du contact' });

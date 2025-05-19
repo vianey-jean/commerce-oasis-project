@@ -296,7 +296,7 @@ const AdminChatContent = () => {
               </div>
             ) : (
               admins.map((admin: AdminUser) => (
-                <div key={admin.id}>
+                <div key={`admin-${admin.id}-${admin.email}`}>
                   <button
                     className={`w-full p-3 flex items-center hover:bg-gray-100 ${
                       selectedAdmin?.id === admin.id ? 'bg-gray-100' : ''
@@ -379,8 +379,8 @@ const AdminChatContent = () => {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {conversation?.messages.map((message, index) => (
-                      <div key={`${message.id}-${index}`} className={`flex ${
+                    {conversation?.messages.map((message) => (
+                      <div key={message.id} className={`flex ${
                         message.senderId === currentUser?.id ? 'justify-end' : 'justify-start'
                       }`}>
                         {editingMessageId === message.id ? (

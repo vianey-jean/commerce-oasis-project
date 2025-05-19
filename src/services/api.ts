@@ -1,5 +1,6 @@
 
 import axios from 'axios';
+import _ from 'lodash';
 
 // 🔁 URL de base récupérée depuis le .env
 const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -17,6 +18,15 @@ API.interceptors.request.use(
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
+
+    // Ajout d'un timestamp pour éviter les problèmes de cache
+    if (config.method === 'get') {
+      config.params = {
+        ...config.params,
+        _t: Date.now(),
+      };
+    }
+
     return config;
   },
   (error) => {
@@ -149,6 +159,58 @@ export const productsAPI = {
   applyPromotion: (id: string, promotion: number, duration: number) => 
     API.post(`/products/${id}/promotion`, { promotion, duration }),
   search: (query: string) => API.get<Product[]>(`/products/search?q=${encodeURIComponent(query)}`),
+};
+
+// Interface Review (Commentaire)
+export interface Review {
+  id: string;
+  userId: string;
+  userName: string;
+  productId: string;
+  productRating: number;
+  deliveryRating: number;
+  comment: string;
+  photos?: string[]; // Nouveau champ pour les photos
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Interface pour l'ajout de commentaire avec photos
+export interface ReviewFormData {
+  productId: string;
+  productRating: number;
+  deliveryRating: number;
+  comment: string;
+  photos?: File[];
+}
+
+// Services pour les commentaires
+export const reviewsAPI = {
+  getProductReviews: (productId: string) => API.get<Review[]>(`/reviews/product/${productId}`),
+  getReviewDetail: (reviewId: string) => API.get<Review>(`/reviews/${reviewId}`),
+  addReview: (reviewData: ReviewFormData) => {
+    const formData = new FormData();
+    formData.append('productId', reviewData.productId);
+    formData.append('productRating', reviewData.productRating.toString());
+    formData.append('deliveryRating', reviewData.deliveryRating.toString());
+    
+    if (reviewData.comment) {
+      formData.append('comment', reviewData.comment);
+    }
+    
+    if (reviewData.photos && reviewData.photos.length > 0) {
+      reviewData.photos.forEach(photo => {
+        formData.append('photos', photo);
+      });
+    }
+    
+    return API.post<Review>('/reviews', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+  },
+  deleteReview: (reviewId: string) => API.delete(`/reviews/${reviewId}`),
 };
 
 // Interface Contact

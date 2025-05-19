@@ -1,5 +1,5 @@
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useVideoCall } from '@/contexts/VideoCallContext';
 import { 
   PhoneCall,
@@ -9,27 +9,41 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/sonner';
-import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
-
-// Base64 encoded short ringtone audio
-const RINGTONE_BASE64 = "data:audio/mpeg;base64,SUQzAwAAAAABDFRJVDIAAAAFAAAAU29uZwBUUEUxAAAAEAAAAEZyZWUgU291bmQgRWZmZWN0APBWSW5mbwAAAA8AAABMYXZmNTguNDUuMTAwAAAAAAAAAAAAAAD/+xDEAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAADAAACQAAYGBgYREREREScnJyc3Nzc3N0VFRUVZWVlZWWZmZmZ6enp6eoqKioqampqam6mpqanAwMDAwNTU1NTU6enp6ekCAgICFBQUFBQoKCgoQEBAQEBaWlpaWnNzc3OLi4uLi6Wlpaen09PT09P////wTEFNRTMuMTAwVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7EMQpAATwBF7AEG3AAANIAAAARVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVX/+xDEfwAAA0gAAAAAAAAAA0gAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==";
+import { createAudioBlobUrl } from '@/utils/audio-utils';
 
 const CallNotification = () => {
   const { incomingCall, acceptCall, rejectCall } = useVideoCall();
   const ringtoneRef = useRef<HTMLAudioElement | null>(null);
+  const [ringtoneBlobUrl, setRingtoneBlobUrl] = useState<string | null>(null);
   
-  // Initialize audio element and play/stop ringtone when incomingCall changes
+  // Créer le blob URL pour le son au chargement du composant
   useEffect(() => {
-    // Create audio element if it doesn't exist
-    if (!ringtoneRef.current) {
+    const blobUrl = createAudioBlobUrl();
+    if (blobUrl) {
+      setRingtoneBlobUrl(blobUrl);
+    }
+    
+    // Nettoyer le blob URL à la destruction du composant
+    return () => {
+      if (ringtoneBlobUrl) {
+        URL.revokeObjectURL(ringtoneBlobUrl);
+      }
+    };
+  }, []);
+  
+  // Initialiser et jouer/arrêter la sonnerie quand incomingCall change
+  useEffect(() => {
+    // Créer l'élément audio s'il n'existe pas
+    if (!ringtoneRef.current && ringtoneBlobUrl) {
       try {
-        ringtoneRef.current = new Audio(RINGTONE_BASE64);
+        ringtoneRef.current = new Audio(ringtoneBlobUrl);
         ringtoneRef.current.loop = true;
+        ringtoneRef.current.preload = 'auto';
         
-        // Add event listener for errors
+        // Ajouter un écouteur d'événements pour les erreurs
         ringtoneRef.current.addEventListener('error', (e) => {
           console.error("Ringtone error:", e);
-          // Fallback to browser's native notification sound if available
+          // Utiliser la notification native du navigateur si disponible
           if ("Notification" in window && Notification.permission === "granted") {
             new Notification("Appel entrant", {
               icon: "/favicon.ico",
@@ -42,33 +56,35 @@ const CallNotification = () => {
       }
     }
     
-    // Play ringtone when there's an incoming call
+    // Jouer la sonnerie lorsqu'il y a un appel entrant
     if (incomingCall && ringtoneRef.current) {
+      console.log("Playing ringtone for incoming call from:", incomingCall.name);
       ringtoneRef.current.play().catch(err => {
         console.error("Could not play ringtone:", err);
-        // Request permission for notifications as fallback
+        // Demander la permission pour les notifications comme solution de secours
         if ("Notification" in window && Notification.permission !== "denied") {
           Notification.requestPermission();
         }
       });
     } else if (ringtoneRef.current) {
-      // Stop ringtone when there's no incoming call
+      // Arrêter la sonnerie lorsqu'il n'y a pas d'appel entrant
       ringtoneRef.current.pause();
       ringtoneRef.current.currentTime = 0;
     }
     
-    // Cleanup on unmount
+    // Nettoyage lors du démontage
     return () => {
       if (ringtoneRef.current) {
         ringtoneRef.current.pause();
         ringtoneRef.current.currentTime = 0;
       }
     };
-  }, [incomingCall]);
+  }, [incomingCall, ringtoneBlobUrl]);
   
-  // Handle accept call with error handling
+  // Gérer l'acceptation de l'appel avec gestion des erreurs
   const handleAcceptCall = async () => {
     try {
+      console.log("Accepting call from:", incomingCall?.name);
       await acceptCall();
     } catch (error) {
       console.error("Error accepting call:", error);
@@ -79,14 +95,14 @@ const CallNotification = () => {
   if (!incomingCall) return null;
   
   return (
-    <div className="fixed top-4 right-4 bg-white shadow-lg rounded-lg p-4 border z-50 w-80 animate-in fade-in slide-in-from-top-5 duration-300" role="alertdialog" aria-labelledby="incoming-call-title" aria-describedby="incoming-call-desc">
+    <div className="fixed top-4 right-4 bg-white shadow-lg rounded-lg p-4 border z-50 w-80 animate-in fade-in slide-in-from-top-5 duration-300" role="alertdialog" aria-label="Appel entrant">
       <div className="flex items-center mb-4">
         <div className="w-12 h-12 bg-red-800 text-white rounded-full flex items-center justify-center mr-4">
           <User className="h-6 w-6" />
         </div>
         <div>
-          <h3 id="incoming-call-title" className="font-medium">{incomingCall.name}</h3>
-          <p id="incoming-call-desc" className="text-sm text-muted-foreground">
+          <h3 className="font-medium">{incomingCall.name}</h3>
+          <p className="text-sm text-muted-foreground">
             {incomingCall.isVideo ? "Appel vidéo entrant" : "Appel audio entrant"}
           </p>
         </div>

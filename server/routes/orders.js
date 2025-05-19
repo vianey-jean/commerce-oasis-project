@@ -7,7 +7,6 @@ const { isAuthenticated, isAdmin } = require('../middlewares/auth');
 
 const ordersFilePath = path.join(__dirname, '../data/commandes.json');
 const productsFilePath = path.join(__dirname, '../data/products.json');
-const notifCommandesFilePath = path.join(__dirname, '../data/notifcommandes.json');
 
 // Vérifier si le fichier commandes.json existe, sinon le créer
 if (!fs.existsSync(ordersFilePath)) {
@@ -141,15 +140,6 @@ router.post('/', isAuthenticated, async (req, res) => {
     orders.push(newOrder);
     fs.writeFileSync(ordersFilePath, JSON.stringify(orders, null, 2));
     
-    // Ajouter une notification pour l'admin
-    try {
-      const notifData = JSON.parse(fs.readFileSync(notifCommandesFilePath));
-      notifData.adminNotifications.commandes += 1;
-      fs.writeFileSync(notifCommandesFilePath, JSON.stringify(notifData, null, 2));
-    } catch (notifError) {
-      console.error('Erreur lors de l\'ajout de notification admin:', notifError);
-    }
-    
     res.status(201).json(newOrder);
   } catch (error) {
     console.error('Erreur lors de la création de la commande:', error);
@@ -173,31 +163,10 @@ router.put('/:orderId/status', isAuthenticated, isAdmin, (req, res) => {
       return res.status(404).json({ message: 'Commande non trouvée' });
     }
     
-    const userId = orders[orderIndex].userId;
-    const oldStatus = orders[orderIndex].status;
-    
-    // Mettre à jour le statut de la commande
     orders[orderIndex].status = status;
     orders[orderIndex].updatedAt = new Date().toISOString();
     
     fs.writeFileSync(ordersFilePath, JSON.stringify(orders, null, 2));
-    
-    // Ajouter une notification pour l'utilisateur si le statut a changé
-    if (status !== oldStatus) {
-      try {
-        const notifData = JSON.parse(fs.readFileSync(notifCommandesFilePath));
-        
-        if (!notifData.users[userId]) {
-          notifData.users[userId] = { count: 1 };
-        } else {
-          notifData.users[userId].count += 1;
-        }
-        
-        fs.writeFileSync(notifCommandesFilePath, JSON.stringify(notifData, null, 2));
-      } catch (notifError) {
-        console.error('Erreur lors de l\'ajout de notification utilisateur:', notifError);
-      }
-    }
     
     res.json(orders[orderIndex]);
   } catch (error) {

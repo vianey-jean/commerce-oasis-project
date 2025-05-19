@@ -1,93 +1,287 @@
+
 require('dotenv').config();
 const express = require('express');
-const bodyParser = require('body-parser');
+const http = require('http');
 const cors = require('cors');
-const fs = require('fs');
+const helmet = require('helmet');
+const bodyParser = require('body-parser');
+const jwt = require('jsonwebtoken');
 const path = require('path');
-const multer = require('multer');
-const nodemailer = require('nodemailer');
+const fs = require('fs');
+const socketIO = require('socket.io');
+const xssClean = require('xss-clean');
+const { createServer } = require('http');
 
+// Initialiser l'application Express
 const app = express();
-const PORT = process.env.PORT || 10000;
+const server = createServer(app);
 
-// Middleware
-app.use(cors());
+// Middleware de sécurité
+app.use(helmet({ 
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: { policy: 'cross-origin' } // Activer le partage de ressources cross-origin
+})); // Headers de sécurité
+app.use(xssClean()); // Protéger contre les attaques XSS
+
+// Configuration de CORS avec options avancées
+const corsOptions = {
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      'http://localhost:8080', 
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'https://riziky-boutic.vercel.app',
+      'https://riziky-boutic.onrender.com',
+      'https://riziky-boutic-server.onrender.com'
+    ];
+    
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log(`Origine rejetée: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Content-Length', 'X-Request-Id']
+};
+
+app.use(cors(corsOptions));
+
+// Middleware additionnels pour les en-têtes CORS
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.header('Cross-Origin-Embedder-Policy', 'credentialless');
+  res.header('Cross-Origin-Opener-Policy', 'same-origin');
+  next();
+});
+
+// Middleware pour parser le corps des requêtes
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-// Configuration pour les uploads d'images
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/');
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
+// Middleware pour vérifier et créer les fichiers de données s'ils n'existent pas
+app.use((req, res, next) => {
+  const dataFiles = [
+    'users.json',
+    'products.json',
+    'panier.json',
+    'favorites.json',
+    'orders.json',
+    'contacts.json',
+    'client-chat.json',
+    'admin-chat.json',
+    'preferences.json',
+    'reviews.json',
+    'reset-codes.json',
+  ];
+
+  const dataDir = path.join(__dirname, 'data');
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir);
   }
-});
-const upload = multer({ storage });
 
-// Création du dossier uploads s'il n'existe pas
-if (!fs.existsSync('uploads')) {
-  fs.mkdirSync('uploads');
-}
-
-// Création des fichiers JSON s'ils n'existent pas
-const dataFiles = [
-  'users.json', 
-  'products.json', 
-  'panier.json', 
-  'favorites.json', 
-  'contacts.json',
-  'commandes.json',
-  'admin-chat.json',
-  'client-chat.json',
-  'notifcommandes.json'
-];
-
-dataFiles.forEach(file => {
-  const filePath = path.join(__dirname, 'data', file);
-  if (!fs.existsSync(path.dirname(filePath))) {
-    fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  }
-  if (!fs.existsSync(filePath)) {
-    let initialData;
-    
-    if (file === 'admin-chat.json' || file === 'client-chat.json') {
-      initialData = { conversations: {}, onlineUsers: {}, autoReplySent: {}, activeCalls: {} };
-    } else if (file === 'notifcommandes.json') {
-      initialData = {
-        users: {},
-        adminNotifications: {
-          messages: 0,
-          commandes: 0,
-          chat: 0,
-          serviceClient: 0
-        }
-      };
-    } else {
-      initialData = [];
+  dataFiles.forEach(file => {
+    const filePath = path.join(dataDir, file);
+    if (!fs.existsSync(filePath)) {
+      fs.writeFileSync(filePath, JSON.stringify([]));
     }
-    
-    fs.writeFileSync(filePath, JSON.stringify(initialData, null, 2));
+  });
+
+  next();
+});
+
+// Middleware pour servir les fichiers statiques avec des en-têtes CORS appropriés
+app.use('/uploads', (req, res, next) => {
+  res.set('Cross-Origin-Resource-Policy', 'cross-origin');
+  express.static(path.join(__dirname, 'uploads'))(req, res, next);
+});
+
+// Middleware d'authentification global
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ message: 'Authentification requise' });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret', (err, user) => {
+    if (err) {
+      return res.status(403).json({ message: 'Token invalide ou expiré' });
+    }
+    req.user = user;
+    next();
+  });
+};
+
+// Protection contre les injections
+app.use((req, res, next) => {
+  // Vérifier et nettoyer les paramètres de la requête
+  if (req.params) {
+    const keys = Object.keys(req.params);
+    for (let key of keys) {
+      req.params[key] = req.params[key]
+        .replace(/[<>]/g, '') // Supprimer les balises HTML
+        .trim();
+    }
+  }
+  
+  // Vérifier et nettoyer le corps de la requête
+  if (req.body && typeof req.body === 'object') {
+    const sanitize = (obj) => {
+      const sanitized = {};
+      for (const [key, value] of Object.entries(obj)) {
+        if (typeof value === 'string') {
+          sanitized[key] = value
+            .replace(/[<>]/g, '') // Supprimer les balises HTML
+            .trim();
+        } else if (typeof value === 'object' && value !== null) {
+          sanitized[key] = sanitize(value);
+        } else {
+          sanitized[key] = value;
+        }
+      }
+      return sanitized;
+    };
+
+    // Ne pas sanitizer les fichiers ou données binaires
+    if (!req.is('multipart/form-data')) {
+      req.body = sanitize(req.body);
+    }
+  }
+
+  next();
+});
+
+// Routes
+const authRoutes = require('./routes/auth');
+const productRoutes = require('./routes/products');
+const panierRoutes = require('./routes/panier');
+const favoriteRoutes = require('./routes/favorites');
+const orderRoutes = require('./routes/orders');
+const contactRoutes = require('./routes/contacts');
+const clientChatRoutes = require('./routes/client-chat');
+const adminChatRoutes = require('./routes/admin-chat');
+const usersRoutes = require('./routes/users');
+const reviewRoutes = require('./routes/reviews');
+
+// Routes de l'API
+app.use('/api/auth', authRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/panier', panierRoutes);
+app.use('/api/favorites', favoriteRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/contacts', contactRoutes);
+app.use('/api/client-chat', clientChatRoutes);
+app.use('/api/admin-chat', adminChatRoutes);
+app.use('/api/users', usersRoutes);
+app.use('/api/reviews', reviewRoutes);
+
+// Socket.io pour la communication en temps réel
+const io = socketIO(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"]
   }
 });
 
-// Routes API
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/products', require('./routes/products'));
-app.use('/api/users', require('./routes/users'));
-app.use('/api/contacts', require('./routes/contacts'));
-app.use('/api/panier', require('./routes/panier'));
-app.use('/api/favorites', require('./routes/favorites'));
-app.use('/api/orders', require('./routes/orders'));
-app.use('/api/admin-chat', require('./routes/admin-chat'));
-app.use('/api/client-chat', require('./routes/client-chat'));
-app.use('/api/notifcommandes', require('./routes/notifcommandes'));
+// Authentification par socket pour les clients
+io.use((socket, next) => {
+  const token = socket.handshake.auth.token;
+  
+  if (!token) {
+    return next(new Error('Authentification requise'));
+  }
+  
+  try {
+    const user = jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret');
+    socket.user = user;
+    next();
+  } catch (err) {
+    next(new Error('Token invalide ou expiré'));
+  }
+});
 
-// Route pour les images uploadées
-app.use('/uploads', express.static('uploads'));
+// Gestion des connexions socket
+io.on('connection', (socket) => {
+  console.log('Nouvelle connexion socket:', socket.id);
 
-// Démarrage du serveur
-app.listen(PORT, () => {
+  // Stocker l'ID socket de l'utilisateur
+  if (socket.user) {
+    // Rejoindre la salle utilisateur
+    socket.join(`user-${socket.user.id}`);
+    console.log(`L'utilisateur ${socket.user.id} a rejoint sa salle privée`);
+
+    // Si c'est un admin, rejoindre la salle admin
+    if (socket.user.role === 'admin') {
+      socket.join('admins');
+      console.log(`Admin ${socket.user.id} a rejoint la salle des admins`);
+    }
+  }
+
+  // Gestion des messages de chat client
+  socket.on('client-message', (data) => {
+    io.to('admins').emit('new-client-message', {
+      ...data,
+      senderId: socket.user.id,
+      senderName: socket.user.name || socket.user.email
+    });
+  });
+
+  // Gestion des messages de chat admin
+  socket.on('admin-message', (data) => {
+    io.to(`user-${data.userId}`).emit('new-admin-message', {
+      ...data,
+      senderId: socket.user.id,
+      senderName: socket.user.name || socket.user.email
+    });
+  });
+
+  // Notification pour nouvel ordre
+  socket.on('new-order', (data) => {
+    io.to('admins').emit('order-notification', {
+      ...data,
+      userId: socket.user.id,
+      userName: socket.user.name || socket.user.email
+    });
+  });
+
+  // Gestion de la déconnexion
+  socket.on('disconnect', () => {
+    console.log('Déconnexion socket:', socket.id);
+  });
+});
+
+// Route pour tester le serveur
+app.get('/', (req, res) => {
+  res.send('API de l\'application e-commerce Riziky-Boutic est active!');
+});
+
+// Middleware pour la gestion des erreurs 404
+app.use((req, res) => {
+  res.status(404).json({ message: 'Route non trouvée' });
+});
+
+// Middleware pour la gestion des erreurs globales
+app.use((err, req, res, next) => {
+  console.error('Erreur serveur:', err);
+  
+  // Ne pas exposer les détails de l'erreur en production
+  const isDev = process.env.NODE_ENV === 'development';
+  const message = isDev ? err.message : 'Une erreur est survenue';
+  
+  res.status(500).json({
+    message,
+    error: isDev ? err.stack : {}
+  });
+});
+
+// Démarrer le serveur
+const PORT = process.env.PORT || 10000;
+server.listen(PORT, () => {
   console.log(`Serveur démarré sur le port ${PORT}`);
 });

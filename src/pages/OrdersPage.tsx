@@ -1,4 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react';
+
+import React, { useEffect } from 'react';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,88 +7,14 @@ import { Check, Truck, Package, ShoppingBag } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useStore } from '@/contexts/StoreContext';
 import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import axios from 'axios';
-import { useAuth } from '@/contexts/AuthContext';
-import { toast } from '@/components/ui/use-toast';
-import _ from 'lodash';
 
 const OrdersPage = () => {
   const { orders, loadingOrders, fetchOrders } = useStore();
-  const { user } = useAuth();
   const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  const [notificationCount, setNotificationCount] = useState(0);
 
-  // Fonction pour récupérer les notifications avec gestion optimisée des erreurs
-  const fetchNotifications = useCallback(async () => {
-    if (!user?.id) return;
-    
-    try {
-      const token = localStorage.getItem('authToken');
-      if (!token) return;
-      
-      const response = await axios.get(`${AUTH_BASE_URL}/api/notifcommandes/user/${user.id}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      if (response.data && response.data.count) {
-        setNotificationCount(response.data.count);
-      }
-    } catch (error) {
-      console.error("Erreur lors de la récupération des notifications:", error);
-      // Silent error - don't show toast for this expected error
-    }
-  }, [user, AUTH_BASE_URL]);
-
-  // Fonction pour marquer les notifications comme lues
-  const markNotificationsAsRead = useCallback(async () => {
-    try {
-      if (user?.id && notificationCount > 0) {
-        const token = localStorage.getItem('authToken');
-        if (!token) return;
-        
-        await axios.post(`${AUTH_BASE_URL}/api/notifcommandes/user/${user.id}/read`, {}, {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        });
-        setNotificationCount(0);
-        toast({
-          title: "Notifications",
-          description: "Notifications marquées comme lues"
-        });
-      }
-    } catch (error) {
-      console.error("Erreur lors du marquage des notifications:", error);
-      // Silent error
-    }
-  }, [notificationCount, user, AUTH_BASE_URL]);
-
-  // Effet pour charger les commandes et les notifications au démarrage
   useEffect(() => {
     fetchOrders();
-    if (user?.id) {
-      fetchNotifications();
-    }
-  }, [user, fetchOrders, fetchNotifications]);
-
-  // Effet pour mettre en place une vérification périodique des notifications
-  useEffect(() => {
-    // Vérifier les notifications toutes les 5 secondes
-    const intervalId = setInterval(() => {
-      fetchNotifications();
-    }, 5000);
-    
-    return () => clearInterval(intervalId);
-  }, [fetchNotifications]);
-
-  // Effet pour marquer les notifications comme lues quand leur nombre change
-  useEffect(() => {
-    if (notificationCount > 0) {
-      markNotificationsAsRead();
-    }
-  }, [notificationCount, markNotificationsAsRead]);
+  }, []);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('fr-FR', {
@@ -121,14 +48,7 @@ const OrdersPage = () => {
   return (
     <Layout>
       <div className="max-w-4xl mx-auto p-4">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-3xl font-bold">Mes commandes</h1>
-          {notificationCount > 0 && (
-            <Badge variant="destructive" className="ml-2 h-6 px-2 flex items-center justify-center text-xs">
-              {notificationCount} nouvelle(s) mise(s) à jour
-            </Badge>
-          )}
-        </div>
+        <h1 className="text-3xl font-bold mb-6">Mes commandes</h1>
 
         {loadingOrders ? (
           <div className="text-center py-10">Chargement des commandes...</div>

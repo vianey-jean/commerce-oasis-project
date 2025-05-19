@@ -3,8 +3,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useVideoCall } from '@/contexts/VideoCallContext';
 import { PhoneOff, Mic, MicOff, Video as VideoIcon, VideoOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 const CallInterface = () => {
   const { callState, localStream, remoteStream, endCall } = useVideoCall();
@@ -16,7 +15,7 @@ const CallInterface = () => {
   
   // Set up local and remote streams
   useEffect(() => {
-    console.log('Call interface - localStream:', !!localStream, 'remoteStream:', !!remoteStream);
+    console.log('Call interface - localStream:', !!localStream, 'remoteStream:', !remoteStream);
     
     if (localVideoRef.current && localStream) {
       localVideoRef.current.srcObject = localStream;
@@ -63,9 +62,10 @@ const CallInterface = () => {
   return (
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
       <DialogContent className="p-0 max-w-full w-full h-full max-h-screen sm:max-w-full sm:rounded-none">
-        <DialogTitle className="sr-only">
-          <VisuallyHidden>Appel en cours</VisuallyHidden>
-        </DialogTitle>
+        <DialogTitle className="sr-only">Appel en cours</DialogTitle>
+        <DialogDescription className="sr-only">
+          Interface d'appel {callState.isVideo ? "vidéo" : "audio"} avec contrôles
+        </DialogDescription>
         
         <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex flex-col">
           <div className="flex-1 relative flex items-center justify-center">

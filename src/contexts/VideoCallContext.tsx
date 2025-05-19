@@ -1,8 +1,12 @@
-
 import React, { createContext, useState, useContext, useRef, useEffect } from 'react';
 import { toast } from '@/components/ui/sonner';
 import Peer from 'simple-peer';
 import io from 'socket.io-client';
+
+// Add custom type extension for Peer Instance to handle _localSignal property
+interface ExtendedPeerInstance extends Peer.Instance {
+  _localSignal?: any;
+}
 
 interface VideoCallContextType {
   callState: CallState;
@@ -26,6 +30,7 @@ interface IncomingCall {
   from: string;
   name: string;
   isVideo: boolean;
+  signal?: any;
 }
 
 const initialCallState: CallState = {
@@ -45,8 +50,18 @@ export const useVideoCall = () => {
   return context;
 };
 
-// Mock WebRTC functionality for development when server is unavailable
-const useMockWebRTC = process.env.NODE_ENV === 'development';
+// Vérifier si nous sommes en mode développement sans serveur disponible
+const useMockWebRTC = process.env.NODE_ENV === 'development' && !import.meta.env.VITE_USE_REAL_WEBRTC;
+
+// Logger personnalisé
+const createLogger = (prefix: string) => ({
+  log: (message: string, ...args: any[]) => console.log(`[${prefix}] ${message}`, ...args),
+  error: (message: string, ...args: any[]) => console.error(`[${prefix}] ${message}`, ...args),
+  warn: (message: string, ...args: any[]) => console.warn(`[${prefix}] ${message}`, ...args),
+  info: (message: string, ...args: any[]) => console.info(`[${prefix}] ${message}`, ...args)
+});
+
+const logger = createLogger('VideoCall');
 
 export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [callState, setCallState] = useState<CallState>(initialCallState);
@@ -54,20 +69,23 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
   
-  const peerRef = useRef<Peer.Instance | null>(null);
+  const peerRef = useRef<ExtendedPeerInstance | null>(null);
   const socketRef = useRef<any>(null);
   const socketErrorShown = useRef<boolean>(false);
+  
+  // Récupérer l'utilisateur actuel
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
   
   // Initialize socket connection
   useEffect(() => {
     // Use the server URL from environment variables or a fallback
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'https://riziky-boutic-server.onrender.com';
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:10000';
     
-    console.log('Connecting to socket server:', apiBaseUrl);
+    logger.log('Connecting to socket server:', apiBaseUrl);
     
     try {
       if (useMockWebRTC) {
-        console.log('Using mock WebRTC mode for development');
+        logger.log('Using mock WebRTC mode for development');
         return;
       }
       
@@ -81,27 +99,38 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       
       // Socket connection error handling
       socketRef.current.on('connect_error', (err: any) => {
-        console.error('Socket connection error:', err);
+        logger.error('Socket connection error:', err);
         // Only show toast once to avoid spam
         if (!socketErrorShown.current) {
           toast.error('Erreur de connexion au serveur de chat');
           socketErrorShown.current = true;
         }
       });
+
+      socketRef.current.on('connect', () => {
+        logger.log('Socket connected successfully');
+        socketErrorShown.current = false;
+        
+        // Authentifier l'utilisateur quand le socket est connecté
+        if (currentUser && currentUser.id) {
+          socketRef.current.emit('authenticate', currentUser);
+          logger.log('User authenticated with socket:', currentUser.id);
+        }
+      });
       
       // Socket event listeners
-      socketRef.current.on('callIncoming', (data: { from: string; name: string; isVideo: boolean }) => {
-        console.log('Incoming call from:', data);
+      socketRef.current.on('callIncoming', (data: { from: string; name: string; isVideo: boolean; signal: any }) => {
+        logger.log('Incoming call from:', data);
         setIncomingCall(data);
       });
       
       socketRef.current.on('callAccepted', async (signal: any) => {
-        console.log('Call accepted, received signal');
+        logger.log('Call accepted, received signal');
         if (peerRef.current) {
           try {
             peerRef.current.signal(signal);
           } catch (error) {
-            console.error('Error signaling peer after call accepted:', error);
+            logger.error('Error signaling peer after call accepted:', error);
             endCall();
           }
         }
@@ -118,17 +147,36 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       });
       
       socketRef.current.on('peerSignal', (signal: any) => {
-        console.log('Received peer signal:', signal);
+        logger.log('Received peer signal:', signal);
         if (peerRef.current) {
           try {
             peerRef.current.signal(signal);
           } catch (error) {
-            console.error('Error processing peer signal:', error);
+            logger.error('Error processing peer signal:', error);
           }
         }
       });
+      
+      socketRef.current.on('sendSignalRequest', (data: { to: string }) => {
+        logger.log('Received signal request from:', data.to);
+        if (peerRef.current && peerRef.current._localSignal) {
+          socketRef.current.emit('sendSignalResponse', {
+            to: data.to,
+            signal: peerRef.current._localSignal
+          });
+        }
+      });
+      
+      socketRef.current.on('callFailed', (data: { reason: string }) => {
+        if (data.reason === 'user-offline') {
+          toast.error('L\'utilisateur n\'est pas en ligne');
+        } else {
+          toast.error('L\'appel a échoué');
+        }
+        endCall();
+      });
     } catch (error) {
-      console.error('Failed to initialize socket connection:', error);
+      logger.error('Failed to initialize socket connection:', error);
       if (!socketErrorShown.current) {
         toast.error('Impossible de se connecter au serveur de chat');
         socketErrorShown.current = true;
@@ -147,7 +195,7 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   // Initiate a call to another user
   const initiateCall = async (userId: string, isVideo: boolean) => {
     try {
-      console.log(`Initiating ${isVideo ? 'video' : 'audio'} call to user ${userId}`);
+      logger.log(`Initiating ${isVideo ? 'video' : 'audio'} call to user ${userId}`);
       
       // For development when server is unavailable
       if (useMockWebRTC) {
@@ -183,7 +231,7 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           await navigator.permissions.query({ name: 'camera' as PermissionName });
         }
       } catch (err) {
-        console.log('Permissions API not supported, trying direct access');
+        logger.log('Permissions API not supported, trying direct access');
       }
       
       // Get user media based on call type
@@ -211,10 +259,13 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             { urls: 'stun:global.stun.twilio.com:3478' }
           ]
         }
-      });
+      }) as ExtendedPeerInstance;
       
       peer.on('signal', (signal) => {
-        console.log('Generated signal for peer, sending to remote user');
+        logger.log('Generated signal for peer, sending to remote user');
+        // Store the local signal for potential retrieval later
+        peer._localSignal = signal;
+        
         if (socketRef.current && socketRef.current.connected) {
           socketRef.current.emit('callUser', {
             userToCall: userId,
@@ -228,18 +279,18 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       });
       
       peer.on('stream', (remoteStream) => {
-        console.log('Received remote stream');
+        logger.log('Received remote stream');
         setRemoteStream(remoteStream);
       });
       
       peer.on('error', (err) => {
-        console.error('Peer connection error:', err);
+        logger.error('Peer connection error:', err);
         endCall();
         toast.error('Erreur de connexion');
       });
       
       peer.on('close', () => {
-        console.log('Peer connection closed');
+        logger.log('Peer connection closed');
         endCall();
       });
       
@@ -254,7 +305,7 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       
       toast.success(`Appel en cours...`);
     } catch (error: any) {
-      console.error('Failed to initiate call:', error);
+      logger.error('Failed to initiate call:', error);
       
       // More user-friendly error messages
       if (error.name === 'NotAllowedError') {
@@ -276,7 +327,7 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     if (!incomingCall) return;
     
     try {
-      console.log(`Accepting ${incomingCall.isVideo ? 'video' : 'audio'} call from ${incomingCall.from}`);
+      logger.log(`Accepting ${incomingCall.isVideo ? 'video' : 'audio'} call from ${incomingCall.from}`);
       
       // For development when server is unavailable
       if (useMockWebRTC) {
@@ -314,7 +365,7 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           await navigator.permissions.query({ name: 'camera' as PermissionName });
         }
       } catch (err) {
-        console.log('Permissions API not supported, trying direct access');
+        logger.log('Permissions API not supported, trying direct access');
       }
       
       // Get user media based on call type
@@ -341,10 +392,13 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
             { urls: 'stun:global.stun.twilio.com:3478' }
           ]
         }
-      });
+      }) as ExtendedPeerInstance;
       
       peer.on('signal', (signal) => {
-        console.log('Generated accept signal, sending to caller');
+        logger.log('Generated accept signal, sending to caller');
+        // Store the local signal for potential retrieval later
+        peer._localSignal = signal;
+        
         if (socketRef.current && socketRef.current.connected) {
           socketRef.current.emit('acceptCall', {
             to: incomingCall.from,
@@ -357,25 +411,31 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       });
       
       peer.on('stream', (remoteStream) => {
-        console.log('Received remote stream from caller');
+        logger.log('Received remote stream from caller');
         setRemoteStream(remoteStream);
       });
       
       peer.on('error', (err) => {
-        console.error('Peer connection error:', err);
+        logger.error('Peer connection error:', err);
         endCall();
         toast.error('Erreur de connexion');
       });
       
       peer.on('close', () => {
-        console.log('Peer connection closed');
+        logger.log('Peer connection closed');
         endCall();
       });
       
-      if (socketRef.current && socketRef.current.connected) {
-        socketRef.current.emit('getCallerSignal', { from: incomingCall.from });
+      // Si le signal existe déjà, on l'utilise directement
+      if (incomingCall.signal) {
+        peer.signal(incomingCall.signal);
       } else {
-        throw new Error('Socket not connected');
+        // Sinon on demande le signal au serveur
+        if (socketRef.current && socketRef.current.connected) {
+          socketRef.current.emit('getCallerSignal', { from: incomingCall.from });
+        } else {
+          throw new Error('Socket not connected');
+        }
       }
       
       peerRef.current = peer;
@@ -389,7 +449,7 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
       
       setIncomingCall(null);
     } catch (error: any) {
-      console.error('Failed to accept call:', error);
+      logger.error('Failed to accept call:', error);
       
       // More user-friendly error messages
       if (error.name === 'NotAllowedError') {
@@ -410,7 +470,7 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   
   // Reject an incoming call
   const rejectCall = () => {
-    console.log('Rejecting call');
+    logger.log('Rejecting call');
     
     if (useMockWebRTC) {
       setIncomingCall(null);
@@ -426,7 +486,7 @@ export const VideoCallProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   
   // End the current call
   const endCall = () => {
-    console.log('Ending call');
+    logger.log('Ending call');
     
     if (!useMockWebRTC) {
       // Notify other participant if in a call

@@ -29,6 +29,8 @@ import { ShoppingCart, Heart, Search, User, LogOut, Settings, Package, Menu } fr
 import { productsAPI, Product } from '@/services/api';
 import { debounce } from 'lodash';
 import { useIsMobile } from '@/hooks/use-mobile';
+import logo from "@/assets/logo.png"; // Corrige le chemin selon la structure de ton projet
+
 
 // Fonction améliorée pour normaliser les chaînes de caractères (supprime les accents et met en minuscule)
 const normalizeString = (str: string) => {
@@ -37,6 +39,11 @@ const normalizeString = (str: string) => {
     .replace(/[\u0300-\u036f]/g, "") // Supprime les accents
     .toLowerCase() // Met en minuscule
     .trim(); // Supprime les espaces inutiles
+};
+
+const sanitizeInput = (input: string) => {
+  // Simple sanitization - more advanced would use DOMPurify
+  return input.replace(/[<>]/g, '');
 };
 
 const Navbar = () => {
@@ -79,22 +86,23 @@ const Navbar = () => {
         return;
       }
 
+      // Sanitize input before searching
+      const sanitizedTerm = sanitizeInput(term);
+      
       setIsSearching(true);
       try {
-        // Normaliser le terme de recherche pour l'API
-        const normalizedTerm = normalizeString(term);
+        // Normalize search term for better search results
+        const normalizedTerm = normalizeString(sanitizedTerm);
         
-        // Recherche côté serveur
+        // Search via API
         const response = await productsAPI.search(normalizedTerm);
         const results = Array.isArray(response.data) ? response.data : [];
 
-        // Filtrage amélioré côté client pour gérer les accents
+        // Enhanced filtering
         const filteredResults = results.filter(product => {
-          // Normaliser le nom du produit pour comparer sans accents
           const normalizedProductName = normalizeString(product.name);
           const normalizedProductDesc = normalizeString(product.description);
           
-          // Vérifier si le nom normalisé ou la description contient le terme normalisé
           return normalizedProductName.includes(normalizedTerm) || 
                  normalizedProductDesc.includes(normalizedTerm);
         });
@@ -103,7 +111,7 @@ const Navbar = () => {
         setShowResults(true);
 
         if (location.pathname === '/') {
-          setSearchParams({ q: term });
+          setSearchParams({ q: sanitizedTerm });
         }
       } catch (error) {
         console.error("Erreur lors de la recherche:", error);
@@ -148,10 +156,10 @@ const Navbar = () => {
     navigate(`/produit/${productId}`);
   };
 
-   const handleCategoryClick = (category: string) => {
-   navigate(`/categorie/${category}`);
-   setCategoriesOpen(false);
-   setIsOpen(false);
+  const handleCategoryClick = (category: string) => {
+    navigate(`/categorie/${category}`);
+    setCategoriesOpen(false);
+    setIsOpen(false);
   };
 
   const renderSearchResults = () => (
@@ -193,31 +201,38 @@ const Navbar = () => {
   );
 
   return (
-    <nav className="border-b py-4">
+    <nav className="border-b py-4" aria-label="Navigation principale">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between">
-        <Link to="/" className="flex items-center">
+        <Link to="/" className="flex items-center" aria-label="Page d'accueil">
             <img 
-              src="/images/logo/logo.png" 
-              alt="Riziky Boutique" 
+              src={logo}  
+              alt= "Riziky Boutique"
+              
               className="h-20 w-auto text-red-600 text-3xl font-bold"
             />
           </Link>
 
           {/* Recherche desktop */}
           <div className="hidden md:flex items-center space-x-4 flex-1 max-w-md mx-8">
-            <div className="relative w-full" ref={searchRef}>
+            <div className="relative w-full" ref={searchRef} role="search">
+              <label htmlFor="search-desktop" className="sr-only">Rechercher des produits</label>
               <Input
-                type="text"
+                id="search-desktop"
+                type="search"
                 placeholder="Rechercher des produits..."
                 className="w-full pl-10"
                 value={searchTerm}
-                onChange={handleSearchChange}
+                onChange={(e) => {
+                  const value = sanitizeInput(e.target.value);
+                  handleSearchChange({ ...e, target: { ...e.target, value } });
+                }}
+                aria-label="Rechercher des produits"
               />
               {isSearching ? (
                 <div className="absolute right-3 top-2.5 h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-brand-blue"></div>
               ) : (
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" aria-hidden="true" />
               )}
               {renderSearchResults()}
             </div>
@@ -447,16 +462,19 @@ const Navbar = () => {
         </div>
 
         {/* Liens catégories - Desktop */}
-        <div className="hidden md:flex mt-4 space-x-4 overflow-x-auto py-2 justify-center">
-          {categories.map((cat) => (
-            <Link
-              key={cat}
-              to={`/categorie/${cat}`}
-              className="text-sm whitespace-nowrap text-red-800 hover:text-red-600 capitalize"
-            >
-              {cat.charAt(0).toUpperCase() + cat.slice(1)}
-            </Link>
-          ))}
+        <div className="hidden md:flex mt-4 space-x-4 overflow-x-auto py-2 justify-center" role="navigation" aria-label="Catégories">
+          <ul className="flex space-x-4">
+            {categories.map((cat) => (
+              <li key={cat}>
+                <Link
+                  to={`/categorie/${cat}`}
+                  className="text-sm whitespace-nowrap text-red-800 hover:text-red-600 capitalize"
+                >
+                  {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
 
         {/* Catégories - Mobile (collapsed by default) */}

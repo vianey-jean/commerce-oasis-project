@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   ShoppingBag,
@@ -12,33 +12,15 @@ import {
   MessageSquare
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Badge } from '@/components/ui/badge';
-import axios from 'axios';
-import { toast } from '@/components/ui/use-toast';
-import _ from 'lodash';
 
 interface AdminLayoutProps {
   children: React.ReactNode;
-}
-
-interface AdminNotifications {
-  messages: number;
-  commandes: number;
-  chat: number;
-  serviceClient: number;
 }
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   const location = useLocation();
   const { user } = useAuth();
   const [isServiceAdmin, setIsServiceAdmin] = useState(false);
-  const [notifications, setNotifications] = useState<AdminNotifications>({
-    messages: 0,
-    commandes: 0,
-    chat: 0,
-    serviceClient: 0
-  });
-  const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
   
   useEffect(() => {
     // Check if the current user is a service client admin
@@ -46,90 +28,20 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       setIsServiceAdmin(true);
     }
   }, [user]);
-
-  // Fonction pour récupérer les notifications avec gestion optimisée des erreurs
-  const fetchNotifications = useCallback(async () => {
-    if (!user || user.role !== 'admin') return;
-    
-    try {
-      const token = localStorage.getItem('authToken');
-      if (!token) return;
-      
-      const response = await axios.get(`${AUTH_BASE_URL}/api/notifcommandes/admin`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      if (response.data) {
-        setNotifications(response.data);
-      }
-    } catch (error) {
-      console.error("Erreur lors de la récupération des notifications:", error);
-      // Silent error
-    }
-  }, [user, AUTH_BASE_URL]);
-  
-  // Mark notifications as read when navigating to that section
-  const markAsRead = useCallback(async (section: string) => {
-    if (!user || user.role !== 'admin') return;
-    
-    try {
-      const token = localStorage.getItem('authToken');
-      if (!token) return;
-      
-      await axios.post(`${AUTH_BASE_URL}/api/notifcommandes/admin/${section}/read`, {}, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-      setNotifications(prev => ({
-        ...prev,
-        [section]: 0
-      }));
-    } catch (error) {
-      console.error(`Erreur lors du marquage des notifications ${section} comme lues:`, error);
-      // Silent error
-    }
-  }, [user, AUTH_BASE_URL]);
-  
-  // Effet pour vérifier les notifications en fonction du pathname
-  useEffect(() => {
-    if (location.pathname === '/admin/messages' && notifications.messages > 0) {
-      markAsRead('messages');
-    } else if (location.pathname === '/admin/commandes' && notifications.commandes > 0) {
-      markAsRead('commandes');
-    } else if (location.pathname === '/admin' && notifications.chat > 0) {
-      markAsRead('chat');
-    } else if (location.pathname === '/admin/service-client' && notifications.serviceClient > 0) {
-      markAsRead('serviceClient');
-    }
-  }, [location.pathname, notifications, markAsRead]);
-  
-  // Effet pour mettre en place une vérification périodique des notifications
-  useEffect(() => {
-    // Vérifier immédiatement
-    fetchNotifications();
-    
-    // Puis vérifier périodiquement
-    const intervalId = setInterval(fetchNotifications, 5000); // Check every 5 seconds
-    
-    return () => clearInterval(intervalId);
-  }, [fetchNotifications]);
   
   const navItems = [
-    { name: 'Produits', path: '/admin/produits', icon: Package, notification: 0 },
-    { name: 'Utilisateurs', path: '/admin/utilisateurs', icon: Users, notification: 0 },
-    { name: 'Messages', path: '/admin/messages', icon: MessageCircle, notification: notifications.messages },
-    { name: 'Commandes', path: '/admin/commandes', icon: Truck, notification: notifications.commandes },
-    { name: 'Chat Admin', path: '/admin', icon: ShoppingBag, notification: notifications.chat },
+    { name: 'Produits', path: '/admin/produits', icon: Package },
+    { name: 'Utilisateurs', path: '/admin/utilisateurs', icon: Users },
+    { name: 'Messages', path: '/admin/messages', icon: MessageCircle },
+    { name: 'Commandes', path: '/admin/commandes', icon: Truck },
+    { name: 'Chat Admin', path: '/admin', icon: ShoppingBag },
     // Conditional item for service client admin
     ...(isServiceAdmin ? [{ 
       name: 'Service Client', 
       path: '/admin/service-client', 
-      icon: MessageSquare,
-      notification: notifications.serviceClient
+      icon: MessageSquare 
     }] : []),
-    { name: 'Paramètres', path: '/admin/parametres', icon: Settings, notification: 0 },
+    { name: 'Paramètres', path: '/admin/parametres', icon: Settings },
   ];
 
   return (
@@ -154,23 +66,18 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           </div>
           
           <nav className="space-y-1">
-            {navItems.map((item, idx) => (
+            {navItems.map((item) => (
               <Link
-                key={`${item.path}-${idx}`}
+                key={item.path}
                 to={item.path}
                 className={`flex items-center px-4 py-3 rounded-lg transition-colors ${
                   location.pathname === item.path
                     ? 'bg-red-800 text-white'
                     : 'text-gray-300 hover:bg-gray-800'
-                } relative`}
+                }`}
               >
                 <item.icon className="h-5 w-5 mr-3" />
-                <span>{item.name}</span>
-                {item.notification > 0 && (
-                  <Badge variant="destructive" className="ml-auto">
-                    {item.notification}
-                  </Badge>
-                )}
+                {item.name}
               </Link>
             ))}
           </nav>

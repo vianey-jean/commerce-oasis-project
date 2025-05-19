@@ -1,4 +1,5 @@
-import React, { useEffect, useCallback } from 'react';
+
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { 
@@ -8,53 +9,25 @@ import {
   SelectTrigger, 
   SelectValue 
 } from '@/components/ui/select';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/components/ui/sonner';
 import { ordersAPI, Order } from '@/services/api';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Check, Package, Truck, ShoppingBag } from 'lucide-react';
 import AdminLayout from './AdminLayout';
-import axios from 'axios';
-import _ from 'lodash';
-import { useAuth } from '@/contexts/AuthContext';
 
 const AdminOrdersPage = () => {
   const queryClient = useQueryClient();
   const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  const { user } = useAuth();
   
   const { data: orders = [], isLoading } = useQuery({
     queryKey: ['admin-orders'],
     queryFn: async () => {
       const response = await ordersAPI.getAll();
       return response.data;
-    },
-    refetchInterval: 10000 // Refetch every 10 seconds
-  });
-
-  // Marquer les notifications de commandes comme lues lorsque la page est chargée
-  const markOrderNotificationsRead = useCallback(async () => {
-    if (!user?.id || user.role !== 'admin') return;
-    
-    try {
-      const token = localStorage.getItem('authToken');
-      if (!token) return;
-      
-      await axios.post(`${AUTH_BASE_URL}/api/notifcommandes/admin/commandes/read`, {}, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
-      });
-    } catch (error) {
-      console.error("Erreur lors du marquage des notifications comme lues:", error);
-      // Silent error - don't show toast for this expected error
     }
-  }, [user, AUTH_BASE_URL]);
-
-  useEffect(() => {
-    markOrderNotificationsRead();
-  }, [markOrderNotificationsRead]);
+  });
 
   const updateOrderStatus = useMutation({
     mutationFn: async ({ orderId, status }: { orderId: string, status: string }) => {
@@ -62,17 +35,10 @@ const AdminOrdersPage = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-orders'] });
-      toast({ 
-        title: "Succès",
-        description: 'Statut de la commande mis à jour' 
-      });
+      toast.success('Statut de la commande mis à jour');
     },
     onError: () => {
-      toast({
-        title: "Erreur",
-        description: 'Erreur lors de la mise à jour du statut',
-        variant: "destructive"
-      });
+      toast.error('Erreur lors de la mise à jour du statut');
     }
   });
 
@@ -129,8 +95,8 @@ const AdminOrdersPage = () => {
                 <div className="mb-4">
                   <h3 className="text-sm font-medium mb-2">Produits:</h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                    {order.items.map((item, idx) => (
-                      <div key={`${item.productId}-${idx}`} className="flex items-center">
+                    {order.items.map((item) => (
+                      <div key={item.productId} className="flex items-center">
                         <div className="w-10 h-10 bg-gray-100 rounded overflow-hidden mr-2">
                           {item.image ? (
                             <img 

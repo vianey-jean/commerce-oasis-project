@@ -20,7 +20,21 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    sourcemap: mode === 'development',
+  },
   define: {
-    global: 'window', // This provides the global object required by simple-peer
+    global: 'window', // Fournit l'objet global requis par simple-peer
+    'process.env': {
+      NODE_ENV: JSON.stringify(mode),
+    },
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      define: {
+        global: 'globalThis',
+      },
+    },
+    include: ['simple-peer'],
   },
 }));
