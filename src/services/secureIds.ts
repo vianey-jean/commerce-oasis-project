@@ -2,8 +2,41 @@
 import { nanoid } from 'nanoid';
 
 // Stockage en mémoire des mappings entre IDs sécurisés et IDs réels
-const secureIdMap = new Map<string, string>();
-const reverseMap = new Map<string, string>();
+// Utilisation du localStorage pour persister les mappings entre les navigations
+const SECURE_ID_MAP_KEY = 'secure_id_map';
+const REVERSE_MAP_KEY = 'reverse_map';
+const STATIC_ROUTES_KEY = 'static_secure_routes';
+
+// Tenter de charger les mappings depuis le localStorage
+let secureIdMap: Map<string, string>;
+let reverseMap: Map<string, string>;
+let staticSecureRoutes: Map<string, string>;
+
+try {
+  const savedSecureIdMap = localStorage.getItem(SECURE_ID_MAP_KEY);
+  const savedReverseMap = localStorage.getItem(REVERSE_MAP_KEY);
+  const savedStaticRoutes = localStorage.getItem(STATIC_ROUTES_KEY);
+  
+  secureIdMap = savedSecureIdMap ? new Map(JSON.parse(savedSecureIdMap)) : new Map<string, string>();
+  reverseMap = savedReverseMap ? new Map(JSON.parse(savedReverseMap)) : new Map<string, string>();
+  staticSecureRoutes = savedStaticRoutes ? new Map(JSON.parse(savedStaticRoutes)) : new Map<string, string>();
+} catch (error) {
+  console.error('Erreur lors du chargement des mappings sécurisés:', error);
+  secureIdMap = new Map<string, string>();
+  reverseMap = new Map<string, string>();
+  staticSecureRoutes = new Map<string, string>();
+}
+
+// Fonction pour sauvegarder les mappings dans localStorage
+const saveMappings = () => {
+  try {
+    localStorage.setItem(SECURE_ID_MAP_KEY, JSON.stringify(Array.from(secureIdMap.entries())));
+    localStorage.setItem(REVERSE_MAP_KEY, JSON.stringify(Array.from(reverseMap.entries())));
+    localStorage.setItem(STATIC_ROUTES_KEY, JSON.stringify(Array.from(staticSecureRoutes.entries())));
+  } catch (error) {
+    console.error('Erreur lors de la sauvegarde des mappings sécurisés:', error);
+  }
+};
 
 // Type d'entité pour identifier les différentes sections sécurisées
 export type EntityType = 'product' | 'admin' | 'profile' | 'orders';
@@ -21,6 +54,9 @@ export const generateSecureId = (realId: string, type: EntityType = 'product'): 
   // Stocker la correspondance dans les maps
   secureIdMap.set(realId, secureId);
   reverseMap.set(secureId, realId);
+  
+  // Sauvegarder les mappings
+  saveMappings();
   
   return secureId;
 };
@@ -42,7 +78,15 @@ export const getRealId = (secureId: string): string | undefined => {
  * @returns L'ID sécurisé
  */
 export const getSecureId = (realId: string, type: EntityType = 'product'): string => {
-  // Toujours générer un nouvel ID sécurisé pour éviter la réutilisation
+  // Vérifier si l'ID réel existe déjà
+  const existingId = secureIdMap.get(realId);
+  
+  // Si l'ID existe et a le bon type, le réutiliser
+  if (existingId && existingId.startsWith(`${type}_`)) {
+    return existingId;
+  }
+  
+  // Sinon, générer un nouvel ID
   return generateSecureId(realId, type);
 };
 
@@ -51,8 +95,28 @@ export const getSecureId = (realId: string, type: EntityType = 'product'): strin
  * À appeler lors de la déconnexion ou du changement de navigation
  */
 export const resetSecureIds = (): void => {
+  // Ne pas réinitialiser les routes statiques pour éviter des problèmes de navigation
+  // Seulement réinitialiser les IDs dynamiques (produits, etc.)
+  const routesToKeep = new Map<string, string>();
+  
+  // Garder les routes statiques
+  staticSecureRoutes.forEach((realRoute, secureRoute) => {
+    routesToKeep.set(secureRoute, realRoute);
+  });
+  
+  // Vider les maps
   secureIdMap.clear();
   reverseMap.clear();
+  
+  // Restaurer les routes statiques dans reverseMap
+  routesToKeep.forEach((realRoute, secureRoute) => {
+    reverseMap.set(secureRoute, realRoute);
+  });
+  
+  // Sauvegarder les changements
+  saveMappings();
+  
+  console.log("IDs sécurisés réinitialisés, routes statiques conservées");
 };
 
 /**
@@ -61,6 +125,7 @@ export const resetSecureIds = (): void => {
  * @returns true si l'ID est valide, false sinon
  */
 export const isValidSecureId = (secureId: string): boolean => {
+  if (!secureId) return false;
   return reverseMap.has(secureId);
 };
 
@@ -76,9 +141,6 @@ export const getEntityType = (secureId: string): EntityType | undefined => {
   
   return parts[0] as EntityType;
 };
-
-// Routes sécurisées statiques (pour les routes sans ID)
-const staticSecureRoutes = new Map<string, string>();
 
 /**
  * Obtient ou génère une route sécurisée pour une route statique
@@ -96,6 +158,9 @@ export const getSecureRoute = (routePath: string): string => {
   staticSecureRoutes.set(routePath, secureRoute);
   reverseMap.set(secureRoute.substring(1), routePath);
   
+  // Sauvegarder les mappings
+  saveMappings();
+  
   return secureRoute;
 };
 
@@ -106,4 +171,39 @@ export const getSecureRoute = (routePath: string): string => {
  */
 export const getRealRoute = (secureRoute: string): string | undefined => {
   return reverseMap.get(secureRoute);
+};
+
+// Initialisation des routes statiques si elles n'existent pas
+export const initSecureRoutes = () => {
+  const routesToInit = [
+    '/admin',
+    '/admin/produits',
+    '/admin/utilisateurs',
+    '/admin/messages',
+    '/admin/parametres', 
+    '/admin/commandes',
+    '/admin/service-client',
+    '/profil',
+    '/commandes',
+    '/panier',
+    '/favoris',
+    '/paiement'
+  ];
+  
+  let hasNewRoutes = false;
+  
+  routesToInit.forEach(route => {
+    if (!staticSecureRoutes.has(route)) {
+      const secureRoute = `/${nanoid(24)}`;
+      staticSecureRoutes.set(route, secureRoute);
+      reverseMap.set(secureRoute.substring(1), route);
+      hasNewRoutes = true;
+    }
+  });
+  
+  if (hasNewRoutes) {
+    saveMappings();
+  }
+  
+  return staticSecureRoutes;
 };

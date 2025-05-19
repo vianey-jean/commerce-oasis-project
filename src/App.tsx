@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import './App.css';
 import { Toaster } from './components/ui/sonner';
@@ -8,42 +7,7 @@ import { StoreProvider } from './contexts/StoreContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import SecureRoute from './components/SecureRoute';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { resetSecureIds, getSecureId, getSecureRoute } from './services/secureIds';
-
-import Index from './pages/Index';
-import LoginPage from './pages/LoginPage';
-import RegisterPage from './pages/RegisterPage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
-import NotFound from './pages/NotFound';
-import ProductDetail from './pages/ProductDetail';
-import CategoryPage from './pages/CategoryPage';
-import CartPage from './pages/CartPage';
-import FavoritesPage from './pages/FavoritesPage';
-import CheckoutPage from './pages/CheckoutPage';
-import ChatPage from './pages/ChatPage';
-import ContactPage from './pages/ContactPage';
-import OrderPage from './pages/OrderPage';
-import OrdersPage from './pages/OrdersPage';
-import ProfilePage from './pages/ProfilePage';
-import DeliveryPage from './pages/DeliveryPage';
-import ReturnsPage from './pages/ReturnsPage';
-import CustomerServicePage from './pages/CustomerServicePage';
-import BlogPage from './pages/BlogPage';
-import CarriersPage from './pages/CarriersPage';
-import HistoryPage from './pages/HistoryPage';
-import TermsPage from './pages/TermsPage';
-import PrivacyPage from './pages/PrivacyPage';
-import CookiesPage from './pages/CookiesPage';
-import FAQPage from './pages/FAQPage';
-
-import AdminLayout from './pages/admin/AdminLayout';
-import AdminProductsPage from './pages/admin/AdminProductsPage';
-import AdminUsersPage from './pages/admin/AdminUsersPage';
-import AdminMessagesPage from './pages/admin/AdminMessagesPage';
-import AdminChatPage from './pages/admin/AdminChatPage';
-import AdminClientChatPage from './pages/admin/AdminClientChatPage';
-import AdminSettingsPage from './pages/admin/AdminSettingsPage';
-import AdminOrdersPage from './pages/admin/AdminOrdersPage';
+import { initSecureRoutes, getSecureRoute } from './services/secureIds';
 
 // Création d'un nouveau QueryClient
 const queryClient = new QueryClient({
@@ -55,30 +19,18 @@ const queryClient = new QueryClient({
   },
 });
 
-// Routes sécurisées avec leurs noms réels
-const secureRoutes = {
-  admin: getSecureRoute('/admin'),
-  adminProducts: getSecureRoute('/admin/produits'),
-  adminUsers: getSecureRoute('/admin/utilisateurs'),
-  adminMessages: getSecureRoute('/admin/messages'),
-  adminSettings: getSecureRoute('/admin/parametres'),
-  adminChat: getSecureRoute('/admin'),
-  adminClientChat: getSecureRoute('/admin/service-client'),
-  adminOrders: getSecureRoute('/admin/commandes'),
-  profile: getSecureRoute('/profil'),
-  orders: getSecureRoute('/commandes'),
-  cart: getSecureRoute('/panier'),
-  favorites: getSecureRoute('/favoris'),
-  checkout: getSecureRoute('/paiement'),
-};
+// Initialiser les routes sécurisées
+const secureRoutes = initSecureRoutes();
 
 function AppRoutes() {
   const location = useLocation();
   
-  // Réinitialiser les IDs sécurisés à chaque changement de route
+  // Ne pas réinitialiser les IDs sécurisés à chaque changement de route
+  // Cela permet de conserver les liens pendant la navigation
   useEffect(() => {
-    resetSecureIds();
-    console.log("IDs sécurisés réinitialisés");
+    // On ne reset plus les IDs pour éviter que les liens ne deviennent invalides
+    // resetSecureIds();
+    console.log("Navigation vers:", location.pathname);
   }, [location.pathname]);
   
   return (
@@ -109,42 +61,42 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
       
-      {/* Routes protégées avec URLs sécurisés */}
-      <Route path={secureRoutes.cart.substring(1)} element={
+      {/* Routes protégées avec URLs sécurisées */}
+      <Route path={secureRoutes.get('/panier')?.substring(1)} element={
         <SecureRoute>
           <ProtectedRoute>
             <CartPage />
           </ProtectedRoute>
         </SecureRoute>
       } />
-      <Route path="/panier" element={<Navigate to={secureRoutes.cart} replace />} />
+      <Route path="/panier" element={<Navigate to={secureRoutes.get('/panier') || '/'} replace />} />
       
-      <Route path={secureRoutes.favorites.substring(1)} element={
+      <Route path={secureRoutes.get('/favoris')?.substring(1)} element={
         <SecureRoute>
           <ProtectedRoute>
             <FavoritesPage />
           </ProtectedRoute>
         </SecureRoute>
       } />
-      <Route path="/favoris" element={<Navigate to={secureRoutes.favorites} replace />} />
+      <Route path="/favoris" element={<Navigate to={secureRoutes.get('/favoris') || '/'} replace />} />
       
-      <Route path={secureRoutes.checkout.substring(1)} element={
+      <Route path={secureRoutes.get('/paiement')?.substring(1)} element={
         <SecureRoute>
           <ProtectedRoute>
             <CheckoutPage />
           </ProtectedRoute>
         </SecureRoute>
       } />
-      <Route path="/paiement" element={<Navigate to={secureRoutes.checkout} replace />} />
+      <Route path="/paiement" element={<Navigate to={secureRoutes.get('/paiement') || '/'} replace />} />
       
-      <Route path={secureRoutes.orders.substring(1)} element={
+      <Route path={secureRoutes.get('/commandes')?.substring(1)} element={
         <SecureRoute>
           <ProtectedRoute>
             <OrdersPage />
           </ProtectedRoute>
         </SecureRoute>
       } />
-      <Route path="/commandes" element={<Navigate to={secureRoutes.orders} replace />} />
+      <Route path="/commandes" element={<Navigate to={secureRoutes.get('/commandes') || '/'} replace />} />
       
       <Route path="/commande/:orderId" element={
         <ProtectedRoute>
@@ -152,78 +104,78 @@ function AppRoutes() {
         </ProtectedRoute>
       } />
       
-      <Route path={secureRoutes.profile.substring(1)} element={
+      <Route path={secureRoutes.get('/profil')?.substring(1)} element={
         <SecureRoute>
           <ProtectedRoute>
             <ProfilePage />
           </ProtectedRoute>
         </SecureRoute>
       } />
-      <Route path="/profil" element={<Navigate to={secureRoutes.profile} replace />} />
+      <Route path="/profil" element={<Navigate to={secureRoutes.get('/profil') || '/'} replace />} />
       
-      {/* Pages Admin avec URLs sécurisés */}
-      <Route path={secureRoutes.adminProducts.substring(1)} element={
+      {/* Pages Admin avec URLs sécurisées */}
+      <Route path={secureRoutes.get('/admin/produits')?.substring(1)} element={
         <SecureRoute>
           <ProtectedRoute requireAdmin>
             <AdminProductsPage />
           </ProtectedRoute>
         </SecureRoute>
       } />
-      <Route path="/admin/produits" element={<Navigate to={secureRoutes.adminProducts} replace />} />
+      <Route path="/admin/produits" element={<Navigate to={secureRoutes.get('/admin/produits') || '/'} replace />} />
       
-      <Route path={secureRoutes.adminUsers.substring(1)} element={
+      <Route path={secureRoutes.get('/admin/utilisateurs')?.substring(1)} element={
         <SecureRoute>
           <ProtectedRoute requireAdmin>
             <AdminUsersPage />
           </ProtectedRoute>
         </SecureRoute>
       } />
-      <Route path="/admin/utilisateurs" element={<Navigate to={secureRoutes.adminUsers} replace />} />
+      <Route path="/admin/utilisateurs" element={<Navigate to={secureRoutes.get('/admin/utilisateurs') || '/'} replace />} />
       
-      <Route path={secureRoutes.adminMessages.substring(1)} element={
+      <Route path={secureRoutes.get('/admin/messages')?.substring(1)} element={
         <SecureRoute>
           <ProtectedRoute requireAdmin>
             <AdminMessagesPage />
           </ProtectedRoute>
         </SecureRoute>
       } />
-      <Route path="/admin/messages" element={<Navigate to={secureRoutes.adminMessages} replace />} />
+      <Route path="/admin/messages" element={<Navigate to={secureRoutes.get('/admin/messages') || '/'} replace />} />
       
-      <Route path={secureRoutes.adminSettings.substring(1)} element={
+      <Route path={secureRoutes.get('/admin/parametres')?.substring(1)} element={
         <SecureRoute>
           <ProtectedRoute requireAdmin>
             <AdminSettingsPage />
           </ProtectedRoute>
         </SecureRoute>
       } />
-      <Route path="/admin/parametres" element={<Navigate to={secureRoutes.adminSettings} replace />} />
+      <Route path="/admin/parametres" element={<Navigate to={secureRoutes.get('/admin/parametres') || '/'} replace />} />
       
-      <Route path={`${secureRoutes.adminChat.substring(1)}/:adminId?`} element={
+      <Route path={`${secureRoutes.get('/admin')?.substring(1)}/:adminId?`} element={
         <SecureRoute>
           <ProtectedRoute requireAdmin>
             <AdminChatPage />
           </ProtectedRoute>
         </SecureRoute>
       } />
-      <Route path="/admin/:adminId?" element={<Navigate to={secureRoutes.adminChat} replace />} />
+      <Route path="/admin/:adminId?" element={<Navigate to={secureRoutes.get('/admin') || '/'} replace />} />
       
-      <Route path={secureRoutes.adminOrders.substring(1)} element={
+      <Route path={secureRoutes.get('/admin/commandes')?.substring(1)} element={
         <SecureRoute>
           <ProtectedRoute requireAdmin>
             <AdminOrdersPage />
           </ProtectedRoute>
         </SecureRoute>
       } />
-      <Route path="/admin/commandes" element={<Navigate to={secureRoutes.adminOrders} replace />} />
+      <Route path="/admin/commandes" element={<Navigate to={secureRoutes.get('/admin/commandes') || '/'} replace />} />
       
-      <Route path={secureRoutes.adminClientChat.substring(1)} element={
+      <Route path={secureRoutes.get('/admin/service-client')?.substring(1)} element={
         <SecureRoute>
           <ProtectedRoute requireAdmin>
             <AdminClientChatPage />
           </ProtectedRoute>
         </SecureRoute>
       } />
-      <Route path="/admin/service-client" element={<Navigate to={secureRoutes.adminClientChat} replace />} />
+      <Route path="/admin/service-client" element={<Navigate to={secureRoutes.get('/admin/service-client') || '/'} replace />} />
       
       {/* Page 404 */}
       <Route path="*" element={<NotFound />} />

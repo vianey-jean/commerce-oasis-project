@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
@@ -17,20 +16,30 @@ const ProductDetail = () => {
   const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
   const PLACEHOLDER_IMAGE = '/placeholder.svg';
   
+  console.log('ProductDetail - Secure ID:', secureProductId);
+  
   // Récupérer l'ID réel à partir de l'ID sécurisé
   const productId = secureProductId ? getRealId(secureProductId) : undefined;
+  
+  console.log('ProductDetail - Real ID:', productId);
+  
   const [product, setProduct] = useState(products.find(p => p.id === productId));
   
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [remainingTime, setRemainingTime] = useState<string>("");
   const [isValidId, setIsValidId] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Valider l'ID sécurisé et rediriger si invalide
   useEffect(() => {
+    setIsLoading(true);
+    
     // Vérifier si l'ID est valide et si c'est bien un produit
     if (secureProductId) {
       const isValid = isValidSecureId(secureProductId);
       const entityType = getEntityType(secureProductId);
+      
+      console.log('ProductDetail - Validation:', { isValid, entityType, productId });
       
       if (!isValid || entityType !== 'product') {
         setIsValidId(false);
@@ -41,14 +50,29 @@ const ProductDetail = () => {
         const foundProduct = products.find(p => p.id === productId);
         if (foundProduct) {
           setProduct(foundProduct);
+          setIsValidId(true);
         } else {
+          console.log('ProductDetail - Produit non trouvé:', productId);
           setIsValidId(false);
           toast.error("Produit introuvable");
           navigate('/not-found', { replace: true });
         }
       }
     }
+    
+    setIsLoading(false);
   }, [secureProductId, productId, products, navigate]);
+
+  // Si le produit est en cours de chargement, afficher un indicateur
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex justify-center items-center h-64">
+          <p className="text-lg">Chargement du produit...</p>
+        </div>
+      </Layout>
+    );
+  }
 
   // Si le produit n'est pas trouvé ou l'ID invalide, afficher un message
   if (!isValidId || !product) {

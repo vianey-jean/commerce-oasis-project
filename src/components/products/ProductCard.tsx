@@ -17,7 +17,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const { addToCart, toggleFavorite, isFavorite } = useStore();
   const isProductFavorite = isFavorite(product.id);
   
-  // Générer un ID sécurisé pour le produit
+  // Générer un ID sécurisé pour le produit (sera persistant grâce aux améliorations)
   const secureId = getSecureId(product.id, 'product');
   
   // Determine which image to display - first image from images array or fallback to image property
