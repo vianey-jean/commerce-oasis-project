@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
@@ -6,7 +7,7 @@ import { useStore } from '@/contexts/StoreContext';
 import { Heart, ShoppingCart } from 'lucide-react';
 import ProductGrid from '@/components/products/ProductGrid';
 import ProductReviews from '@/components/reviews/ProductReviews';
-import { getRealId } from '@/services/secureIds';
+import { getRealId, isValidSecureId, getEntityType } from '@/services/secureIds';
 import { toast } from '@/components/ui/sonner';
 
 const ProductDetail = () => {
@@ -18,18 +19,51 @@ const ProductDetail = () => {
   
   // Récupérer l'ID réel à partir de l'ID sécurisé
   const productId = secureProductId ? getRealId(secureProductId) : undefined;
-  const product = products.find(p => p.id === productId);
+  const [product, setProduct] = useState(products.find(p => p.id === productId));
   
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [remainingTime, setRemainingTime] = useState<string>("");
+  const [isValidId, setIsValidId] = useState(true);
 
-  // Rediriger vers la page 404 si l'ID sécurisé est invalide
+  // Valider l'ID sécurisé et rediriger si invalide
   useEffect(() => {
-    if (secureProductId && !productId) {
-      toast.error("Ce lien n'est plus valide");
-      navigate('/not-found', { replace: true });
+    // Vérifier si l'ID est valide et si c'est bien un produit
+    if (secureProductId) {
+      const isValid = isValidSecureId(secureProductId);
+      const entityType = getEntityType(secureProductId);
+      
+      if (!isValid || entityType !== 'product') {
+        setIsValidId(false);
+        toast.error("Ce lien n'est plus valide");
+        navigate('/not-found', { replace: true });
+      } else {
+        // Trouver le produit correspondant à l'ID réel
+        const foundProduct = products.find(p => p.id === productId);
+        if (foundProduct) {
+          setProduct(foundProduct);
+        } else {
+          setIsValidId(false);
+          toast.error("Produit introuvable");
+          navigate('/not-found', { replace: true });
+        }
+      }
     }
-  }, [secureProductId, productId, navigate]);
+  }, [secureProductId, productId, products, navigate]);
+
+  // Si le produit n'est pas trouvé ou l'ID invalide, afficher un message
+  if (!isValidId || !product) {
+    return (
+      <Layout>
+        <div className="text-center py-20">
+          <h1 className="text-2xl font-bold mb-4">Produit non trouvé</h1>
+          <p className="mb-6">Le produit que vous recherchez n'existe pas ou a été supprimé.</p>
+          <Button asChild>
+            <a href="/">Retour à l'accueil</a>
+          </Button>
+        </div>
+      </Layout>
+    );
+  }
 
   const relatedProducts = products
     .filter(p => p.category === product?.category && p.id !== product?.id)
@@ -61,21 +95,7 @@ const ProductDetail = () => {
     }
   }, [product]);
 
-  if (!product) {
-    return (
-      <Layout>
-        <div className="text-center py-20">
-          <h1 className="text-2xl font-bold mb-4">Produit non trouvé</h1>
-          <p className="mb-6">Le produit que vous recherchez n'existe pas ou a été supprimé.</p>
-          <Button asChild>
-            <a href="/">Retour à l'accueil</a>
-          </Button>
-        </div>
-      </Layout>
-    );
-  }
-
-  const isProductFavorite = isFavorite(product.id);
+  const isProductFavorite = productId ? isFavorite(productId) : false;
   const isPromotionActive = product.promotion && 
     product.promotionEnd && 
     new Date(product.promotionEnd) > new Date();

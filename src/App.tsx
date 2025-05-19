@@ -1,12 +1,14 @@
+
 import React, { useEffect } from 'react';
 import './App.css';
 import { Toaster } from './components/ui/sonner';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { StoreProvider } from './contexts/StoreContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import SecureRoute from './components/SecureRoute';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { resetSecureIds } from './services/secureIds';
+import { resetSecureIds, getSecureId, getSecureRoute } from './services/secureIds';
 
 import Index from './pages/Index';
 import LoginPage from './pages/LoginPage';
@@ -53,12 +55,30 @@ const queryClient = new QueryClient({
   },
 });
 
+// Routes sécurisées avec leurs noms réels
+const secureRoutes = {
+  admin: getSecureRoute('/admin'),
+  adminProducts: getSecureRoute('/admin/produits'),
+  adminUsers: getSecureRoute('/admin/utilisateurs'),
+  adminMessages: getSecureRoute('/admin/messages'),
+  adminSettings: getSecureRoute('/admin/parametres'),
+  adminChat: getSecureRoute('/admin'),
+  adminClientChat: getSecureRoute('/admin/service-client'),
+  adminOrders: getSecureRoute('/admin/commandes'),
+  profile: getSecureRoute('/profil'),
+  orders: getSecureRoute('/commandes'),
+  cart: getSecureRoute('/panier'),
+  favorites: getSecureRoute('/favoris'),
+  checkout: getSecureRoute('/paiement'),
+};
+
 function AppRoutes() {
   const location = useLocation();
   
   // Réinitialiser les IDs sécurisés à chaque changement de route
   useEffect(() => {
     resetSecureIds();
+    console.log("IDs sécurisés réinitialisés");
   }, [location.pathname]);
   
   return (
@@ -84,82 +104,126 @@ function AppRoutes() {
       <Route path="/faq" element={<FAQPage />} />
 
       <Route path="/chat" element={
-            <ProtectedRoute>
-              <ChatPage />
-            </ProtectedRoute>
-          } />
-      <Route path="/panier" element={
-            <ProtectedRoute>
-              <CartPage />
-            </ProtectedRoute>
-          } />
-      <Route path="/favoris" element={
-            <ProtectedRoute>
-              <FavoritesPage />
-            </ProtectedRoute>
-          } />
-      {/* Routes protégées */}
-      <Route path="/paiement" element={
         <ProtectedRoute>
-          <CheckoutPage />
+          <ChatPage />
         </ProtectedRoute>
       } />
-      <Route path="/commandes" element={
-        <ProtectedRoute>
-          <OrdersPage />
-        </ProtectedRoute>
+      
+      {/* Routes protégées avec URLs sécurisés */}
+      <Route path={secureRoutes.cart.substring(1)} element={
+        <SecureRoute>
+          <ProtectedRoute>
+            <CartPage />
+          </ProtectedRoute>
+        </SecureRoute>
       } />
+      <Route path="/panier" element={<Navigate to={secureRoutes.cart} replace />} />
+      
+      <Route path={secureRoutes.favorites.substring(1)} element={
+        <SecureRoute>
+          <ProtectedRoute>
+            <FavoritesPage />
+          </ProtectedRoute>
+        </SecureRoute>
+      } />
+      <Route path="/favoris" element={<Navigate to={secureRoutes.favorites} replace />} />
+      
+      <Route path={secureRoutes.checkout.substring(1)} element={
+        <SecureRoute>
+          <ProtectedRoute>
+            <CheckoutPage />
+          </ProtectedRoute>
+        </SecureRoute>
+      } />
+      <Route path="/paiement" element={<Navigate to={secureRoutes.checkout} replace />} />
+      
+      <Route path={secureRoutes.orders.substring(1)} element={
+        <SecureRoute>
+          <ProtectedRoute>
+            <OrdersPage />
+          </ProtectedRoute>
+        </SecureRoute>
+      } />
+      <Route path="/commandes" element={<Navigate to={secureRoutes.orders} replace />} />
+      
       <Route path="/commande/:orderId" element={
         <ProtectedRoute>
           <OrderPage />
         </ProtectedRoute>
       } />
-      <Route path="/profil" element={
-        <ProtectedRoute>
-          <ProfilePage />
-        </ProtectedRoute>
-      } />
-
       
-      {/* Pages Admin */}
-      <Route path="/admin/produits" element={
-        <ProtectedRoute requireAdmin>
-          <AdminProductsPage />
-        </ProtectedRoute>
+      <Route path={secureRoutes.profile.substring(1)} element={
+        <SecureRoute>
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        </SecureRoute>
       } />
-      <Route path="/admin/utilisateurs" element={
-        <ProtectedRoute requireAdmin>
-          <AdminUsersPage />
-        </ProtectedRoute>
-      } />
-      <Route path="/admin/messages" element={
-        <ProtectedRoute requireAdmin>
-          <AdminMessagesPage />
-        </ProtectedRoute>
-      } />
+      <Route path="/profil" element={<Navigate to={secureRoutes.profile} replace />} />
       
-      <Route path="/admin/parametres" element={
-        <ProtectedRoute requireAdmin>
-          <AdminSettingsPage />
-        </ProtectedRoute>
+      {/* Pages Admin avec URLs sécurisés */}
+      <Route path={secureRoutes.adminProducts.substring(1)} element={
+        <SecureRoute>
+          <ProtectedRoute requireAdmin>
+            <AdminProductsPage />
+          </ProtectedRoute>
+        </SecureRoute>
       } />
+      <Route path="/admin/produits" element={<Navigate to={secureRoutes.adminProducts} replace />} />
       
-      <Route path="/admin/:adminId?" element={
-        <ProtectedRoute requireAdmin>
-          <AdminChatPage />
-        </ProtectedRoute>
+      <Route path={secureRoutes.adminUsers.substring(1)} element={
+        <SecureRoute>
+          <ProtectedRoute requireAdmin>
+            <AdminUsersPage />
+          </ProtectedRoute>
+        </SecureRoute>
       } />
-      <Route path="admin/commandes" element={
-        <ProtectedRoute requireAdmin>
-          <AdminOrdersPage />
-        </ProtectedRoute>
+      <Route path="/admin/utilisateurs" element={<Navigate to={secureRoutes.adminUsers} replace />} />
+      
+      <Route path={secureRoutes.adminMessages.substring(1)} element={
+        <SecureRoute>
+          <ProtectedRoute requireAdmin>
+            <AdminMessagesPage />
+          </ProtectedRoute>
+        </SecureRoute>
       } />
-      <Route path="/admin/service-client" element={
-        <ProtectedRoute requireAdmin>
-          <AdminClientChatPage />
-        </ProtectedRoute>
+      <Route path="/admin/messages" element={<Navigate to={secureRoutes.adminMessages} replace />} />
+      
+      <Route path={secureRoutes.adminSettings.substring(1)} element={
+        <SecureRoute>
+          <ProtectedRoute requireAdmin>
+            <AdminSettingsPage />
+          </ProtectedRoute>
+        </SecureRoute>
       } />
-
+      <Route path="/admin/parametres" element={<Navigate to={secureRoutes.adminSettings} replace />} />
+      
+      <Route path={`${secureRoutes.adminChat.substring(1)}/:adminId?`} element={
+        <SecureRoute>
+          <ProtectedRoute requireAdmin>
+            <AdminChatPage />
+          </ProtectedRoute>
+        </SecureRoute>
+      } />
+      <Route path="/admin/:adminId?" element={<Navigate to={secureRoutes.adminChat} replace />} />
+      
+      <Route path={secureRoutes.adminOrders.substring(1)} element={
+        <SecureRoute>
+          <ProtectedRoute requireAdmin>
+            <AdminOrdersPage />
+          </ProtectedRoute>
+        </SecureRoute>
+      } />
+      <Route path="/admin/commandes" element={<Navigate to={secureRoutes.adminOrders} replace />} />
+      
+      <Route path={secureRoutes.adminClientChat.substring(1)} element={
+        <SecureRoute>
+          <ProtectedRoute requireAdmin>
+            <AdminClientChatPage />
+          </ProtectedRoute>
+        </SecureRoute>
+      } />
+      <Route path="/admin/service-client" element={<Navigate to={secureRoutes.adminClientChat} replace />} />
       
       {/* Page 404 */}
       <Route path="*" element={<NotFound />} />

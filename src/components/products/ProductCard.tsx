@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
@@ -17,7 +18,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   const isProductFavorite = isFavorite(product.id);
   
   // Générer un ID sécurisé pour le produit
-  const secureId = getSecureId(product.id);
+  const secureId = getSecureId(product.id, 'product');
   
   // Determine which image to display - first image from images array or fallback to image property
   const displayImage = product.images && product.images.length > 0 
@@ -103,9 +104,6 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
                   : product.price.toFixed(2)}{' '}
                     €
               </p>
-              {/* <span className="inline-block px-2 py-1 bg-red-100 text-red-800 rounded text-xs font-medium">
-                -{product.promotion}%
-              </span> */}
               <p className="mt-1 font-bold ">{product.price.toFixed(2)} €</p>
             </div>
           ) : (
