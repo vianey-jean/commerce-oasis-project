@@ -66,7 +66,6 @@ function AppRoutes() {
   // Cela permet de conserver les liens pendant la navigation
   useEffect(() => {
     // On ne reset plus les IDs pour éviter que les liens ne deviennent invalides
-    // resetSecureIds();
     console.log("Navigation vers:", location.pathname);
   }, [location.pathname]);
   
@@ -76,7 +75,11 @@ function AppRoutes() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/produit/:productId" element={<ProductDetail />} />
+      
+      {/* Route de détail produit avec l'ID sécurisé directement dans le chemin */}
+      <Route path="/:productId" element={<ProductDetail />} />
+      <Route path="/produit/:productId" element={<Navigate to="/:productId" replace />} />
+      
       <Route path="/categorie/:categoryName" element={<CategoryPage />} />
       
       {/* Pages d'information */}

@@ -10,6 +10,7 @@ import { getSecureId } from '@/services/secureIds';
 interface ProductCardProps {
   product: Product;
 }
+
 const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const PLACEHOLDER_IMAGE = '/placeholder.svg';
 
@@ -61,7 +62,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   return (
     <Card className="overflow-hidden h-full flex flex-col">
       <div className="relative">
-        <Link to={`/produit/${secureId}`} className="overflow-hidden">
+        <Link to={`/${secureId}`} className="overflow-hidden">
           <img 
             src={getImageUrl(displayImage)} 
             alt={`Photo de ${product.name}`} 
@@ -89,7 +90,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
         )}
       </div>
       <CardContent className="p-4 flex flex-col flex-grow">
-        <Link to={`/produit/${secureId}`} className="block">
+        <Link to={`/${secureId}`} className="block">
           <h3 className="font-medium text-lg mb-1 hover:text-brand-blue transition-colors">{product.name}</h3>
         </Link>
         <p className="text-muted-foreground text-sm mb-3 line-clamp-2">{product.description}</p>

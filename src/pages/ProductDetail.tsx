@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
@@ -10,6 +11,7 @@ import { getRealId, isValidSecureId, getEntityType } from '@/services/secureIds'
 import { toast } from '@/components/ui/sonner';
 
 const ProductDetail = () => {
+  // Récupérer le paramètre directement de l'URL
   const { productId: secureProductId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
   const { products, addToCart, toggleFavorite, isFavorite } = useStore();
@@ -23,46 +25,79 @@ const ProductDetail = () => {
   
   console.log('ProductDetail - Real ID:', productId);
   
+  // Définir tous les useState au début du composant
   const [product, setProduct] = useState(products.find(p => p.id === productId));
-  
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [remainingTime, setRemainingTime] = useState<string>("");
   const [isValidId, setIsValidId] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
-
+  
   // Valider l'ID sécurisé et rediriger si invalide
   useEffect(() => {
     setIsLoading(true);
     
-    // Vérifier si l'ID est valide et si c'est bien un produit
-    if (secureProductId) {
-      const isValid = isValidSecureId(secureProductId);
-      const entityType = getEntityType(secureProductId);
-      
-      console.log('ProductDetail - Validation:', { isValid, entityType, productId });
-      
-      if (!isValid || entityType !== 'product') {
-        setIsValidId(false);
-        toast.error("Ce lien n'est plus valide");
-        navigate('/not-found', { replace: true });
+    // Vérifier si l'ID existe
+    if (!secureProductId) {
+      setIsValidId(false);
+      toast.error("Produit non trouvé");
+      navigate('/not-found', { replace: true });
+      return;
+    }
+    
+    // Vérifier si c'est un ID produit valide
+    const isValid = isValidSecureId(secureProductId);
+    const entityType = getEntityType(secureProductId);
+    
+    console.log('ProductDetail - Validation:', { isValid, entityType, productId });
+    
+    if (!isValid) {
+      setIsValidId(false);
+      toast.error("Ce lien n'est plus valide");
+      navigate('/not-found', { replace: true });
+    } else {
+      // Trouver le produit correspondant à l'ID réel
+      const foundProduct = products.find(p => p.id === productId);
+      if (foundProduct) {
+        setProduct(foundProduct);
+        setIsValidId(true);
       } else {
-        // Trouver le produit correspondant à l'ID réel
-        const foundProduct = products.find(p => p.id === productId);
-        if (foundProduct) {
-          setProduct(foundProduct);
-          setIsValidId(true);
-        } else {
-          console.log('ProductDetail - Produit non trouvé:', productId);
-          setIsValidId(false);
-          toast.error("Produit introuvable");
-          navigate('/not-found', { replace: true });
-        }
+        console.log('ProductDetail - Produit non trouvé:', productId);
+        setIsValidId(false);
+        toast.error("Produit introuvable");
+        navigate('/not-found', { replace: true });
       }
     }
     
     setIsLoading(false);
   }, [secureProductId, productId, products, navigate]);
 
+  // Timer pour les promotions
+  useEffect(() => {
+    if (product && product.promotion && product.promotionEnd) {
+      const updateRemainingTime = () => {
+        const end = new Date(product.promotionEnd!);
+        const now = new Date();
+        const diffInMs = end.getTime() - now.getTime();
+        
+        if (diffInMs <= 0) {
+          setRemainingTime("Promotion expirée");
+          return;
+        }
+        
+        const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+        const diffInMins = Math.floor((diffInMs % (1000 * 60 * 60)) / (1000 * 60));
+        const diffInSecs = Math.floor((diffInMs % (1000 * 60)) / 1000);
+        
+        setRemainingTime(`${diffInHours}h ${diffInMins}m ${diffInSecs}s`);
+      };
+      
+      updateRemainingTime();
+      const interval = setInterval(updateRemainingTime, 1000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [product]);
+  
   // Si le produit est en cours de chargement, afficher un indicateur
   if (isLoading) {
     return (
@@ -92,32 +127,6 @@ const ProductDetail = () => {
   const relatedProducts = products
     .filter(p => p.category === product?.category && p.id !== product?.id)
     .slice(0, 4);
-
-  useEffect(() => {
-    if (product && product.promotion && product.promotionEnd) {
-      const updateRemainingTime = () => {
-        const end = new Date(product.promotionEnd!);
-        const now = new Date();
-        const diffInMs = end.getTime() - now.getTime();
-        
-        if (diffInMs <= 0) {
-          setRemainingTime("Promotion expirée");
-          return;
-        }
-        
-        const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
-        const diffInMins = Math.floor((diffInMs % (1000 * 60 * 60)) / (1000 * 60));
-        const diffInSecs = Math.floor((diffInMs % (1000 * 60)) / 1000);
-        
-        setRemainingTime(`${diffInHours}h ${diffInMins}m ${diffInSecs}s`);
-      };
-      
-      updateRemainingTime();
-      const interval = setInterval(updateRemainingTime, 1000);
-      
-      return () => clearInterval(interval);
-    }
-  }, [product]);
 
   const isProductFavorite = productId ? isFavorite(productId) : false;
   const isPromotionActive = product.promotion && 

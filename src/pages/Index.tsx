@@ -137,7 +137,7 @@ const Index = () => {
 
   // Fonction pour générer un ID sécurisé pour chaque produit
   const getProductUrl = (productId: string) => {
-    return `/produit/${getSecureId(productId, 'product')}`;
+    return `/${getSecureId(productId, 'product')}`;
   };
 
   return (
