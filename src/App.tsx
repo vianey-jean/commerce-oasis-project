@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import './App.css';
 import { Toaster } from './components/ui/sonner';
@@ -8,6 +9,42 @@ import ProtectedRoute from './components/ProtectedRoute';
 import SecureRoute from './components/SecureRoute';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { initSecureRoutes, getSecureRoute } from './services/secureIds';
+
+// Page imports
+import Index from './pages/Index';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ProductDetail from './pages/ProductDetail';
+import CategoryPage from './pages/CategoryPage';
+import DeliveryPage from './pages/DeliveryPage';
+import ReturnsPage from './pages/ReturnsPage';
+import CustomerServicePage from './pages/CustomerServicePage';
+import ContactPage from './pages/ContactPage';
+import BlogPage from './pages/BlogPage';
+import CarriersPage from './pages/CarriersPage';
+import HistoryPage from './pages/HistoryPage';
+import TermsPage from './pages/TermsPage';
+import PrivacyPage from './pages/PrivacyPage';
+import CookiesPage from './pages/CookiesPage';
+import FAQPage from './pages/FAQPage';
+import ChatPage from './pages/ChatPage';
+import CartPage from './pages/CartPage';
+import FavoritesPage from './pages/FavoritesPage';
+import CheckoutPage from './pages/CheckoutPage';
+import OrdersPage from './pages/OrdersPage';
+import OrderPage from './pages/OrderPage';
+import ProfilePage from './pages/ProfilePage';
+import NotFound from './pages/NotFound';
+
+// Admin page imports
+import AdminProductsPage from './pages/admin/AdminProductsPage';
+import AdminUsersPage from './pages/admin/AdminUsersPage';
+import AdminMessagesPage from './pages/admin/AdminMessagesPage';
+import AdminSettingsPage from './pages/admin/AdminSettingsPage';
+import AdminChatPage from './pages/admin/AdminChatPage';
+import AdminOrdersPage from './pages/admin/AdminOrdersPage';
+import AdminClientChatPage from './pages/admin/AdminClientChatPage';
 
 // Création d'un nouveau QueryClient
 const queryClient = new QueryClient({
