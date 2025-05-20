@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,12 +37,6 @@ const RegisterPage = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [emailExists, setEmailExists] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const location = useLocation();
-
-  // Vérifier et afficher le chemin de la page pour le débogage
-  useEffect(() => {
-    console.log('Les liens sécurisés aléatoires sont désormais corrigés pour la register :Navigation vers:', location.pathname);
-  }, [location]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
