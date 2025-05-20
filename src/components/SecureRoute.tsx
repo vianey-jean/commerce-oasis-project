@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { getRealRoute, isValidSecureId, getEntityType } from '@/services/secureIds';
+import { getRealRoute, isValidSecureId } from '@/services/secureIds';
 import NotFound from '@/pages/NotFound';
 import { toast } from '@/components/ui/sonner';
 

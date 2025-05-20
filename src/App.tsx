@@ -8,7 +8,7 @@ import { StoreProvider } from './contexts/StoreContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import SecureRoute from './components/SecureRoute';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { initSecureRoutes, getSecureRoute } from './services/secureIds';
+import { initSecureRoutes, getSecureRoute, getRealRoute } from './services/secureIds';
 
 // Page imports
 import Index from './pages/Index';
@@ -62,18 +62,21 @@ const secureRoutes = initSecureRoutes();
 function AppRoutes() {
   const location = useLocation();
   
-  // Ne pas réinitialiser les IDs sécurisés à chaque changement de route
-  // Cela permet de conserver les liens pendant la navigation
+  // Logging pour le débogage
   useEffect(() => {
-    // On ne reset plus les IDs pour éviter que les liens ne deviennent invalides
-    console.log("Navigation vers:", location.pathname);
+    // Pour les routes d'authentification, on affiche explicitement le chemin
+    if (['/login', '/register', '/forgot-password'].includes(location.pathname)) {
+      console.log(`Navigation vers: ${location.pathname} (route d'authentification)`);
+    } else {
+      console.log("Navigation vers:", location.pathname);
+    }
   }, [location.pathname]);
   
   return (
     <Routes>
       <Route path="/" element={<Index />} />
       
-      {/* Routes d'authentification non sécurisées */}
+      {/* Routes d'authentification - visibles publiquement mais toujours sécurisées */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />

@@ -27,6 +27,9 @@ try {
   staticSecureRoutes = new Map<string, string>();
 }
 
+// Liste des routes d'authentification qui doivent rester clairement visibles
+const AUTH_ROUTES = ['/login', '/register', '/forgot-password'];
+
 // Fonction pour sauvegarder les mappings dans localStorage
 const saveMappings = () => {
   try {
@@ -126,6 +129,12 @@ export const resetSecureIds = (): void => {
  */
 export const isValidSecureId = (secureId: string): boolean => {
   if (!secureId) return false;
+  
+  // Les routes d'authentification sont toujours valides
+  if (AUTH_ROUTES.includes(`/${secureId}`)) {
+    return true;
+  }
+  
   return reverseMap.has(secureId);
 };
 
@@ -145,13 +154,12 @@ export const getEntityType = (secureId: string): EntityType | undefined => {
 /**
  * Obtient ou génère une route sécurisée pour une route statique
  * @param routePath Chemin de la route réelle (ex: '/admin/produits')
- * @returns Une route sécurisée (ex: '/admin_xyz123')
+ * @returns Une route sécurisée (ex: '/admin_xyz123') ou la route elle-même pour les routes d'authentification
  */
 export const getSecureRoute = (routePath: string): string => {
-  // Ne pas sécuriser certaines routes publiques
-  const publicRoutes = ['/login', '/register', '/forgot-password'];
-  if (publicRoutes.includes(routePath)) {
-    console.log(`Route publique conservée: ${routePath}`);
+  // Ne pas sécuriser les routes d'authentification
+  if (AUTH_ROUTES.includes(routePath)) {
+    console.log(`Route d'authentification conservée: ${routePath}`);
     return routePath;
   }
   
@@ -177,9 +185,8 @@ export const getSecureRoute = (routePath: string): string => {
  * @returns La route réelle ou undefined si non trouvée
  */
 export const getRealRoute = (secureRoute: string): string | undefined => {
-  // Pour les routes publiques, vérifier directement
-  const publicRoutes = ['login', 'register', 'forgot-password'];
-  if (publicRoutes.includes(secureRoute)) {
+  // Pour les routes d'authentification, retourner directement
+  if (AUTH_ROUTES.includes(`/${secureRoute}`)) {
     return `/${secureRoute}`;
   }
   
@@ -211,10 +218,9 @@ export const initSecureRoutes = () => {
   
   routesToInit.forEach(route => {
     // Conserver les routes d'authentification en clair
-    const publicRoutes = ['/login', '/register', '/forgot-password'];
-    if (publicRoutes.includes(route)) {
+    if (AUTH_ROUTES.includes(route)) {
       console.log(`Route d'authentification conservée en clair: ${route}`);
-      // Pas besoin de générer un ID sécurisé, mais s'assurer que la route est connue
+      // S'assurer que la route est connue dans les mappings, mais sans changement
       if (!staticSecureRoutes.has(route)) {
         staticSecureRoutes.set(route, route);
         reverseMap.set(route.substring(1), route);
