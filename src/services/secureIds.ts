@@ -148,6 +148,13 @@ export const getEntityType = (secureId: string): EntityType | undefined => {
  * @returns Une route sécurisée (ex: '/admin_xyz123')
  */
 export const getSecureRoute = (routePath: string): string => {
+  // Ne pas sécuriser certaines routes publiques
+  const publicRoutes = ['/login', '/register', '/forgot-password'];
+  if (publicRoutes.includes(routePath)) {
+    console.log(`Route publique conservée: ${routePath}`);
+    return routePath;
+  }
+  
   // Si la route existe déjà, la retourner
   if (staticSecureRoutes.has(routePath)) {
     return staticSecureRoutes.get(routePath)!;
@@ -170,6 +177,12 @@ export const getSecureRoute = (routePath: string): string => {
  * @returns La route réelle ou undefined si non trouvée
  */
 export const getRealRoute = (secureRoute: string): string | undefined => {
+  // Pour les routes publiques, vérifier directement
+  const publicRoutes = ['login', 'register', 'forgot-password'];
+  if (publicRoutes.includes(secureRoute)) {
+    return `/${secureRoute}`;
+  }
+  
   return reverseMap.get(secureRoute);
 };
 
@@ -187,12 +200,29 @@ export const initSecureRoutes = () => {
     '/commandes',
     '/panier',
     '/favoris',
-    '/paiement'
+    '/paiement',
+    // Routes d'authentification (non sécurisées)
+    '/login',
+    '/register',
+    '/forgot-password'
   ];
   
   let hasNewRoutes = false;
   
   routesToInit.forEach(route => {
+    // Conserver les routes d'authentification en clair
+    const publicRoutes = ['/login', '/register', '/forgot-password'];
+    if (publicRoutes.includes(route)) {
+      console.log(`Route d'authentification conservée en clair: ${route}`);
+      // Pas besoin de générer un ID sécurisé, mais s'assurer que la route est connue
+      if (!staticSecureRoutes.has(route)) {
+        staticSecureRoutes.set(route, route);
+        reverseMap.set(route.substring(1), route);
+        hasNewRoutes = true;
+      }
+      return;
+    }
+    
     if (!staticSecureRoutes.has(route)) {
       const secureRoute = `/${nanoid(24)}`;
       staticSecureRoutes.set(route, secureRoute);
@@ -203,6 +233,7 @@ export const initSecureRoutes = () => {
   
   if (hasNewRoutes) {
     saveMappings();
+    console.log("Routes initiales créées ou mises à jour, y compris routes d'authentification");
   }
   
   return staticSecureRoutes;

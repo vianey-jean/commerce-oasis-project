@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,6 @@ import { getRealId, isValidSecureId, getEntityType } from '@/services/secureIds'
 import { toast } from '@/components/ui/sonner';
 
 const ProductDetail = () => {
-  // Récupérer le paramètre directement de l'URL
   const { productId: secureProductId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
   const { products, addToCart, toggleFavorite, isFavorite } = useStore();
@@ -20,19 +19,21 @@ const ProductDetail = () => {
   
   console.log('ProductDetail - Secure ID:', secureProductId);
   
-  // Récupérer l'ID réel à partir de l'ID sécurisé
-  const productId = secureProductId ? getRealId(secureProductId) : undefined;
+  // Récupérer l'ID réel à partir de l'ID sécurisé de manière déterministe pour éviter les problèmes de hooks
+  const productId = useMemo(() => {
+    return secureProductId ? getRealId(secureProductId) : undefined;
+  }, [secureProductId]);
   
   console.log('ProductDetail - Real ID:', productId);
   
   // Définir tous les useState au début du composant
-  const [product, setProduct] = useState(products.find(p => p.id === productId));
+  const [product, setProduct] = useState<typeof products[0] | undefined>(undefined);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [remainingTime, setRemainingTime] = useState<string>("");
   const [isValidId, setIsValidId] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   
-  // Valider l'ID sécurisé et rediriger si invalide
+  // Toujours garder le même nombre de hooks dans le même ordre
   useEffect(() => {
     setIsLoading(true);
     
@@ -54,18 +55,20 @@ const ProductDetail = () => {
       setIsValidId(false);
       toast.error("Ce lien n'est plus valide");
       navigate('/not-found', { replace: true });
+      return;
+    }
+
+    // Trouver le produit correspondant à l'ID réel
+    const foundProduct = products.find(p => p.id === productId);
+    if (foundProduct) {
+      setProduct(foundProduct);
+      setIsValidId(true);
     } else {
-      // Trouver le produit correspondant à l'ID réel
-      const foundProduct = products.find(p => p.id === productId);
-      if (foundProduct) {
-        setProduct(foundProduct);
-        setIsValidId(true);
-      } else {
-        console.log('ProductDetail - Produit non trouvé:', productId);
-        setIsValidId(false);
-        toast.error("Produit introuvable");
-        navigate('/not-found', { replace: true });
-      }
+      console.log('ProductDetail - Produit non trouvé:', productId);
+      setIsValidId(false);
+      toast.error("Produit introuvable");
+      navigate('/not-found', { replace: true });
+      return;
     }
     
     setIsLoading(false);
@@ -73,6 +76,8 @@ const ProductDetail = () => {
 
   // Timer pour les promotions
   useEffect(() => {
+    let interval: number | undefined;
+    
     if (product && product.promotion && product.promotionEnd) {
       const updateRemainingTime = () => {
         const end = new Date(product.promotionEnd!);
@@ -81,6 +86,7 @@ const ProductDetail = () => {
         
         if (diffInMs <= 0) {
           setRemainingTime("Promotion expirée");
+          clearInterval(interval as unknown as number);
           return;
         }
         
@@ -92,10 +98,12 @@ const ProductDetail = () => {
       };
       
       updateRemainingTime();
-      const interval = setInterval(updateRemainingTime, 1000);
-      
-      return () => clearInterval(interval);
+      interval = window.setInterval(updateRemainingTime, 1000);
     }
+    
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [product]);
   
   // Si le produit est en cours de chargement, afficher un indicateur

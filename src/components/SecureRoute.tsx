@@ -16,6 +16,14 @@ const SecureRoute: React.FC<SecureRouteProps> = ({ children }) => {
   const [isValidPath, setIsValidPath] = useState<boolean | null>(null);
   
   useEffect(() => {
+    // Routes non sécurisées (publiques)
+    const publicRoutes = ['login', 'register', 'forgot-password'];
+    if (publicRoutes.includes(path)) {
+      console.log('Route publique détectée:', path);
+      setIsValidPath(true);
+      return;
+    }
+    
     // Vérifier si c'est une route sécurisée connue
     const realPath = getRealRoute(path);
     const isValidId = isValidSecureId(path);
@@ -42,7 +50,7 @@ const SecureRoute: React.FC<SecureRouteProps> = ({ children }) => {
     return null;
   }
   
-  // Si la route est sécurisée, afficher le contenu enfant
+  // Si la route est sécurisée ou publique, afficher le contenu enfant
   return <>{children}</>;
 };
 
