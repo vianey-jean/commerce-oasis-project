@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -6,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { flashSaleAPI } from '@/services/flashSaleAPI';
 import { DynamicIcon } from '@/utils/iconLoader';
+import { getSecureRoute } from '@/services/secureIds';
 
 interface TimeLeft {
   days: number;
@@ -146,6 +148,9 @@ const FlashSaleBanner: React.FC = () => {
         const iconName = flashSale.icon || 'Flame';
         const emoji = flashSale.emoji || '🔥';
 
+        // Générer le lien sécurisé pour cette vente flash spécifique
+        const secureFlashSaleRoute = getSecureRoute('/flash-sale');
+
         return (
           <motion.div
             key={flashSale.id}
@@ -187,7 +192,7 @@ const FlashSaleBanner: React.FC = () => {
                       className="bg-white text-gray-900 hover:bg-gray-100 font-bold px-6 py-6 rounded-full shadow-lg hover:shadow-xl transition-all group"
                       asChild
                     >
-                      <Link to={`/flash-sale?index=${index}`}>
+                      <Link to={`${secureFlashSaleRoute}?index=${index}`}>
                         <span>Voir les produits</span>
                         <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                       </Link>
