@@ -1,22 +1,34 @@
 [
   {
-    "id": "ORD-1747507193174",
+    "id": "ORD-1748097370624",
     "userId": "3",
-    "userName": "RABEMANALINA ",
+    "userName": "RABEMANALINA  Jean Marie",
     "userEmail": "vianey.jean@ymail.com",
     "items": [
+      {
+        "productId": "1746760831010",
+        "name": "Perruque 💯 cheveux humain , bouclé coloré, 16 pouces",
+        "price": 112.5,
+        "originalPrice": 150,
+        "quantity": 1,
+        "image": "/uploads/images-1746760831007-189769899.jpg",
+        "subtotal": 112.5
+      },
       {
         "productId": "1746726531059",
         "name": "4 Paquet Tissage 💯cheveux naturelle, 20 pouces",
         "price": 50,
+        "originalPrice": 50,
         "quantity": 1,
         "image": "/uploads/images-1746726531053-828134332.jpg",
         "subtotal": 50
       }
     ],
-    "totalAmount": 50,
+    "totalAmount": 162.5,
+    "originalAmount": 162.5,
+    "discount": 0,
     "shippingAddress": {
-      "nom": "RABEMANALINA ",
+      "nom": "RABEMANALINA",
       "prenom": "Jean Marie",
       "adresse": "21 rue de paris",
       "ville": "Saint-Denis",
@@ -24,9 +36,10 @@
       "pays": "La Réunion",
       "telephone": "0692198701"
     },
-    "paymentMethod": "stripe",
-    "status": "en préparation",
-    "createdAt": "2025-05-17T18:39:53.174Z",
-    "updatedAt": "2025-05-17T18:40:17.789Z"
+    "paymentMethod": "cash",
+    "codePromoUsed": null,
+    "status": "confirmée",
+    "createdAt": "2025-05-24T14:36:10.624Z",
+    "updatedAt": "2025-05-28T03:09:39.555Z"
   }
 ]

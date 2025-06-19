@@ -1,40 +1,33 @@
 
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react-swc";
-import path from "path";
-import { componentTagger } from "lovable-tagger";
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react-swc';
+import path from 'path';
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
-  server: {
-    host: "::",
-    port: 8080,
-  },
-  plugins: [
-    react(),
-    mode === 'development' &&
-    componentTagger(),
-  ].filter(Boolean),
+export default defineConfig({
+  plugins: [react()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      '@': path.resolve(__dirname, './src'),
+      '@emoji-mart/data': path.resolve(__dirname, 'node_modules/@emoji-mart/data'),
+      '@emoji-mart/react': path.resolve(__dirname, 'node_modules/@emoji-mart/react')
     },
   },
   build: {
-    sourcemap: mode === 'development',
-  },
-  define: {
-    global: 'window', // Fournit l'objet global requis par simple-peer
-    'process.env': {
-      NODE_ENV: JSON.stringify(mode),
-    },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'emoji-mart': ['@emoji-mart/data', '@emoji-mart/react', 'emoji-mart'],
+          'three': ['three']
+        }
+      },
+      external: []
+    }
   },
   optimizeDeps: {
-    esbuildOptions: {
-      define: {
-        global: 'globalThis',
-      },
-    },
-    include: ['simple-peer'],
+    include: ['three', '@emoji-mart/data', '@emoji-mart/react', 'emoji-mart']
   },
-}));
+  server: {
+    port: 8080,
+  },
+});

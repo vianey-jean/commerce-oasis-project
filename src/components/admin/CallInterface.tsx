@@ -4,6 +4,7 @@ import { useVideoCall } from '@/contexts/VideoCallContext';
 import { PhoneOff, Mic, MicOff, Video as VideoIcon, VideoOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { toast } from '@/components/ui/sonner';
 
 const CallInterface = () => {
   const { callState, localStream, remoteStream, endCall } = useVideoCall();
@@ -11,21 +12,32 @@ const CallInterface = () => {
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const [micEnabled, setMicEnabled] = useState(true);
   const [cameraEnabled, setCameraEnabled] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(true); // To fix accessibility warning
+  const [dialogOpen, setDialogOpen] = useState(true);
   
   // Set up local and remote streams
   useEffect(() => {
-    console.log('Call interface - localStream:', !!localStream, 'remoteStream:', !remoteStream);
+    console.log('Call interface - localStream:', !!localStream, 'remoteStream:', !!remoteStream);
     
+    // Gérer le flux vidéo local
     if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream;
+      try {
+        localVideoRef.current.srcObject = localStream;
+      } catch (error) {
+        console.error('Error setting local video source:', error);
+      }
     }
     
+    // Gérer le flux vidéo distant
     if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream;
+      try {
+        remoteVideoRef.current.srcObject = remoteStream;
+      } catch (error) {
+        console.error('Error setting remote video source:', error);
+      }
     }
   }, [localStream, remoteStream]);
   
+  // Gestion du microphone
   const toggleMic = () => {
     if (localStream) {
       const audioTracks = localStream.getAudioTracks();
@@ -38,6 +50,7 @@ const CallInterface = () => {
     }
   };
   
+  // Gestion de la caméra
   const toggleCamera = () => {
     if (localStream && callState.isVideo) {
       const videoTracks = localStream.getVideoTracks();
@@ -50,18 +63,41 @@ const CallInterface = () => {
     }
   };
   
-  // Handle call end
+  // Gestion de la fin d'appel
   const handleEndCall = () => {
-    endCall();
-    setDialogOpen(false);
+    try {
+      endCall();
+      setDialogOpen(false);
+      toast.success('Appel terminé');
+    } catch (error) {
+      console.error('Error ending call:', error);
+      toast.error('Erreur lors de la fermeture de l\'appel');
+      
+      // Forcer la fermeture de l'interface en cas d'erreur
+      setDialogOpen(false);
+    }
   };
+  
+  // Force cleanup on unmount
+  useEffect(() => {
+    return () => {
+      try {
+        endCall();
+      } catch (error) {
+        console.error('Error during cleanup:', error);
+      }
+    };
+  }, [endCall]);
   
   if (!callState.isInCall) return null;
   
   // Use Dialog for accessibility
   return (
-    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-      <DialogContent className="p-0 max-w-full w-full h-full max-h-screen sm:max-w-full sm:rounded-none">
+    <Dialog open={dialogOpen} onOpenChange={(open) => {
+      if (!open) handleEndCall();
+      setDialogOpen(open);
+    }}>
+      <DialogContent className="p-0 max-w-full w-full h-full max-h-screen sm:max-w-full sm:rounded-none" onInteractOutside={(e) => e.preventDefault()}>
         <DialogTitle className="sr-only">Appel en cours</DialogTitle>
         <DialogDescription className="sr-only">
           Interface d'appel {callState.isVideo ? "vidéo" : "audio"} avec contrôles
@@ -100,7 +136,7 @@ const CallInterface = () => {
             
             {/* Local Video (Picture-in-Picture) */}
             {callState.isVideo && localStream && (
-              <div className="absolute bottom-4 right-4 w-48 h-auto border-2 border-white rounded-lg overflow-hidden">
+              <div className="absolute bottom-4 right-4 w-48 h-auto border-2 border-white rounded-lg overflow-hidden shadow-lg">
                 <video 
                   ref={localVideoRef} 
                   autoPlay 

@@ -3,220 +3,211 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import ProductGrid from '@/components/products/ProductGrid';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Slider } from '@/components/ui/slider';
+import HeroSection from '@/components/layout/HeroSection';
+import DesktopFilters from '@/components/filters/DesktopFilters';
+import FilterBadges from '@/components/filters/FilterBadges';
+import ProductsPageHeader from '@/components/products/ProductsPageHeader';
+import PageDataLoader from '@/components/layout/PageDataLoader';
 import { Product } from '@/contexts/StoreContext';
 import { productsAPI } from '@/services/api';
 import { toast } from '@/components/ui/sonner';
+import { Button } from '@/components/ui/button';
+import { ShoppingBag, TrendingUp, Sparkles } from 'lucide-react';
+import { useProductFilters } from '@/hooks/useProductFilters';
+import { getRealCategoryName } from '@/services/secureCategories';
 
 const CategoryPage = () => {
-  const { categoryName } = useParams<{ categoryName: string }>();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 200]);
-  const [sortOption, setSortOption] = useState('default');
+  const { categoryName: secureCategoryId } = useParams<{ categoryName: string }>();
   const [products, setProducts] = useState<Product[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
-  const [sortedProducts, setSortedProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [showInStock, setShowInStock] = useState(true);
-  const [showOutOfStock, setShowOutOfStock] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
-  // Convertir le nom de catégorie de l'URL en format lisible
-  const categoryTitle = categoryName ? categoryName.charAt(0).toUpperCase() + categoryName.slice(1) : '';
+  // Obtenir le nom réel de la catégorie depuis l'ID sécurisé
+  const realCategoryName = secureCategoryId ? getRealCategoryName(secureCategoryId) || secureCategoryId : '';
+  const categoryTitle = realCategoryName ? realCategoryName.charAt(0).toUpperCase() + realCategoryName.slice(1) : '';
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      setIsLoading(true);
-      try {
-        const response = await productsAPI.getAll();
-        
-        if (!response.data || !Array.isArray(response.data)) {
-          throw new Error('Format de données incorrect');
-        }
-        
-        const allProducts = response.data;
-        setProducts(allProducts);
-        
-        // Filtrer par catégorie - on compare en ignorant la casse
-        const categoryProducts = allProducts.filter((product: Product) => 
-          product.category.toLowerCase() === categoryName?.toLowerCase()
-        );
-        
-        console.log(`Catégorie: ${categoryName}, Produits trouvés: ${categoryProducts.length}`);
-        
-        setFilteredProducts(categoryProducts);
-        setSortedProducts(categoryProducts);
-      } catch (error) {
-        console.error("Erreur lors du chargement des produits:", error);
-        toast.error("Impossible de charger les produits");
-        setFilteredProducts([]);
-        setSortedProducts([]);
-      } finally {
-        setIsLoading(false);
+  const {
+    searchTerm,
+    setSearchTerm,
+    priceRange,
+    setPriceRange,
+    maxPrice,
+    sortOption,
+    setSortOption,
+    sortedProducts,
+    showInStock,
+    setShowInStock,
+    showOutOfStock,
+    setShowOutOfStock,
+    showPromoOnly,
+    setShowPromoOnly,
+    activeFilters,
+    resetFilters,
+    getFilterBadges
+  } = useProductFilters({ 
+    products, 
+    categoryFilter: realCategoryName 
+  });
+
+  const fetchCategoryProducts = async () => {
+    try {
+      const response = await productsAPI.getAll();
+      
+      if (!response.data || !Array.isArray(response.data)) {
+        throw new Error('Format de données incorrect');
       }
-    };
-    
-    fetchProducts();
-  }, [categoryName]);
-
-  // Appliquer les filtres
-  useEffect(() => {
-    let result = [...filteredProducts];
-    
-    // Filtre de recherche
-    if (searchTerm) {
-      result = result.filter(product => 
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.description.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      
+      return response.data;
+    } catch (error) {
+      console.error("Erreur lors du chargement des produits:", error);
+      toast.error("Impossible de charger les produits");
+      throw error;
     }
-    
-    // Filtre de prix
-    result = result.filter(product => 
-      product.price >= priceRange[0] && product.price <= priceRange[1]
-    );
-    
-    // Filtre de disponibilité
-    result = result.filter(product => 
-      (showInStock && product.isSold) || (showOutOfStock && !product.isSold)
-    );
-    
-    // Tri
-    switch (sortOption) {
-      case 'price-asc':
-        result = [...result].sort((a, b) => a.price - b.price);
-        break;
-      case 'price-desc':
-        result = [...result].sort((a, b) => b.price - a.price);
-        break;
-      case 'name-asc':
-        result = [...result].sort((a, b) => a.name.localeCompare(b.name));
-        break;
-      case 'name-desc':
-        result = [...result].sort((a, b) => b.name.localeCompare(a.name));
-        break;
-      default:
-        // Par défaut, pas de tri particulier
-        break;
-    }
-    
-    setSortedProducts(result);
-  }, [filteredProducts, searchTerm, priceRange, sortOption, showInStock, showOutOfStock]);
+  };
 
-  const resetFilters = () => {
-    setSearchTerm('');
-    setPriceRange([0, 200]);
-    setSortOption('default');
-    setShowInStock(true);
-    setShowOutOfStock(false);
+  const handleDataSuccess = (data: Product[]) => {
+    setProducts(data);
+    setIsLoading(false);
+  };
+
+  const handleMaxRetriesReached = () => {
+    setProducts([]);
+    setIsLoading(false);
+  };
+
+  const mobileFiltersProps = {
+    filtersOpen,
+    setFiltersOpen,
+    activeFilters,
+    searchTerm,
+    setSearchTerm,
+    priceRange,
+    setPriceRange,
+    maxPrice,
+    showInStock,
+    setShowInStock,
+    showOutOfStock,
+    setShowOutOfStock,
+    showPromoOnly,
+    setShowPromoOnly,
+    resetFilters
   };
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-2 text-red-800">{categoryTitle}</h1>
-        <p className="text-muted-foreground mb-6">
-          {sortedProducts.length} produits trouvés
-        </p>
-        
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-          {/* Filters */}
-          <div className="space-y-6">
-            <div className="mb-4">
-              <h2 className="font-medium mb-2">Rechercher</h2>
-              <Input
-                placeholder="Rechercher..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            
-            <Accordion type="single" collapsible defaultValue="price">
-              <AccordionItem value="price">
-                <AccordionTrigger>Prix</AccordionTrigger>
-                <AccordionContent>
-                  <div className="pt-4">
-                    <Slider
-                      value={priceRange}
-                      min={0}
-                      max={200}
-                      step={10}
-                      onValueChange={(value) => setPriceRange(value as [number, number])}
-                    />
-                    <div className="flex justify-between mt-2 text-sm">
-                      <span>{priceRange[0]} €</span>
-                      <span>{priceRange[1]} €</span>
-                    </div>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-              
-              <AccordionItem value="availability">
-                <AccordionTrigger>Disponibilité</AccordionTrigger>
-                <AccordionContent>
-                  <div className="space-y-2">
-                    <div className="flex items-center">
-                      <input 
-                        type="checkbox" 
-                        id="in-stock" 
-                        className="mr-2" 
-                        checked={showInStock}
-                        onChange={(e) => setShowInStock(e.target.checked)}
-                      />
-                      <label htmlFor="in-stock">En stock</label>
-                    </div>
-                    <div className="flex items-center">
-                      <input 
-                        type="checkbox" 
-                        id="out-of-stock" 
-                        className="mr-2" 
-                        checked={showOutOfStock}
-                        onChange={(e) => setShowOutOfStock(e.target.checked)}
-                      />
-                      <label htmlFor="out-of-stock">Rupture de stock</label>
-                    </div>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-            
-            <div>
-              <Button variant="outline" className="w-full" onClick={resetFilters}>
-                Réinitialiser les filtres
-              </Button>
-            </div>
-          </div>
-          
-          {/* Products */}
-          <div className="md:col-span-3">
-            <div className="flex justify-between mb-6">
-              <Select value={sortOption} onValueChange={setSortOption}>
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Trier par..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="default">Pertinence</SelectItem>
-                  <SelectItem value="price-asc">Prix: Croissant</SelectItem>
-                  <SelectItem value="price-desc">Prix: Décroissant</SelectItem>
-                  <SelectItem value="name-asc">Nom: A à Z</SelectItem>
-                  <SelectItem value="name-desc">Nom: Z à A</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            {isLoading ? (
-              <div className="text-center py-10">Chargement des produits...</div>
-            ) : sortedProducts.length > 0 ? (
-              <ProductGrid products={sortedProducts} />
-            ) : (
-              <div className="text-center py-10 bg-gray-50 rounded-lg">
-                <p className="text-muted-foreground">Aucun produit trouvé pour cette catégorie</p>
+      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-50 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950">
+        {/* Hero Section avec design moderne */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-red-500/10 via-rose-500/10 to-pink-500/10 dark:from-red-500/5 dark:via-rose-500/5 dark:to-pink-500/5">
+          <div className="absolute inset-0 bg-grid-neutral-100/50 dark:bg-grid-neutral-800/50" />
+          <div className="container mx-auto px-4 py-16 relative">
+            <div className="text-center max-w-4xl mx-auto">
+              <div className="flex items-center justify-center mb-6">
+                <div className="bg-gradient-to-r from-red-500 to-rose-500 p-3 rounded-2xl shadow-lg">
+                  <TrendingUp className="h-8 w-8 text-white" />
+                </div>
               </div>
-            )}
+              
+              <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 bg-clip-text text-transparent mb-6">
+                {categoryTitle}
+              </h1>
+              
+              <p className="text-lg md:text-xl text-neutral-600 dark:text-neutral-300 mb-8 leading-relaxed">
+                Découvrez notre sélection de {categoryTitle.toLowerCase()} de qualité premium. 
+                Des produits soigneusement choisis pour sublimer votre beauté naturelle.
+              </p>
+              
+              <div className="flex items-center justify-center space-x-8 text-sm text-neutral-500 dark:text-neutral-400">
+                <div className="flex items-center space-x-2">
+                  <Sparkles className="h-5 w-5 text-red-500" />
+                  <span>Qualité Premium</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <ShoppingBag className="h-5 w-5 text-rose-500" />
+                  <span>Livraison Rapide</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <TrendingUp className="h-5 w-5 text-pink-500" />
+                  <span>Tendances Actuelles</span>
+                </div>
+              </div>
+            </div>
           </div>
+        </div>
+
+        <div className="container mx-auto px-4 py-8">
+          <PageDataLoader
+            fetchFunction={fetchCategoryProducts}
+            onSuccess={handleDataSuccess}
+            onMaxRetriesReached={handleMaxRetriesReached}
+            loadingMessage={`Chargement des ${categoryTitle.toLowerCase()}...`}
+            loadingSubmessage="Récupération de notre sélection premium..."
+            errorMessage={`Erreur de chargement des ${categoryTitle.toLowerCase()}`}
+          >
+            <ProductsPageHeader
+              title={categoryTitle}
+              productCount={sortedProducts.length}
+              sortOption={sortOption}
+              setSortOption={setSortOption}
+              mobileFiltersProps={mobileFiltersProps}
+            />
+            
+            <FilterBadges 
+              badges={getFilterBadges()} 
+              onClearAll={resetFilters}
+            />
+            
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+              <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-800 p-6">
+                <DesktopFilters
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
+                  priceRange={priceRange}
+                  setPriceRange={setPriceRange}
+                  maxPrice={maxPrice}
+                  showInStock={showInStock}
+                  setShowInStock={setShowInStock}
+                  showOutOfStock={showOutOfStock}
+                  setShowOutOfStock={setShowOutOfStock}
+                  showPromoOnly={showPromoOnly}
+                  setShowPromoOnly={setShowPromoOnly}
+                  resetFilters={resetFilters}
+                />
+              </div>
+              
+              <div className="md:col-span-3">
+                {isLoading ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {[...Array(6)].map((_, i) => (
+                      <div key={i} className="border rounded-xl p-4 h-[300px] animate-pulse bg-white dark:bg-neutral-900">
+                        <div className="w-full h-40 bg-gradient-to-r from-neutral-200 to-neutral-300 dark:from-neutral-700 dark:to-neutral-600 rounded-lg mb-4"></div>
+                        <div className="h-4 bg-gradient-to-r from-neutral-200 to-neutral-300 dark:from-neutral-700 dark:to-neutral-600 rounded w-3/4 mb-2"></div>
+                        <div className="h-4 bg-gradient-to-r from-neutral-200 to-neutral-300 dark:from-neutral-700 dark:to-neutral-600 rounded w-1/2"></div>
+                      </div>
+                    ))}
+                  </div>
+                ) : sortedProducts.length > 0 ? (
+                  <ProductGrid products={sortedProducts} />
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-16 px-6 bg-gradient-to-br from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800 rounded-xl text-center border border-neutral-200 dark:border-neutral-700">
+                    <div className="bg-gradient-to-r from-red-500 to-rose-500 p-4 rounded-full mb-6">
+                      <ShoppingBag className="h-12 w-12 text-white" />
+                    </div>
+                    <h2 className="text-2xl font-bold mb-3 text-neutral-900 dark:text-neutral-100">Aucun produit trouvé</h2>
+                    <p className="text-neutral-600 dark:text-neutral-400 mb-6 max-w-md">
+                      Nous n'avons trouvé aucun produit correspondant à vos critères de recherche. 
+                      Essayez d'ajuster vos filtres ou de parcourir d'autres catégories.
+                    </p>
+                    <Button 
+                      onClick={resetFilters}
+                      className="bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white shadow-lg"
+                    >
+                      Réinitialiser tous les filtres
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </PageDataLoader>
         </div>
       </div>
     </Layout>

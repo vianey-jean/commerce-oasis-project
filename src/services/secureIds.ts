@@ -27,9 +27,6 @@ try {
   staticSecureRoutes = new Map<string, string>();
 }
 
-// Liste des routes d'authentification qui doivent rester clairement visibles
-const AUTH_ROUTES = ['/login', '/register', '/forgot-password'];
-
 // Fonction pour sauvegarder les mappings dans localStorage
 const saveMappings = () => {
   try {
@@ -42,7 +39,7 @@ const saveMappings = () => {
 };
 
 // Type d'entité pour identifier les différentes sections sécurisées
-export type EntityType = 'product' | 'admin' | 'profile' | 'orders';
+export type EntityType = 'product' | 'admin' | 'profile' | 'orders' | 'order';
 
 /**
  * Génère un ID sécurisé pour un ID réel donné
@@ -51,6 +48,20 @@ export type EntityType = 'product' | 'admin' | 'profile' | 'orders';
  * @returns Un ID sécurisé unique
  */
 export const generateSecureId = (realId: string, type: EntityType = 'product'): string => {
+  // Pour les commandes, générer un ID complètement aléatoire sans préfixe
+  if (type === 'order') {
+    const secureId = nanoid(32);
+    
+    // Stocker la correspondance dans les maps
+    secureIdMap.set(realId, secureId);
+    reverseMap.set(secureId, realId);
+    
+    // Sauvegarder les mappings
+    saveMappings();
+    
+    return secureId;
+  }
+  
   // Générer un ID sécurisé aléatoire avec un préfixe pour le type
   const secureId = `${type}_${nanoid(16)}_${Date.now().toString(36)}`;
   
@@ -84,6 +95,11 @@ export const getSecureId = (realId: string, type: EntityType = 'product'): strin
   // Vérifier si l'ID réel existe déjà
   const existingId = secureIdMap.get(realId);
   
+  // Pour les commandes, toujours vérifier que l'ID existant est bien de type order
+  if (type === 'order' && existingId && !existingId.includes('_')) {
+    return existingId;
+  }
+  
   // Si l'ID existe et a le bon type, le réutiliser
   if (existingId && existingId.startsWith(`${type}_`)) {
     return existingId;
@@ -91,6 +107,25 @@ export const getSecureId = (realId: string, type: EntityType = 'product'): strin
   
   // Sinon, générer un nouvel ID
   return generateSecureId(realId, type);
+};
+
+/**
+ * Obtient un ID sécurisé spécifiquement pour un produit
+ * @param productId L'ID du produit
+ * @param type Type d'entité (par défaut 'product')
+ * @returns L'ID sécurisé du produit
+ */
+export const getSecureProductId = (productId: string, type: EntityType = 'product'): string => {
+  return getSecureId(productId, type);
+};
+
+/**
+ * Obtient un ID sécurisé spécifiquement pour une commande
+ * @param orderId L'ID de la commande
+ * @returns L'ID sécurisé de la commande
+ */
+export const getSecureOrderId = (orderId: string): string => {
+  return getSecureId(orderId, 'order');
 };
 
 /**
@@ -129,12 +164,6 @@ export const resetSecureIds = (): void => {
  */
 export const isValidSecureId = (secureId: string): boolean => {
   if (!secureId) return false;
-  
-  // Les routes d'authentification sont toujours valides
-  if (AUTH_ROUTES.includes(`/${secureId}`)) {
-    return true;
-  }
-  
   return reverseMap.has(secureId);
 };
 
@@ -154,15 +183,9 @@ export const getEntityType = (secureId: string): EntityType | undefined => {
 /**
  * Obtient ou génère une route sécurisée pour une route statique
  * @param routePath Chemin de la route réelle (ex: '/admin/produits')
- * @returns Une route sécurisée (ex: '/admin_xyz123') ou la route elle-même pour les routes d'authentification
+ * @returns Une route sécurisée (ex: '/admin_xyz123')
  */
 export const getSecureRoute = (routePath: string): string => {
-  // Ne pas sécuriser les routes d'authentification
-  if (AUTH_ROUTES.includes(routePath)) {
-    console.log(`Route d'authentification conservée: ${routePath}`);
-    return routePath;
-  }
-  
   // Si la route existe déjà, la retourner
   if (staticSecureRoutes.has(routePath)) {
     return staticSecureRoutes.get(routePath)!;
@@ -185,11 +208,6 @@ export const getSecureRoute = (routePath: string): string => {
  * @returns La route réelle ou undefined si non trouvée
  */
 export const getRealRoute = (secureRoute: string): string | undefined => {
-  // Pour les routes d'authentification, retourner directement
-  if (AUTH_ROUTES.includes(`/${secureRoute}`)) {
-    return `/${secureRoute}`;
-  }
-  
   return reverseMap.get(secureRoute);
 };
 
@@ -203,32 +221,35 @@ export const initSecureRoutes = () => {
     '/admin/parametres', 
     '/admin/commandes',
     '/admin/service-client',
+    '/admin/pub-layout',
+    '/admin/remboursements',
+    '/admin/flash-sales',
+    '/admin/categories',
+    '/admin/code-promos',
+    '/flash-sale/:id',
     '/profil',
     '/commandes',
     '/panier',
     '/favoris',
     '/paiement',
-    // Routes d'authentification (non sécurisées)
+    '/commande/:orderId',
+    // Ajout des routes d'authentification
     '/login',
     '/register',
-    '/forgot-password'
+    '/forgot-password',
+    // Ajout de la route tous-les-produits
+    '/tous-les-produits',
+    // Ajout des nouvelles routes
+    '/promotions',
+    '/nouveautes',
+    '/populaires',
+    // Ajout de la route maintenance-login sécurisée
+    '/maintenance-login'
   ];
   
   let hasNewRoutes = false;
   
   routesToInit.forEach(route => {
-    // Conserver les routes d'authentification en clair
-    if (AUTH_ROUTES.includes(route)) {
-      console.log(`Route d'authentification conservée en clair: ${route}`);
-      // S'assurer que la route est connue dans les mappings, mais sans changement
-      if (!staticSecureRoutes.has(route)) {
-        staticSecureRoutes.set(route, route);
-        reverseMap.set(route.substring(1), route);
-        hasNewRoutes = true;
-      }
-      return;
-    }
-    
     if (!staticSecureRoutes.has(route)) {
       const secureRoute = `/${nanoid(24)}`;
       staticSecureRoutes.set(route, secureRoute);
@@ -239,7 +260,6 @@ export const initSecureRoutes = () => {
   
   if (hasNewRoutes) {
     saveMappings();
-    console.log("Routes initiales créées ou mises à jour, y compris routes d'authentification");
   }
   
   return staticSecureRoutes;

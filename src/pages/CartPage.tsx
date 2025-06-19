@@ -1,29 +1,52 @@
+
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import { useStore } from '@/contexts/StoreContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
-
-// 🔁 URL de base récupérée depuis le .env
-const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import PageDataLoader from '@/components/layout/PageDataLoader';
+import CartSummary from '@/components/cart/CartSummary';
+import CartItemCard from '@/components/cart/CartItemCard';
+import EmptyCartMessage from '@/components/cart/EmptyCartMessage';
+import { ShoppingCart, Sparkles, Shield, TrendingUp } from 'lucide-react';
 
 const CartPage = () => {
-  const { cart, updateQuantity, removeFromCart, getCartTotal, loadingCart, setSelectedCartItems } = useStore();
+  const { 
+    cart, 
+    updateQuantity, 
+    removeFromCart, 
+    loadingCart, 
+    setSelectedCartItems 
+  } = useStore();
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const [selectedItems, setSelectedItems] = useState<Record<string, boolean>>({});
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   useEffect(() => {
-    const initialSelection = cart.reduce((acc, item) => {
-      acc[item.product.id] = true;
-      return acc;
-    }, {} as Record<string, boolean>);
-    setSelectedItems(initialSelection);
+    if (cart && cart.length > 0) {
+      const initialSelection = cart.reduce((acc, item) => {
+        acc[item.product.id] = true;
+        return acc;
+      }, {} as Record<string, boolean>);
+      setSelectedItems(initialSelection);
+    }
   }, [cart]);
+
+  const loadCartData = async () => {
+    // Simuler le chargement du panier
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return cart;
+  };
+
+  const handleDataSuccess = () => {
+    setDataLoaded(true);
+  };
+
+  const handleMaxRetriesReached = () => {
+    setDataLoaded(true);
+  };
 
   const handleQuantityChange = (productId: string, newQuantity: number) => {
     if (newQuantity >= 1) {
@@ -38,188 +61,144 @@ const CartPage = () => {
     }));
   };
 
-  const getSelectedTotal = () => {
-    return cart
-      .filter(item => selectedItems[item.product.id])
-      .reduce((total, item) => total + (item.product.price * item.quantity), 0);
-  };
-
   const handleCheckout = () => {
     const selectedProducts = cart.filter(item => selectedItems[item.product.id]);
     setSelectedCartItems(selectedProducts);
     navigate('/paiement');
   };
 
-  if (loadingCart) {
-    return (
-      <Layout>
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold mb-6">Votre Panier</h1>
-          <div className="text-center py-10">Chargement de votre panier...</div>
-        </div>
-      </Layout>
-    );
-  }
-
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold mb-6">Votre Panier</h1>
-
-        {!isAuthenticated ? (
-          <div className="text-center py-12 border rounded-lg bg-gray-50">
-            <div className="mb-4">
-              <ShoppingBag className="h-12 w-12 mx-auto text-muted-foreground" />
-            </div>
-            <h2 className="text-xl font-medium mb-2">Connectez-vous pour voir votre panier</h2>
-            <p className="text-muted-foreground mb-6">Vous devez être connecté pour accéder à votre panier</p>
-            <Button asChild>
-              <Link to="/login">Se connecter</Link>
-            </Button>
-          </div>
-        ) : cart.length > 0 ? (
-          <>
-            <div className="mb-8">
-              {cart.map((item) => (
-                <div key={item.product.id} className="flex flex-col sm:flex-row border-b py-4">
-                  <div className="flex items-center mb-4 sm:mb-0">
-                    <Checkbox 
-                      checked={selectedItems[item.product.id] || false}
-                      onCheckedChange={(checked) => handleSelectItem(item.product.id, checked === true)}
-                      className="mr-3"
-                      id={`select-${item.product.id}`}
-                    />
-                    <div className="sm:w-20">
-                      <img 
-                        src={`${AUTH_BASE_URL}/${item.product.image.startsWith('/') ? item.product.image.slice(1) : item.product.image}`} 
-                        alt={item.product.name} 
-                        className="w-full h-auto object-cover rounded" 
-                      />
-                    </div>
+      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-50 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950">
+        {/* Hero Section */}
+        <div className="relative overflow-hidden bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-purple-500/10 dark:from-blue-500/5 dark:via-indigo-500/5 dark:to-purple-500/5">
+          <div className="absolute inset-0 bg-grid-neutral-100/50 dark:bg-grid-neutral-800/50" />
+          <div className="container mx-auto px-4 py-12 relative">
+            <div className="text-center max-w-4xl mx-auto">
+              <div className="flex items-center justify-center mb-6">
+                <div className="bg-gradient-to-r from-blue-500 to-indigo-500 p-3 rounded-2xl shadow-lg">
+                  <ShoppingCart className="h-8 w-8 text-white" />
+                </div>
+              </div>
+              
+              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent mb-6">
+                Votre Panier
+              </h1>
+              
+              {cart && cart.length > 0 && (
+                <div className="flex items-center justify-center space-x-8 text-sm text-neutral-500 dark:text-neutral-400">
+                  <div className="flex items-center space-x-2">
+                    <Sparkles className="h-5 w-5 text-blue-500" />
+                    <span>Livraison offerte dès 50€</span>
                   </div>
+                  <div className="flex items-center space-x-2">
+                    <Shield className="h-5 w-5 text-green-500" />
+                    <span>Paiement sécurisé</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <TrendingUp className="h-5 w-5 text-purple-500" />
+                    <span>Retour gratuit 30j</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
 
-                  <div className="flex-1 sm:ml-6 flex flex-col sm:flex-row justify-between">
-                    <div>
-                      <h3 className="font-medium">
-                        <Link to={`/produit/${item.product.id}`} className="hover:text-brand-blue">
-                          {item.product.name}
-                        </Link>
-                      </h3>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        {item.product.price.toFixed(2)} € par unité
-                      </p>
-                    </div>
-
-                    <div className="flex items-center justify-between mt-4 sm:mt-0">
-                      <div className="flex items-center">
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          className="h-8 w-8 rounded-r-none"
-                          onClick={() => handleQuantityChange(item.product.id, item.quantity - 1)}
-                        >
-                          <Minus className="h-3 w-3" />
-                        </Button>
-                        <Input
-                          type="text"
-                          value={item.quantity}
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value);
-                            if (!isNaN(val)) handleQuantityChange(item.product.id, val);
-                          }}
-                          className="h-8 w-12 rounded-none text-center p-0"
-                        />
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          className="h-8 w-8 rounded-l-none"
-                          onClick={() => handleQuantityChange(item.product.id, item.quantity + 1)}
-                        >
-                          <Plus className="h-3 w-3" />
-                        </Button>
-                      </div>
-
-                      <div className="flex items-center ml-4 sm:ml-10">
-                        <span className="font-medium mr-4">
-                          {(item.product.price * item.quantity).toFixed(2)} €
+        <div className="container mx-auto px-4 py-8">
+          {!isAuthenticated || !cart || cart.length === 0 ? (
+            <EmptyCartMessage isAuthenticated={isAuthenticated} />
+          ) : (
+            <PageDataLoader
+              fetchFunction={loadCartData}
+              onSuccess={handleDataSuccess}
+              onMaxRetriesReached={handleMaxRetriesReached}
+              loadingMessage="Chargement de votre panier..."
+              loadingSubmessage="Récupération de vos articles sélectionnés..."
+              errorMessage="Erreur de chargement du panier"
+            >
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2">
+                  <div className="bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-800 p-6 mb-6">
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-2xl font-bold text-neutral-900 dark:text-neutral-100">
+                        Articles dans votre panier
+                      </h2>
+                      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 px-4 py-2 rounded-full">
+                        <span className="text-blue-700 dark:text-blue-400 font-medium">
+                          {cart.length} article{cart.length > 1 ? 's' : ''}
                         </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => removeFromCart(item.product.id)}
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-6">
+                      {cart.map((item) => (
+                        <div 
+                          key={item.product.id}
+                          className="bg-gradient-to-r from-neutral-50 to-neutral-100 dark:from-neutral-800 dark:to-neutral-700 rounded-xl p-4 border border-neutral-200 dark:border-neutral-600"
                         >
-                          <Trash2 className="h-4 w-4 text-red-500" />
-                        </Button>
+                          <CartItemCard
+                            item={item}
+                            isSelected={selectedItems[item.product.id] || false}
+                            onSelectItem={handleSelectItem}
+                            onQuantityChange={handleQuantityChange}
+                            onRemove={removeFromCart}
+                          />
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-6 pt-6 border-t border-neutral-200 dark:border-neutral-700 flex justify-end">
+                      <Button 
+                        variant="outline" 
+                        className="text-sm hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 hover:text-blue-700 hover:border-blue-300 dark:hover:from-blue-950/20 dark:hover:to-indigo-950/20 dark:hover:text-blue-400"
+                        onClick={() => {
+                          const allSelected = cart.every(item => selectedItems[item.product.id]);
+                          const newSelection = cart.reduce((acc, item) => {
+                            acc[item.product.id] = !allSelected;
+                            return acc;
+                          }, {} as Record<string, boolean>);
+                          setSelectedItems(newSelection);
+                        }}
+                      >
+                        {cart.every(item => selectedItems[item.product.id]) 
+                          ? "Désélectionner tout" 
+                          : "Sélectionner tout"}
+                      </Button>
+                    </div>
+                  </div>
+                  
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-start">
+                      <div className="mr-3 mt-0.5">
+                        <div className="bg-blue-500 rounded-full p-1">
+                          <Sparkles className="h-4 w-4 text-white" />
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-blue-800 dark:text-blue-300 font-medium mb-1">
+                          Livraison offerte à partir de 50€ d'achat.
+                        </p>
+                        <p className="text-blue-700 dark:text-blue-400 text-sm">
+                          Les frais de livraison sont calculés à l'étape suivante.
+                        </p>
                       </div>
                     </div>
                   </div>
                 </div>
-              ))}
-
-              <div className="mt-4 flex justify-end">
-                <Button 
-                  variant="outline" 
-                  className="text-sm"
-                  onClick={() => {
-                    const allSelected = cart.every(item => selectedItems[item.product.id]);
-                    const newSelection = cart.reduce((acc, item) => {
-                      acc[item.product.id] = !allSelected;
-                      return acc;
-                    }, {} as Record<string, boolean>);
-                    setSelectedItems(newSelection);
-                  }}
-                >
-                  {cart.every(item => selectedItems[item.product.id]) 
-                    ? "Désélectionner tout" 
-                    : "Sélectionner tout"}
-                </Button>
-              </div>
-            </div>
-
-            <div className="bg-gray-50 p-6 rounded-lg">
-              <div className="flex justify-between mb-4">
-                <span>Sous-total</span>
-                <span>{getSelectedTotal().toFixed(2)} €</span>
-              </div>
-              <div className="flex justify-between mb-4">
-                <span>Livraison</span>
-                <span>Calculé à l'étape suivante</span>
-              </div>
-              <div className="border-t pt-4 flex justify-between font-bold">
-                <span>Total</span>
-                <span>{getSelectedTotal().toFixed(2)} €</span>
-              </div>
-
-              <div className="mt-6">
-                <Button 
-                  className="w-full" 
-                  size="lg" 
-                  onClick={handleCheckout}
-                  disabled={Object.values(selectedItems).filter(Boolean).length === 0}
-                >
-                  Procéder au paiement
-                </Button>
-                <div className="flex justify-center mt-4">
-                  <Link to="/" className="text-brand-blue hover:underline text-sm flex items-center">
-                    <ShoppingBag className="h-4 w-4 mr-1" />
-                    Continuer vos achats
-                  </Link>
+                
+                <div className="lg:col-span-1">
+                  <div className="sticky top-8">
+                    <CartSummary 
+                      onCheckout={handleCheckout}
+                      selectedItems={selectedItems}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          </>
-        ) : (
-          <div className="text-center py-12 border rounded-lg bg-gray-50">
-            <div className="mb-4">
-              <ShoppingBag className="h-12 w-12 mx-auto text-muted-foreground" />
-            </div>
-            <h2 className="text-xl font-medium mb-2">Votre panier est vide</h2>
-            <p className="text-muted-foreground mb-6">Ajoutez des produits à votre panier pour commander</p>
-            <Button asChild>
-              <Link to="/">Explorer nos produits</Link>
-            </Button>
-          </div>
-        )}
+            </PageDataLoader>
+          )}
+        </div>
       </div>
     </Layout>
   );

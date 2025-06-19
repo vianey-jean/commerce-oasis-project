@@ -1,176 +1,425 @@
-
 const express = require('express');
-const router = express.Router();
 const fs = require('fs');
 const path = require('path');
-const { isAuthenticated, isAdmin } = require('../middlewares/auth');
+const { isAuthenticated } = require('../middlewares/auth');
 
-const ordersFilePath = path.join(__dirname, '../data/commandes.json');
-const productsFilePath = path.join(__dirname, '../data/products.json');
+const router = express.Router();
 
-// Vérifier si le fichier commandes.json existe, sinon le créer
-if (!fs.existsSync(ordersFilePath)) {
-  fs.writeFileSync(ordersFilePath, JSON.stringify([], null, 2));
+// Chemins vers les fichiers JSON
+const ordersPath = path.join(__dirname, '../data/orders.json');
+const commandesPath = path.join(__dirname, '../data/commandes.json');
+const codePromosPath = path.join(__dirname, '../data/code-promos.json');
+const productsPath = path.join(__dirname, '../data/products.json');
+
+// Fonction utilitaire pour lire un fichier JSON
+function readJSON(filePath) {
+  try {
+    const data = fs.readFileSync(filePath, 'utf-8');
+    return JSON.parse(data);
+  } catch (error) {
+    console.error(`Erreur lors de la lecture du fichier ${filePath}:`, error);
+    return [];
+  }
 }
 
-// Obtenir toutes les commandes (admin seulement)
-router.get('/', isAuthenticated, isAdmin, (req, res) => {
+// Fonction utilitaire pour écrire dans un fichier JSON
+function writeJSON(filePath, data) {
   try {
-    const orders = JSON.parse(fs.readFileSync(ordersFilePath));
-    res.json(orders);
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf-8');
+    return true;
   } catch (error) {
-    res.status(500).json({ message: 'Erreur lors de la récupération des commandes' });
+    console.error(`Erreur lors de l'écriture dans le fichier ${filePath}:`, error);
+    return false;
+  }
+}
+
+// Route pour obtenir toutes les commandes (pour l'admin)
+router.get('/', isAuthenticated, async (req, res) => {
+  try {
+    const commandes = readJSON(commandesPath);
+    res.json(commandes);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des commandes:', error);
+    res.status(500).json({ message: 'Erreur interne du serveur.' });
   }
 });
 
-// Obtenir les commandes d'un utilisateur
-router.get('/user', isAuthenticated, (req, res) => {
+// Route pour obtenir les commandes de l'utilisateur connecté
+router.get('/user', isAuthenticated, async (req, res) => {
   try {
-    const orders = JSON.parse(fs.readFileSync(ordersFilePath));
-    const userOrders = orders.filter(order => order.userId === req.user.id);
-    res.json(userOrders);
+    const commandes = readJSON(commandesPath);
+    const userCommandes = commandes.filter(commande => commande.userId === req.user.id);
+    res.json(userCommandes);
   } catch (error) {
-    res.status(500).json({ message: 'Erreur lors de la récupération des commandes' });
+    console.error('Erreur lors de la récupération des commandes utilisateur:', error);
+    res.status(500).json({ message: 'Erreur interne du serveur.' });
   }
 });
 
-// Obtenir une commande spécifique
-router.get('/:orderId', isAuthenticated, (req, res) => {
-  try {
-    const orders = JSON.parse(fs.readFileSync(ordersFilePath));
-    const order = orders.find(o => o.id === req.params.orderId);
-    
-    if (!order) {
-      return res.status(404).json({ message: 'Commande non trouvée' });
-    }
-    
-    // Vérifier que l'utilisateur a accès à cette commande ou est admin
-    if (order.userId !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Accès non autorisé à cette commande' });
-    }
-    
-    res.json(order);
-  } catch (error) {
-    res.status(500).json({ message: 'Erreur lors de la récupération de la commande' });
-  }
-});
-
-// Créer une nouvelle commande
+// Route pour créer une commande
 router.post('/', isAuthenticated, async (req, res) => {
+  console.log('Requête reçue pour créer une commande:', JSON.stringify(req.body));
+  
   try {
-    const { items, shippingAddress, paymentMethod } = req.body;
-    
-    if (!items || !Array.isArray(items) || items.length === 0) {
-      return res.status(400).json({ message: 'Aucun article dans la commande' });
+    const { items, shippingAddress, paymentMethod, codePromo } = req.body;
+
+    // Convertir les items de format objet à format tableau si nécessaire
+    let itemsArray = items;
+    if (items && typeof items === 'object' && !Array.isArray(items)) {
+      itemsArray = Object.values(items);
     }
+
+    // Validation des items
+    if (!itemsArray || !Array.isArray(itemsArray) || itemsArray.length === 0) {
+      return res.status(400).json({ message: 'La commande doit contenir au moins un article.' });
+    }
+
+    // Validation de l'adresse de livraison
+    const requiredFields = ['nom', 'prenom', 'adresse', 'ville', 'codePostal', 'pays', 'telephone'];
+    for (const field of requiredFields) {
+      if (!shippingAddress || !shippingAddress[field]) {
+        return res.status(400).json({ message: `Le champ ${field} de l'adresse est requis.` });
+      }
+    }
+
+    // Validation de la méthode de paiement
+    if (!paymentMethod || typeof paymentMethod !== 'string') {
+      return res.status(400).json({ message: 'La méthode de paiement est requise.' });
+    }
+
+    // Récupérer les produits pour enrichir les données et vérifier le stock
+    const products = readJSON(productsPath);
     
-    // Vérifier et mettre à jour le stock de chaque produit
-    const products = JSON.parse(fs.readFileSync(productsFilePath));
-    let totalAmount = 0;
-    const orderItems = [];
-    
-    for (const item of items) {
-      const productIndex = products.findIndex(p => p.id === item.productId);
-      
-      if (productIndex === -1) {
-        return res.status(400).json({ 
-          message: `Produit ${item.productId} non trouvé` 
-        });
+    // Enrichir les items avec les informations des produits
+    const enrichedItems = itemsArray.map(item => {
+      const product = products.find(p => p.id === item.productId);
+      if (!product) {
+        throw new Error(`Produit non trouvé: ${item.productId}`);
       }
       
-      const product = products[productIndex];
-      
-      if (!product.stock || product.stock < item.quantity) {
-        return res.status(400).json({ 
-          message: `Stock insuffisant pour le produit ${product.name}` 
-        });
+      // Vérifier le stock disponible
+      if (product.stock !== undefined && product.stock < item.quantity) {
+        throw new Error(`Stock insuffisant pour ${product.name}. Disponible: ${product.stock}, Demandé: ${item.quantity}`);
       }
       
-      // Mettre à jour le stock
-      product.stock -= item.quantity;
-      product.isSold = product.stock > 0;
-      
-      // Déterminer l'image principale à utiliser
-      let productImage = '';
-      
-      // Si le produit a plusieurs images, utiliser la première
-      if (product.images && product.images.length > 0) {
-        productImage = product.images[0];
-      } else if (product.image) {
-        // Sinon, utiliser l'image unique du produit
-        productImage = product.image;
-      }
-      
-      // Ajouter le produit à la commande avec l'image correcte
-      const orderItem = {
-        productId: product.id,
+      return {
+        productId: item.productId,
         name: product.name,
-        price: product.price,
+        price: item.price,
+        originalPrice: product.originalPrice || product.price,
         quantity: item.quantity,
-        image: productImage, // Utiliser l'image principale
-        subtotal: product.price * item.quantity
+        image: product.images?.[0] || product.image || null,
+        subtotal: item.price * item.quantity
       };
+    });
+
+    // Lire les commandes existantes
+    const orders = readJSON(ordersPath);
+    const commandes = readJSON(commandesPath);
+
+    // Calculer le montant total
+    let totalAmount = enrichedItems.reduce((sum, item) => sum + item.subtotal, 0);
+    let originalAmount = totalAmount;
+    
+    // Traitement du code promo si présent
+    let codePromoUsed = null;
+    let discount = 0;
+    
+    if (codePromo) {
+      const codePromos = readJSON(codePromosPath);
+      const promoIndex = codePromos.findIndex(cp => cp.code === codePromo.code);
       
-      orderItems.push(orderItem);
-      totalAmount += orderItem.subtotal;
-      
-      // Mettre à jour le produit dans la liste
-      products[productIndex] = product;
+      if (promoIndex !== -1 && codePromos[promoIndex].quantite > 0) {
+        const promo = codePromos[promoIndex];
+        
+        // Vérifier si le code promo s'applique à un des produits dans le panier
+        const applicableItem = enrichedItems.find(item => item.productId === promo.productId);
+        
+        if (applicableItem) {
+          // Calculer la remise
+          discount = (promo.pourcentage / 100) * applicableItem.subtotal;
+          totalAmount -= discount;
+          
+          // Mettre à jour le code promo (décrémenter la quantité)
+          codePromos[promoIndex].quantite -= 1;
+          writeJSON(codePromosPath, codePromos);
+          
+          codePromoUsed = {
+            code: promo.code,
+            productId: promo.productId,
+            pourcentage: promo.pourcentage,
+            discountAmount: discount
+          };
+        }
+      }
     }
-    
-    // Enregistrer les modifications de stock
-    fs.writeFileSync(productsFilePath, JSON.stringify(products, null, 2));
-    
-    // Créer la commande
-    const orders = JSON.parse(fs.readFileSync(ordersFilePath));
+
+    // Créer une nouvelle commande avec ID unique
+    const orderId = `ORD-${Date.now()}`;
     const newOrder = {
-      id: `ORD-${Date.now()}`,
+      id: orderId,
       userId: req.user.id,
-      userName: req.user.nom,
+      userName: `${req.user.nom} ${req.user.prenom || ''}`.trim(),
       userEmail: req.user.email,
-      items: orderItems,
-      totalAmount: parseFloat(totalAmount.toFixed(2)),
+      items: enrichedItems,
+      totalAmount,
+      originalAmount,
+      discount,
       shippingAddress,
       paymentMethod,
+      codePromoUsed,
       status: 'confirmée',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
-    
+
+    // Enregistrer la commande dans orders.json et commandes.json
     orders.push(newOrder);
-    fs.writeFileSync(ordersFilePath, JSON.stringify(orders, null, 2));
+    commandes.push(newOrder);
+
+    const ordersSaved = writeJSON(ordersPath, orders);
+    const commandesSaved = writeJSON(commandesPath, commandes);
+
+    if (!ordersSaved || !commandesSaved) {
+      throw new Error("Erreur lors de l'enregistrement de la commande");
+    }
     
+    // Mettre à jour le stock des produits achetés
+    const updatedProducts = products.map(product => {
+      const orderedItem = enrichedItems.find(item => item.productId === product.id);
+      
+      if (orderedItem) {
+        // Réduire le stock du produit
+        const newStock = Math.max(0, product.stock - orderedItem.quantity);
+        
+        return {
+          ...product,
+          stock: newStock,
+          isSold: newStock > 0 // Mettre à jour le statut de disponibilité
+        };
+      }
+      
+      return product;
+    });
+    
+    // Enregistrer les produits mis à jour
+    const productsSaved = writeJSON(productsPath, updatedProducts);
+    
+    if (!productsSaved) {
+      console.error("Le stock des produits n'a pas pu être mis à jour");
+      // On ne bloque pas la commande pour autant, on continue
+    }
+    
+    console.log('Commande créée avec succès:', orderId);
     res.status(201).json(newOrder);
   } catch (error) {
     console.error('Erreur lors de la création de la commande:', error);
-    res.status(500).json({ message: 'Erreur lors de la création de la commande' });
+    res.status(500).json({ message: 'Erreur interne du serveur: ' + error.message });
   }
 });
 
-// Mettre à jour le statut d'une commande (admin seulement)
-router.put('/:orderId/status', isAuthenticated, isAdmin, (req, res) => {
+// Route pour annuler une commande ou des items spécifiques
+router.post('/:id/cancel', isAuthenticated, async (req, res) => {
+  try {
+    const { itemsToCancel } = req.body;
+    const orderId = req.params.id;
+    
+    // Lire les commandes existantes
+    const orders = readJSON(ordersPath);
+    const commandes = readJSON(commandesPath);
+    const products = readJSON(productsPath);
+    
+    // Trouver la commande
+    const orderIndex = orders.findIndex(o => o.id === orderId);
+    const commandeIndex = commandes.findIndex(c => c.id === orderId);
+    
+    if (orderIndex === -1 || commandeIndex === -1) {
+      return res.status(404).json({ message: 'Commande non trouvée.' });
+    }
+    
+    const order = orders[orderIndex];
+    
+    // Vérifier si l'utilisateur est autorisé (propriétaire de la commande ou admin)
+    if (req.user.role !== 'admin' && order.userId !== req.user.id) {
+      return res.status(403).json({ message: 'Accès non autorisé à cette commande.' });
+    }
+    
+    // Vérifier si la commande peut être annulée
+    if (order.status !== 'confirmée' && order.status !== 'en préparation') {
+      return res.status(400).json({ message: 'Cette commande ne peut plus être annulée.' });
+    }
+    
+    // Si aucun item spécifique n'est fourni, annuler toute la commande
+    const itemsToRemove = itemsToCancel && itemsToCancel.length > 0 
+      ? itemsToCancel 
+      : order.items.map(item => item.productId);
+    
+    // Restaurer le stock pour les items annulés
+    const updatedProducts = products.map(product => {
+      const cancelledItem = order.items.find(item => 
+        itemsToRemove.includes(item.productId) && item.productId === product.id
+      );
+      
+      if (cancelledItem) {
+        const newStock = (product.stock || 0) + cancelledItem.quantity;
+        return {
+          ...product,
+          stock: newStock,
+          isSold: newStock > 0
+        };
+      }
+      
+      return product;
+    });
+    
+    // Sauvegarder les produits mis à jour
+    writeJSON(productsPath, updatedProducts);
+    
+    // Filtrer les items qui ne sont pas annulés
+    const remainingItems = order.items.filter(item => 
+      !itemsToRemove.includes(item.productId)
+    );
+    
+    if (remainingItems.length === 0) {
+      // Supprimer complètement la commande seulement si TOUS les items sont annulés
+      orders.splice(orderIndex, 1);
+      commandes.splice(commandeIndex, 1);
+      
+      // Sauvegarder les commandes mises à jour
+      writeJSON(ordersPath, orders);
+      writeJSON(commandesPath, commandes);
+      
+      console.log(`Commande ${orderId} complètement annulée - tous les produits ont été supprimés`);
+      res.json({ message: 'Commande complètement annulée', cancelled: true });
+    } else {
+      // Mettre à jour la commande avec les items restants - NE JAMAIS SUPPRIMER LA COMMANDE
+      const newOriginalAmount = remainingItems.reduce((sum, item) => sum + (item.originalPrice || item.price) * item.quantity, 0);
+      const newTotalAmount = remainingItems.reduce((sum, item) => sum + item.subtotal, 0);
+      
+      // Recalculer la remise si un code promo était appliqué
+      let newDiscount = 0;
+      let newCodePromoUsed = order.codePromoUsed;
+      
+      if (order.codePromoUsed && typeof order.codePromoUsed === 'object') {
+        // Vérifier si le produit avec le code promo est encore dans la commande
+        const promoProductStillInOrder = remainingItems.find(
+          item => item.productId === order.codePromoUsed.productId
+        );
+        
+        if (promoProductStillInOrder) {
+          // Recalculer la remise sur le produit restant
+          newDiscount = (order.codePromoUsed.pourcentage / 100) * promoProductStillInOrder.subtotal;
+          newCodePromoUsed = {
+            ...order.codePromoUsed,
+            discountAmount: newDiscount
+          };
+        } else {
+          // Le produit avec le code promo a été annulé, supprimer le code promo
+          newCodePromoUsed = null;
+          newDiscount = 0;
+        }
+      }
+      
+      const finalTotalAmount = newTotalAmount - newDiscount;
+      
+      const updatedOrder = {
+        ...order,
+        items: remainingItems,
+        totalAmount: finalTotalAmount,
+        originalAmount: newOriginalAmount,
+        discount: newDiscount,
+        codePromoUsed: newCodePromoUsed,
+        updatedAt: new Date().toISOString()
+      };
+      
+      orders[orderIndex] = updatedOrder;
+      commandes[commandeIndex] = updatedOrder;
+      
+      // Sauvegarder les commandes mises à jour
+      writeJSON(ordersPath, orders);
+      writeJSON(commandesPath, commandes);
+      
+      console.log(`Commande ${orderId} - Produits annulés:`, itemsToRemove);
+      console.log(`Produits restants dans la commande:`, remainingItems.length);
+      
+      res.json({ 
+        message: 'Produits sélectionnés annulés avec succès. La commande a été mise à jour.', 
+        cancelled: false,
+        updatedOrder: updatedOrder
+      });
+    }
+    
+  } catch (error) {
+    console.error('Erreur lors de l\'annulation de la commande:', error);
+    res.status(500).json({ message: 'Erreur interne du serveur.' });
+  }
+});
+
+// Route pour obtenir une commande spécifique
+router.get('/:id', isAuthenticated, async (req, res) => {
+  try {
+    const commandes = readJSON(commandesPath);
+    const commande = commandes.find(c => c.id === req.params.id);
+    
+    if (!commande) {
+      return res.status(404).json({ message: 'Commande non trouvée.' });
+    }
+    
+    // Vérifier si l'utilisateur est autorisé à voir cette commande (admin ou propriétaire)
+    if (req.user.role !== 'admin' && commande.userId !== req.user.id) {
+      return res.status(403).json({ message: 'Accès non autorisé à cette commande.' });
+    }
+    
+    res.json(commande);
+  } catch (error) {
+    console.error('Erreur lors de la récupération de la commande:', error);
+    res.status(500).json({ message: 'Erreur interne du serveur.' });
+  }
+});
+
+// Route pour mettre à jour le statut d'une commande
+router.put('/:id/status', isAuthenticated, async (req, res) => {
   try {
     const { status } = req.body;
     
-    if (!status || !['confirmée', 'en préparation', 'en livraison', 'livrée'].includes(status)) {
-      return res.status(400).json({ message: 'Statut invalide' });
+    // Vérification du rôle administrateur
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({ message: 'Seul un administrateur peut modifier le statut d\'une commande.' });
     }
     
-    const orders = JSON.parse(fs.readFileSync(ordersFilePath));
-    const orderIndex = orders.findIndex(o => o.id === req.params.orderId);
+    // Validation du statut
+    const validStatuses = ['confirmée', 'en préparation', 'en livraison', 'livrée'];
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({ message: 'Statut de commande invalide.' });
+    }
+    
+    const commandes = readJSON(commandesPath);
+    const orderIndex = commandes.findIndex(c => c.id === req.params.id);
     
     if (orderIndex === -1) {
-      return res.status(404).json({ message: 'Commande non trouvée' });
+      return res.status(404).json({ message: 'Commande non trouvée.' });
     }
     
-    orders[orderIndex].status = status;
-    orders[orderIndex].updatedAt = new Date().toISOString();
+    // Mise à jour du statut
+    commandes[orderIndex].status = status;
+    commandes[orderIndex].updatedAt = new Date().toISOString();
     
-    fs.writeFileSync(ordersFilePath, JSON.stringify(orders, null, 2));
+    // Mise à jour également dans le fichier orders.json
+    const orders = readJSON(ordersPath);
+    const orderIndexInOrders = orders.findIndex(o => o.id === req.params.id);
     
-    res.json(orders[orderIndex]);
+    if (orderIndexInOrders !== -1) {
+      orders[orderIndexInOrders].status = status;
+      orders[orderIndexInOrders].updatedAt = new Date().toISOString();
+      writeJSON(ordersPath, orders);
+    }
+    
+    writeJSON(commandesPath, commandes);
+    
+    res.json(commandes[orderIndex]);
   } catch (error) {
-    res.status(500).json({ message: 'Erreur lors de la mise à jour du statut de la commande' });
+    console.error('Erreur lors de la mise à jour du statut de la commande:', error);
+    res.status(500).json({ message: 'Erreur interne du serveur.' });
   }
 });
 
