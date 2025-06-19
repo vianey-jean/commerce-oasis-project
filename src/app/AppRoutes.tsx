@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Routes, Route } from 'react-router-dom';
+import { Routes, Route, Outlet } from 'react-router-dom';
 import HomePage from '@/pages/HomePage';
 import AllProductsPage from '@/pages/AllProductsPage';
 import CategoryPage from '@/pages/CategoryPage';
@@ -121,7 +121,9 @@ const AppRoutes: React.FC = () => {
       <Route path="/admin/*" element={
         <ProtectedRoute>
           <SecureRoute>
-            <AdminLayout />
+            <AdminLayout>
+              <Outlet />
+            </AdminLayout>
           </SecureRoute>
         </ProtectedRoute>
       }>
