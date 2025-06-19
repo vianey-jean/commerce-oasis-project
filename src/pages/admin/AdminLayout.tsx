@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, Outlet } from 'react-router-dom';
 import { 
   ShoppingBag,
   Package,
@@ -21,11 +21,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { getSecureRoute } from '@/services/secureIds';
 
-interface AdminLayoutProps {
-  children: React.ReactNode;
-}
-
-const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
+const AdminLayout: React.FC = () => {
   const location = useLocation();
   const { user } = useAuth();
   const [isServiceAdmin, setIsServiceAdmin] = useState(false);
@@ -53,11 +49,11 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
   };
   
   const navItems = [
-    { name: 'Produits', path: secureRoutes.produits, realPath: '/admin/produits', icon: Package, color: 'from-blue-500 to-blue-600' },
+    { name: 'Produits', path: secureRoutes.produits, realPath: '/admin/products', icon: Package, color: 'from-blue-500 to-blue-600' },
     { name: 'Catégories', path: secureRoutes.categories, realPath: '/admin/categories', icon: FolderOpen, color: 'from-purple-500 to-purple-600' },
-    { name: 'Utilisateurs', path: secureRoutes.utilisateurs, realPath: '/admin/utilisateurs', icon: Users, color: 'from-green-500 to-green-600' },
+    { name: 'Utilisateurs', path: secureRoutes.utilisateurs, realPath: '/admin/users', icon: Users, color: 'from-green-500 to-green-600' },
     { name: 'Messages', path: secureRoutes.messages, realPath: '/admin/messages', icon: MessageCircle, color: 'from-yellow-500 to-orange-500' },
-    { name: 'Commandes', path: secureRoutes.commandes, realPath: '/admin/commandes', icon: Truck, color: 'from-indigo-500 to-indigo-600' },
+    { name: 'Commandes', path: secureRoutes.commandes, realPath: '/admin/orders', icon: Truck, color: 'from-indigo-500 to-indigo-600' },
     { name: 'CodePromo', path: secureRoutes.codePromo, realPath: '/admin/code-promos', icon: Percent, color: 'from-pink-500 to-rose-500' },
     { name: 'Publicités', path: secureRoutes.pubLayout, realPath: '/admin/pub-layout', icon: Megaphone, color: 'from-cyan-500 to-cyan-600' },
     { name: 'Remboursements', path: secureRoutes.remboursements, realPath: '/admin/remboursements', icon: RefreshCw, color: 'from-red-500 to-red-600' },
@@ -70,7 +66,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       icon: MessageSquare,
       color: 'from-teal-500 to-teal-600'
     }] : []),
-    { name: 'Paramètres', path: secureRoutes.parametres, realPath: '/admin/parametres', icon: Settings, color: 'from-gray-500 to-gray-600' },
+    { name: 'Paramètres', path: secureRoutes.parametres, realPath: '/admin/settings', icon: Settings, color: 'from-gray-500 to-gray-600' },
   ];
 
   const isActivePath = (realPath: string) => {
@@ -178,7 +174,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       <div className="flex-1 overflow-hidden">
         <div className="p-3 md:p-4 h-screen overflow-y-auto">
           <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 h-full p-4 md:p-6 overflow-y-auto">
-            {children}
+            <Outlet />
           </div>
         </div>
       </div>

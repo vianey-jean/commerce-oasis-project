@@ -55,6 +55,7 @@ import AdminSettingsPage from '@/pages/admin/AdminSettingsPage';
 
 import ProtectedRoute from '@/components/ProtectedRoute';
 import SecureRoute from '@/components/SecureRoute';
+import { getSecureRoute } from '@/services/secureIds';
 
 const AppRoutes: React.FC = () => {
   return (
@@ -66,10 +67,10 @@ const AppRoutes: React.FC = () => {
       <Route path="/product/:id" element={<ProductDetail />} />
       <Route path="/cart" element={<CartPage />} />
       <Route path="/checkout" element={<CheckoutPage />} />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
+      <Route path={getSecureRoute('/login')} element={<LoginPage />} />
+      <Route path={getSecureRoute('/register')} element={<RegisterPage />} />
+      <Route path={getSecureRoute('/forgot-password')} element={<ForgotPasswordPage />} />
       <Route path="/register-block" element={<RegisterBlockPage />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
       <Route path="/favorites" element={<FavoritesPage />} />
       <Route path="/contact" element={<ContactPage />} />
       <Route path="/faq" element={<FAQPage />} />
