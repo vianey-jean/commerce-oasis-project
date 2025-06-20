@@ -1,4 +1,3 @@
-
 import { nanoid } from 'nanoid';
 
 // Stockage en mémoire des mappings entre IDs sécurisés et IDs réels
@@ -227,24 +226,37 @@ export const initSecureRoutes = () => {
     '/admin/categories',
     '/admin/code-promos',
     '/flash-sale/:id',
+    '/flash-sale',
     '/profil',
     '/commandes',
     '/panier',
     '/favoris',
     '/paiement',
     '/commande/:orderId',
-    // Ajout des routes d'authentification
+    // Routes d'authentification
     '/login',
     '/register',
     '/forgot-password',
-    // Ajout de la route tous-les-produits
+    // Route tous-les-produits
     '/tous-les-produits',
-    // Ajout des nouvelles routes
+    // Routes promotionnelles
     '/promotions',
     '/nouveautes',
     '/populaires',
-    // Ajout de la route maintenance-login sécurisée
-    '/maintenance-login'
+    // Route maintenance-login sécurisée
+    '/maintenance-login',
+    // Nouvelles routes à sécuriser
+    '/notre-histoire',
+    '/faq', 
+    '/livraison',
+    '/retours',
+    '/contact',
+    '/conditions-utilisation',
+    '/politique-confidentialite',
+    '/politique-cookies',
+    '/service-client',
+    '/chat',
+    '/carrieres'
   ];
   
   let hasNewRoutes = false;
