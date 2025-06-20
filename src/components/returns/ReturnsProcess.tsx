@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { ArrowRight, Shield } from 'lucide-react';
+import { ArrowRight, Shield, Package, Truck, CreditCard } from 'lucide-react';
 
 interface Step {
   number: number;
