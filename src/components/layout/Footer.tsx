@@ -79,7 +79,7 @@ const Footer = () => {
             <div className="space-y-4">
               <div>
                 <h3 className="text-lg font-bold mb-3 text-white relative inline-block">
-                  Liens Utiles
+                  Liens Utiles :
                   <div className="absolute -bottom-1 left-0 w-10 h-0.5 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full"></div>
                 </h3>
               </div>
@@ -111,7 +111,7 @@ const Footer = () => {
             <div className="space-y-4">
               <div>
                 <h3 className="text-lg font-bold mb-3 text-white relative inline-block">
-                  Informations
+                  Informations :
                   <div className="absolute -bottom-1 left-0 w-10 h-0.5 bg-gradient-to-r from-purple-500 to-violet-500 rounded-full"></div>
                 </h3>
               </div>
@@ -143,18 +143,18 @@ const Footer = () => {
             <div className="space-y-4">
               <div>
                 <h3 className="text-lg font-bold mb-3 text-white relative inline-block">
-                  Contact
+                  Contact :
                   <div className="absolute -bottom-1 left-0 w-10 h-0.5 bg-gradient-to-r from-red-500 to-orange-500 rounded-full"></div>
                 </h3>
               </div>
               <ul className="space-y-3">
-                <li className="group flex items-start">
+                <li className="group flex items-start items-center">
                   <div className="w-8 h-8 bg-gradient-to-r from-red-500 to-orange-500 rounded-lg flex items-center justify-center mr-3 flex-shrink-0 transition-all duration-300 group-hover:scale-105">
                     <MapPin className="h-4 w-4 text-white" />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400 mb-1">Adresse</p>
-                    <span className="text-gray-300 leading-relaxed text-sm">123 Avenue de la Beauté, 97400 Saint-Denis</span>
+                    <p className="text-xs text-gray-400 mb-1 items-center">Adresse :</p>
+                    <span className="text-gray-300 leading-relaxed text-sm">10 Allée des Beryls Bleus, Bellepierre, 97400 Saint-Denis</span>
                   </div>
                 </li>
                 <li className="group flex items-center">
@@ -162,8 +162,8 @@ const Footer = () => {
                     <Phone className="h-4 w-4 text-white" />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400 mb-1">Téléphone</p>
-                    <span className="text-gray-300 text-sm">+262 123 456 789</span>
+                    <p className="text-xs text-gray-400 mb-1">Téléphone :</p>
+                    <span className="text-gray-300 text-sm">+262 (0)6 92 84 23 70</span>
                   </div>
                 </li>
                 <li className="group flex items-center">
@@ -171,7 +171,7 @@ const Footer = () => {
                     <Mail className="h-4 w-4 text-white" />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400 mb-1">Email</p>
+                    <p className="text-xs text-gray-400 mb-1">Email :</p>
                     <span className="text-gray-300 text-sm">contact@riziky-boutique.com</span>
                   </div>
                 </li>
@@ -180,7 +180,7 @@ const Footer = () => {
                     <Clock className="h-4 w-4 text-white" />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-400 mb-1">Horaires</p>
+                    <p className="text-xs text-gray-400 mb-1 ">Horaires :</p>
                     <span className="text-gray-300 text-sm">Lun-Sam: 9h00-19h00</span>
                   </div>
                 </li>
@@ -196,10 +196,11 @@ const Footer = () => {
                 © {currentYear} <span className="bg-gradient-to-r from-red-400 to-pink-400 bg-clip-text text-transparent font-semibold">Riziky Boutique</span>. 
                 Tous droits réservés.
               </p>
-              <div className="flex items-center space-x-2 text-gray-400 text-sm">
-                <span>Fait avec</span>
+              <div className="flex items-center space-x-2 text-gray-400 text-sm font-bold">
+                <span>Fait avec le</span>
                 <Heart className="h-3 w-3 text-red-400 animate-pulse" />
                 <span>à La Réunion</span>
+                <span>/ RJMV</span>
               </div>
             </div>
           </div>
