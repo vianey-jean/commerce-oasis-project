@@ -4,71 +4,74 @@ import { Product } from '@/types/product';
 import { productsAPI } from '@/services/api';
 import { toast } from '@/components/ui/sonner';
 
-export const useProducts = (categoryName?: string) => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+export const utiliserProduits = (nomCategorie?: string) => {
+  const [produits, setProduits] = useState<Product[]>([]);
+  const [chargement, setChargement] = useState(true);
 
-  const fetchProducts = async (categoryName?: string) => {
-    setLoading(true);
+  const recupererProduits = async (nomCategorie?: string) => {
+    setChargement(true);
     try {
-      let response;
-      if (categoryName) {
-        response = await productsAPI.getByCategory(categoryName);
+      let reponse;
+      if (nomCategorie) {
+        reponse = await productsAPI.getByCategory(nomCategorie);
       } else {
-        response = await productsAPI.getAll();
+        reponse = await productsAPI.getAll();
       }
       
-      if (!response.data || !Array.isArray(response.data)) {
+      if (!reponse.data || !Array.isArray(reponse.data)) {
         throw new Error('Format de données incorrect pour les produits');
       }
       
-      setProducts(response.data);
-    } catch (error) {
-      console.error("Erreur lors du chargement des produits:", error);
+      setProduits(reponse.data);
+    } catch (erreur) {
+      console.error("Erreur lors du chargement des produits:", erreur);
       toast.error('Erreur lors du chargement des produits');
-      setProducts([]);
+      setProduits([]);
     } finally {
-      setLoading(false);
+      setChargement(false);
     }
   };
 
   useEffect(() => {
-    fetchProducts(categoryName);
-  }, [categoryName]);
+    recupererProduits(nomCategorie);
+  }, [nomCategorie]);
 
-  // Vérification périodique des promotions expirées
+  // Vérification périodique des promotions expirées - optimisée
   useEffect(() => {
-    const checkPromotions = () => {
-      const now = new Date();
-      const updatedProducts = products.map(product => {
-        if (product.promotion && product.promotionEnd && new Date(product.promotionEnd) < now) {
+    const verifierPromotions = () => {
+      const maintenant = new Date();
+      const produitsModifies = produits.map(produit => {
+        if (produit.promotion && produit.promotionEnd && new Date(produit.promotionEnd) < maintenant) {
           return {
-            ...product,
-            price: product.originalPrice || product.price,
+            ...produit,
+            price: produit.originalPrice || produit.price,
             promotion: null,
             promotionEnd: null
           };
         }
-        return product;
+        return produit;
       });
       
-      if (JSON.stringify(updatedProducts) !== JSON.stringify(products)) {
-        setProducts(updatedProducts);
+      // Optimisation: ne met à jour que si nécessaire
+      if (JSON.stringify(produitsModifies) !== JSON.stringify(produits)) {
+        setProduits(produitsModifies);
       }
     };
     
-    const interval = setInterval(checkPromotions, 60000);
-    return () => clearInterval(interval);
-  }, [products]);
+    if (produits.length > 0) {
+      const intervalle = setInterval(verifierPromotions, 300000); // 5 minutes au lieu de 1
+      return () => clearInterval(intervalle);
+    }
+  }, [produits]);
 
-  const getProductById = (id: string) => {
-    return products.find(p => p.id === id);
+  const obtenirProduitParId = (id: string) => {
+    return produits.find(p => p.id === id);
   };
 
   return {
-    products,
-    loading,
-    fetchProducts,
-    getProductById
+    produits,
+    chargement,
+    recupererProduits,
+    obtenirProduitParId
   };
 };

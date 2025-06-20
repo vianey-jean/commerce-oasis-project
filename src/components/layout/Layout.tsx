@@ -15,36 +15,36 @@ import { productsAPI } from '@/services/api';
 import pubLayoutAPI, { PubLayout } from '@/services/pubLayoutAPI';
 import { useScrollDetection } from '@/hooks/useScrollDetection';
 
-interface LayoutProps {
-  children: React.ReactNode;
-  hidePrompts?: boolean;
+interface ProprietesLayout {
+  enfants: React.ReactNode;
+  masquerInvites?: boolean;
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, hidePrompts = false }) => {
-  const { data: trendingProducts } = useQuery({
-    queryKey: ['trending-products'],
+const Layout: React.FC<ProprietesLayout> = ({ enfants, masquerInvites = false }) => {
+  const { data: produitsTendance } = useQuery({
+    queryKey: ['produits-tendance'],
     queryFn: async (): Promise<Product[]> => {
       try {
-        const response = await productsAPI.getMostFavorited();
-        return response.data || [];
-      } catch (error) {
-        console.error('Erreur lors du chargement des produits populaires:', error);
+        const reponse = await productsAPI.getMostFavorited();
+        return reponse.data || [];
+      } catch (erreur) {
+        console.error('Erreur lors du chargement des produits populaires:', erreur);
         return [];
       }
     },
-    enabled: !hidePrompts,
-    staleTime: 10 * 60 * 1000,
-    retry: 2,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+    enabled: !masquerInvites,
+    staleTime: 15 * 60 * 1000, // Augmenté de 10min à 15min pour réduire les requêtes
+    retry: 1, // Réduit de 2 à 1 tentative
+    retryDelay: 2000, // Réduit le délai de retry
   });
 
-  const { data: pubLayoutItems = [], isLoading: isLoadingPubLayout } = useQuery({
+  const { data: elementsPubLayout = [], isLoading: chargementPubLayout } = useQuery({
     queryKey: ['pub-layout'],
     queryFn: async (): Promise<PubLayout[]> => {
       try {
         return await pubLayoutAPI.getAll();
-      } catch (error) {
-        console.error('Erreur lors du chargement des publicités:', error);
+      } catch (erreur) {
+        console.error('Erreur lors du chargement des publicités:', erreur);
         return [
           { id: "1", icon: "ThumbsUp", text: "Livraison gratuite à partir de 50€ d'achat" },
           { id: "2", icon: "Gift", text: "-10% sur votre première commande avec le code WELCOME10" },
@@ -52,22 +52,22 @@ const Layout: React.FC<LayoutProps> = ({ children, hidePrompts = false }) => {
         ];
       }
     },
-    staleTime: 30 * 1000,
-    refetchInterval: 30 * 1000,
-    refetchOnWindowFocus: true,
+    staleTime: 60 * 1000, // Augmenté de 30s à 60s
+    refetchInterval: 60 * 1000, // Augmenté de 30s à 60s pour réduire la charge
+    refetchOnWindowFocus: false, // Désactivé pour améliorer les performances
   });
 
-  const hasScrolled = useScrollDetection(200, hidePrompts);
+  const aDefileVue = useScrollDetection(200, masquerInvites);
 
   return (
     <div className="flex flex-col min-h-screen bg-neutral-50 dark:bg-neutral-950">
       <header className="sticky top-0 z-50">
         <Navbar />
-        <PromoBanner pubLayoutItems={pubLayoutItems} isLoading={isLoadingPubLayout} />
+        <PromoBanner pubLayoutItems={elementsPubLayout} isLoading={chargementPubLayout} />
       </header>
       
       <main className="flex-grow" role="main">
-        {children}
+        {enfants}
         <BenefitsSection />
         <PaymentBadges />
       </main>
@@ -75,9 +75,9 @@ const Layout: React.FC<LayoutProps> = ({ children, hidePrompts = false }) => {
       <Footer />
       
       <LayoutPrompts 
-        hidePrompts={hidePrompts}
-        trendingProducts={trendingProducts}
-        hasScrolled={hasScrolled}
+        hidePrompts={masquerInvites}
+        trendingProducts={produitsTendance}
+        hasScrolled={aDefileVue}
       />
 
       <ClientServiceChatWidget />

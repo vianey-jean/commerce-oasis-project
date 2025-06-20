@@ -1,21 +1,22 @@
 
 import axios from 'axios';
 
-const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const URL_BASE_AUTH = import.meta.env.VITE_API_BASE_URL;
 
-export const apiClient = axios.create({
-  baseURL: `${AUTH_BASE_URL}/api`,
-  timeout: 30000,
+export const clientApi = axios.create({
+  baseURL: `${URL_BASE_AUTH}/api`,
+  timeout: 15000, // Réduit de 30s à 15s pour des réponses plus rapides
 });
 
-// Request interceptor
-apiClient.interceptors.request.use(
+// Intercepteur de requête optimisé
+clientApi.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      config.headers['Authorization'] = `Bearer ${token}`;
+    const jeton = localStorage.getItem('authToken');
+    if (jeton) {
+      config.headers['Authorization'] = `Bearer ${jeton}`;
     }
 
+    // Optimisation: cache-busting seulement pour GET
     if (config.method === 'get') {
       config.params = {
         ...config.params,
@@ -23,36 +24,34 @@ apiClient.interceptors.request.use(
       };
     }
 
-    console.log(`${config.method?.toUpperCase()} Request to ${config.url}`, 
-      config.method === 'post' || config.method === 'put' 
-        ? JSON.stringify(config.data)
-        : config.params || {});
+    // Log simplifié pour de meilleures performances
+    console.log(`${config.method?.toUpperCase()} → ${config.url}`);
 
     return config;
   },
-  (error) => {
-    console.error('Request error:', error);
-    return Promise.reject(error);
+  (erreur) => {
+    console.error('Erreur de requête:', erreur);
+    return Promise.reject(erreur);
   }
 );
 
-// Response interceptor
-apiClient.interceptors.response.use(
-  response => {
-    console.log(`Response from ${response.config.url}:`, response.data);
-    return response;
+// Intercepteur de réponse optimisé
+clientApi.interceptors.response.use(
+  reponse => {
+    console.log(`✓ ${reponse.config.url}`);
+    return reponse;
   },
-  error => {
-    console.error("API Error:", error.response || error);
+  erreur => {
+    console.error("Erreur API:", erreur.response || erreur);
     
-    if (error.response && error.response.status === 401 && 
-        !error.config.url.includes('/auth/login') && 
-        !error.config.url.includes('/auth/verify-token')) {
+    if (erreur.response && erreur.response.status === 401 && 
+        !erreur.config.url.includes('/auth/login') && 
+        !erreur.config.url.includes('/auth/verify-token')) {
       console.log("Session expirée, redirection vers la page de connexion...");
       localStorage.removeItem('authToken');
       window.location.href = '/login';
     }
     
-    return Promise.reject(error);
+    return Promise.reject(erreur);
   }
 );

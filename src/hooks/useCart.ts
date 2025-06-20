@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { StoreCartItem } from '@/types/cart';
 import { Product } from '@/types/product';
@@ -5,69 +6,73 @@ import { cartAPI, productsAPI } from '@/services/api';
 import { toast } from '@/components/ui/sonner';
 import { useAuth } from '@/contexts/AuthContext';
 
-export const useCart = () => {
-  const [cart, setCart] = useState<StoreCartItem[]>([]);
-  const [selectedCartItems, setSelectedCartItems] = useState<StoreCartItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { user, isAuthenticated } = useAuth();
+export const utiliserPanier = () => {
+  const [panier, setPanier] = useState<StoreCartItem[]>([]);
+  const [articlesSelectionnes, setArticlesSelectionnes] = useState<StoreCartItem[]>([]);
+  const [chargement, setChargement] = useState(true);
+  const { utilisateur, estAuthentifie } = useAuth();
 
-  const fetchCart = async () => {
-    if (!isAuthenticated || !user) {
-      setCart([]);
-      setLoading(false);
+  const recupererPanier = async () => {
+    if (!estAuthentifie || !utilisateur) {
+      setPanier([]);
+      setChargement(false);
       return;
     }
     
-    setLoading(true);
+    setChargement(true);
     try {
-      const response = await cartAPI.get(user.id);
-      const cartData = response.data;
+      const reponse = await cartAPI.get(utilisateur.id);
+      const donneesPanier = reponse.data;
       
-      if (!cartData || !Array.isArray(cartData.items)) {
-        setCart([]);
-        setLoading(false);
+      if (!donneesPanier || !Array.isArray(donneesPanier.items)) {
+        setPanier([]);
+        setChargement(false);
         return;
       }
       
-      const cartItems: StoreCartItem[] = [];
-      for (const item of cartData.items) {
+      // Optimisation: chargement parallèle des produits
+      const promessesProduits = donneesPanier.items.map(async (article) => {
         try {
-          const productResponse = await productsAPI.getById(item.productId);
-          if (productResponse.data) {
-            cartItems.push({
-              product: productResponse.data,
-              quantity: item.quantity
-            });
+          const reponseProduit = await productsAPI.getById(article.productId);
+          if (reponseProduit.data) {
+            return {
+              produit: reponseProduit.data,
+              quantite: article.quantity
+            };
           }
         } catch (err) {
-          console.error(`Erreur lors du chargement du produit ${item.productId}:`, err);
+          console.error(`Erreur lors du chargement du produit ${article.productId}:`, err);
         }
-      }
+        return null;
+      });
       
-      setCart(cartItems);
-    } catch (error) {
-      console.error("Erreur lors du chargement du panier:", error);
-      setCart([]);
+      const resultats = await Promise.all(promessesProduits);
+      const articlesPanier = resultats.filter(Boolean) as StoreCartItem[];
+      
+      setPanier(articlesPanier);
+    } catch (erreur) {
+      console.error("Erreur lors du chargement du panier:", erreur);
+      setPanier([]);
     } finally {
-      setLoading(false);
+      setChargement(false);
     }
   };
 
   useEffect(() => {
-    if (isAuthenticated && user) {
-      fetchCart();
+    if (estAuthentifie && utilisateur) {
+      recupererPanier();
     } else {
-      setCart([]);
-      setLoading(false);
+      setPanier([]);
+      setChargement(false);
     }
-  }, [isAuthenticated, user]);
+  }, [estAuthentifie, utilisateur]);
 
   useEffect(() => {
-    setSelectedCartItems([...cart]);
-  }, [cart]);
+    setArticlesSelectionnes([...panier]);
+  }, [panier]);
 
-  const addToCart = async (product: Product, quantity: number = 1) => {
-    if (!isAuthenticated || !user) {
+  const ajouterAuPanier = async (produit: Product, quantite: number = 1) => {
+    if (!estAuthentifie || !utilisateur) {
       toast.error('Vous devez être connecté pour ajouter un produit au panier', {
         style: { backgroundColor: '#EF4444', color: 'white', fontWeight: 'bold' },
         duration: 4000,
@@ -76,109 +81,109 @@ export const useCart = () => {
       return;
     }
     
-    if (product.stock !== undefined && product.stock < quantity) {
-      toast.error(`Stock insuffisant. Disponible: ${product.stock}`);
+    if (produit.stock !== undefined && produit.stock < quantite) {
+      toast.error(`Stock insuffisant. Disponible: ${produit.stock}`);
       return;
     }
     
-    const existingItemIndex = cart.findIndex(item => item.product.id === product.id);
-    const existingQuantity = existingItemIndex >= 0 ? cart[existingItemIndex].quantity : 0;
+    const indexArticleExistant = panier.findIndex(article => article.produit.id === produit.id);
+    const quantiteExistante = indexArticleExistant >= 0 ? panier[indexArticleExistant].quantite : 0;
     
-    if (product.stock !== undefined && (existingQuantity + quantity) > product.stock) {
-      toast.error(`Stock insuffisant. Disponible: ${product.stock}`);
+    if (produit.stock !== undefined && (quantiteExistante + quantite) > produit.stock) {
+      toast.error(`Stock insuffisant. Disponible: ${produit.stock}`);
       return;
     }
     
     try {
-      await cartAPI.addItem(user.id, product.id, quantity);
+      await cartAPI.addItem(utilisateur.id, produit.id, quantite);
       
-      if (existingItemIndex >= 0) {
-        const updatedCart = [...cart];
-        updatedCart[existingItemIndex].quantity += quantity;
-        setCart(updatedCart);
+      if (indexArticleExistant >= 0) {
+        const panierMisAJour = [...panier];
+        panierMisAJour[indexArticleExistant].quantite += quantite;
+        setPanier(panierMisAJour);
       } else {
-        setCart([...cart, { product, quantity }]);
+        setPanier([...panier, { produit, quantite }]);
       }
       
       toast.success('Produit ajouté au panier');
-    } catch (error) {
-      console.error("Erreur lors de l'ajout au panier:", error);
+    } catch (erreur) {
+      console.error("Erreur lors de l'ajout au panier:", erreur);
       toast.error('Erreur lors de l\'ajout au panier');
     }
   };
 
-  const removeFromCart = async (productId: string) => {
-    if (!isAuthenticated || !user) return;
+  const supprimerDuPanier = async (idProduit: string) => {
+    if (!estAuthentifie || !utilisateur) return;
     
     try {
-      await cartAPI.removeItem(user.id, productId);
-      setCart(cart.filter(item => item.product.id !== productId));
+      await cartAPI.removeItem(utilisateur.id, idProduit);
+      setPanier(panier.filter(article => article.produit.id !== idProduit));
       toast.info('Produit supprimé du panier');
-    } catch (error) {
-      console.error("Erreur lors de la suppression du panier:", error);
+    } catch (erreur) {
+      console.error("Erreur lors de la suppression du panier:", erreur);
       toast.error('Erreur lors de la suppression du produit');
     }
   };
 
-  const updateQuantity = async (productId: string, quantity: number, products: Product[]) => {
-    if (!isAuthenticated || !user) return;
+  const mettreAJourQuantite = async (idProduit: string, quantite: number, produits: Product[]) => {
+    if (!estAuthentifie || !utilisateur) return;
     
-    if (quantity <= 0) {
-      removeFromCart(productId);
+    if (quantite <= 0) {
+      supprimerDuPanier(idProduit);
       return;
     }
     
-    const product = products.find(p => p.id === productId);
-    if (product && product.stock !== undefined && quantity > product.stock) {
-      toast.error(`Stock insuffisant. Disponible: ${product.stock}`);
+    const produit = produits.find(p => p.id === idProduit);
+    if (produit && produit.stock !== undefined && quantite > produit.stock) {
+      toast.error(`Stock insuffisant. Disponible: ${produit.stock}`);
       return;
     }
     
     try {
-      await cartAPI.updateItem(user.id, productId, quantity);
+      await cartAPI.updateItem(utilisateur.id, idProduit, quantite);
       
-      const updatedCart = cart.map(item => {
-        if (item.product.id === productId) {
-          return { ...item, quantity };
+      const panierMisAJour = panier.map(article => {
+        if (article.produit.id === idProduit) {
+          return { ...article, quantite };
         }
-        return item;
+        return article;
       });
       
-      setCart(updatedCart);
-    } catch (error) {
-      console.error("Erreur lors de la mise à jour du panier:", error);
+      setPanier(panierMisAJour);
+    } catch (erreur) {
+      console.error("Erreur lors de la mise à jour du panier:", erreur);
       toast.error('Erreur lors de la mise à jour de la quantité');
     }
   };
 
-  const clearCart = async () => {
-    if (!isAuthenticated || !user) return;
+  const viderPanier = async () => {
+    if (!estAuthentifie || !utilisateur) return;
     
     try {
-      await cartAPI.clear(user.id);
-      setCart([]);
-    } catch (error) {
-      console.error("Erreur lors de la suppression du panier:", error);
+      await cartAPI.clear(utilisateur.id);
+      setPanier([]);
+    } catch (erreur) {
+      console.error("Erreur lors de la suppression du panier:", erreur);
       toast.error('Erreur lors de la suppression du panier');
     }
   };
 
-  const getCartTotal = () => {
-    return selectedCartItems.reduce((total, item) => {
-      return total + (item.product.price * item.quantity);
+  const obtenirTotalPanier = () => {
+    return articlesSelectionnes.reduce((total, article) => {
+      return total + (article.produit.price * article.quantite);
     }, 0);
   };
 
   return {
-    cart,
-    selectedCartItems,
-    loading,
-    addToCart,
-    removeFromCart,
-    updateQuantity,
-    clearCart,
-    getCartTotal,
-    setSelectedCartItems,
-    fetchCart
+    panier,
+    articlesSelectionnes,
+    chargement,
+    ajouterAuPanier,
+    supprimerDuPanier,
+    mettreAJourQuantite,
+    viderPanier,
+    obtenirTotalPanier,
+    setArticlesSelectionnes,
+    recupererPanier
   };
 };

@@ -5,46 +5,46 @@ import { favoritesAPI } from '@/services/favoritesAPI';
 import { toast } from '@/components/ui/sonner';
 import { useAuth } from '@/contexts/AuthContext';
 
-export const useFavorites = () => {
-  const [favorites, setFavorites] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { user, isAuthenticated } = useAuth();
+export const utiliserFavoris = () => {
+  const [favoris, setFavoris] = useState<Product[]>([]);
+  const [chargement, setChargement] = useState(true);
+  const { utilisateur, estAuthentifie } = useAuth();
 
-  const fetchFavorites = async () => {
-    if (!isAuthenticated || !user) {
-      setFavorites([]);
-      setLoading(false);
+  const recupererFavoris = async () => {
+    if (!estAuthentifie || !utilisateur) {
+      setFavoris([]);
+      setChargement(false);
       return;
     }
     
-    setLoading(true);
+    setChargement(true);
     try {
-      const response = await favoritesAPI.get(user.id);
-      if (response.data && response.data.items && Array.isArray(response.data.items)) {
-        setFavorites(response.data.items);
+      const reponse = await favoritesAPI.get(utilisateur.id);
+      if (reponse.data && reponse.data.items && Array.isArray(reponse.data.items)) {
+        setFavoris(reponse.data.items);
       } else {
-        setFavorites([]);
+        setFavoris([]);
       }
-    } catch (error) {
-      console.error("Erreur lors du chargement des favoris:", error);
-      setFavorites([]);
+    } catch (erreur) {
+      console.error("Erreur lors du chargement des favoris:", erreur);
+      setFavoris([]);
     } finally {
-      setLoading(false);
+      setChargement(false);
     }
   };
 
   useEffect(() => {
-    if (isAuthenticated && user) {
-      fetchFavorites();
+    if (estAuthentifie && utilisateur) {
+      recupererFavoris();
     } else {
-      setFavorites([]);
-      setLoading(false);
+      setFavoris([]);
+      setChargement(false);
     }
-  }, [isAuthenticated, user]);
+  }, [estAuthentifie, utilisateur]);
 
-  const toggleFavorite = async (product: Product) => {
-    if (!isAuthenticated || !user) {
-      toast.error('Vous devez être connecté pour ajouter un produit au favoris', {
+  const basculerFavori = async (produit: Product) => {
+    if (!estAuthentifie || !utilisateur) {
+      toast.error('Vous devez être connecté pour ajouter un produit aux favoris', {
         style: { backgroundColor: '#EF4444', color: 'white', fontWeight: 'bold' },
         duration: 4000,
         position: 'top-center',
@@ -52,33 +52,33 @@ export const useFavorites = () => {
       return;
     }
     
-    const isFav = favorites.some(fav => fav.id === product.id);
+    const estDejaDansFavoris = favoris.some(fav => fav.id === produit.id);
     
     try {
-      if (isFav) {
-        await favoritesAPI.removeItem(user.id, product.id);
-        setFavorites(favorites.filter(fav => fav.id !== product.id));
+      if (estDejaDansFavoris) {
+        await favoritesAPI.removeItem(utilisateur.id, produit.id);
+        setFavoris(favoris.filter(fav => fav.id !== produit.id));
         toast.info('Produit retiré des favoris');
       } else {
-        await favoritesAPI.addItem(user.id, product.id);
-        setFavorites([...favorites, product]);
+        await favoritesAPI.addItem(utilisateur.id, produit.id);
+        setFavoris([...favoris, produit]);
         toast.success('Produit ajouté aux favoris');
       }
-    } catch (error) {
-      console.error("Erreur lors de la gestion des favoris:", error);
+    } catch (erreur) {
+      console.error("Erreur lors de la gestion des favoris:", erreur);
       toast.error('Erreur lors de la gestion des favoris');
     }
   };
 
-  const isFavorite = (productId: string) => {
-    return favorites.some(fav => fav.id === productId);
+  const estFavori = (idProduit: string) => {
+    return favoris.some(fav => fav.id === idProduit);
   };
 
   return {
-    favorites,
-    loading,
-    toggleFavorite,
-    isFavorite,
-    favoriteCount: favorites.length
+    favoris,
+    chargement,
+    basculerFavori,
+    estFavori,
+    nombreFavoris: favoris.length
   };
 };
