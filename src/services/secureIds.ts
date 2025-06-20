@@ -1,3 +1,4 @@
+
 import { nanoid } from 'nanoid';
 
 // Stockage en mémoire des mappings entre IDs sécurisés et IDs réels
@@ -25,6 +26,23 @@ try {
   reverseMap = new Map<string, string>();
   staticSecureRoutes = new Map<string, string>();
 }
+
+// Mappings spécifiques pour les liens demandés
+const initSpecificMappings = () => {
+  // Mapping pour la catégorie
+  if (!reverseMap.has('qgfgqergQdsgdsg1324fhsfd')) {
+    reverseMap.set('qgfgqergQdsgdsg1324fhsfd', 'q4C65b37eA67');
+    secureIdMap.set('q4C65b37eA67', 'qgfgqergQdsgdsg1324fhsfd');
+  }
+  
+  // Mapping pour le produit
+  if (!reverseMap.has('POxgIfpvG17C5Mo1_mc1e1vu')) {
+    reverseMap.set('POxgIfpvG17C5Mo1_mc1e1vu', 'product_POxgIfpvG17C5Mo1_mc1e1vuq');
+    secureIdMap.set('product_POxgIfpvG17C5Mo1_mc1e1vuq', 'POxgIfpvG17C5Mo1_mc1e1vu');
+  }
+  
+  saveMappings();
+};
 
 // Fonction pour sauvegarder les mappings dans localStorage
 const saveMappings = () => {
@@ -212,6 +230,9 @@ export const getRealRoute = (secureRoute: string): string | undefined => {
 
 // Initialisation des routes statiques si elles n'existent pas
 export const initSecureRoutes = () => {
+  // Initialiser les mappings spécifiques au démarrage
+  initSpecificMappings();
+  
   const routesToInit = [
     '/admin',
     '/admin/produits',
