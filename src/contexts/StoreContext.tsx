@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext } from 'react';
 import { utiliserProduits } from '@/hooks/useProducts';
 import { utiliserPanier } from '@/hooks/useCart';
@@ -38,6 +37,7 @@ interface TypeContexteMagasin {
   recupererPanier: () => Promise<void>;
   
   // Aliases pour compatibilité avec les composants existants
+  products: Product[]; // Added to interface
   cart: StoreCartItem[];
   addToCart: (produit: Product, quantite?: number) => void;
   removeFromCart: (idProduit: string) => void;
@@ -148,7 +148,7 @@ export const FournisseurMagasin: React.FC<{ children: React.ReactNode }> = ({ ch
       recupererPanier,
       
       // Aliases pour compatibilité
-      products: produits, // Added missing products alias
+      products: produits,
       cart: panier,
       addToCart: ajouterAuPanier,
       removeFromCart: supprimerDuPanier,
