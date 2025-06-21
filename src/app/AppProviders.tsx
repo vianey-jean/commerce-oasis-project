@@ -1,34 +1,47 @@
 
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async';
+import { ThemeProvider } from '@/components/theme-provider';
 import { AuthProvider } from '@/contexts/AuthContext';
-import { FournisseurMagasin } from '@/contexts/StoreContext';
+import { StoreProvider } from '@/contexts/StoreContext';
+import { VideoCallProvider } from '@/contexts/VideoCallContext';
 import { Toaster } from '@/components/ui/sonner';
-
-interface AppProvidersProps {
-  children: React.ReactNode;
-}
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      retry: 1,
-      refetchOnWindowFocus: false,
-      staleTime: 60000,
-      gcTime: 5 * 60 * 1000,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes
+      retry: 2,
+      retryDelay: 1000,
     },
   },
 });
 
-const AppProviders: React.FC<AppProvidersProps> = ({ children }) => {
+const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <FournisseurMagasin>
-          {children}
-          <Toaster closeButton richColors position="top-center" />
-        </FournisseurMagasin>
-      </AuthProvider>
+      <HelmetProvider>
+        <BrowserRouter>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="light"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <AuthProvider>
+              <StoreProvider>
+                <VideoCallProvider>
+                  {children}
+                  <Toaster />
+                </VideoCallProvider>
+              </StoreProvider>
+            </AuthProvider>
+          </ThemeProvider>
+        </BrowserRouter>
+      </HelmetProvider>
     </QueryClientProvider>
   );
 };
