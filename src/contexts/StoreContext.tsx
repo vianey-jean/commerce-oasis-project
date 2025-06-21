@@ -88,13 +88,8 @@ export const FournisseurMagasin: React.FC<{ children: React.ReactNode }> = ({ ch
     const resultat = await creerNouvelleCommande(adresseLivraison, methodePaiement, articlesSelectionnes, codePromo);
     
     if (resultat) {
-      // Recharger le panier pour refléter les suppressions
       await recupererPanier();
-      
-      // Vider les articles sélectionnés
       setArticlesSelectionnes([]);
-      
-      // Mettre à jour les produits pour refléter le stock actualisé
       recupererProduits();
     }
     
@@ -140,4 +135,7 @@ export const utiliserMagasin = () => {
   return contexte;
 };
 
+// Exports pour la compatibilité
+export const StoreProvider = FournisseurMagasin;
+export const useStore = utiliserMagasin;
 export type { Product };

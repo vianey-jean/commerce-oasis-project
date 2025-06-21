@@ -47,9 +47,10 @@ const DonneesStructureesProduit: React.FC<ProprietesDS> = ({
   };
 
   if (produit.promotion && produit.promotion > 0) {
+    const prixReduit = produit.price * (1 - produit.promotion / 100);
     donneesStructurees.offers = {
       ...donneesStructurees.offers,
-      "price": produit.price * (1 - produit.promotion / 100),
+      "price": prixReduit,
       "highPrice": produit.originalPrice || produit.price
     };
   }

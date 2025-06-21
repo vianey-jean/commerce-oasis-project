@@ -2,14 +2,13 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/contexts/AuthContext';
-import { StoreProvider } from '@/contexts/StoreContext';
+import { FournisseurMagasin } from '@/contexts/StoreContext';
 import { Toaster } from '@/components/ui/sonner';
 
 interface AppProvidersProps {
   children: React.ReactNode;
 }
 
-// Création d'un nouveau QueryClient avec configuration optimisée
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -25,10 +24,10 @@ const AppProviders: React.FC<AppProvidersProps> = ({ children }) => {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <StoreProvider>
+        <FournisseurMagasin>
           {children}
           <Toaster closeButton richColors position="top-center" />
-        </StoreProvider>
+        </FournisseurMagasin>
       </AuthProvider>
     </QueryClientProvider>
   );

@@ -10,7 +10,7 @@ export const utiliserPanier = () => {
   const [panier, setPanier] = useState<StoreCartItem[]>([]);
   const [articlesSelectionnes, setArticlesSelectionnes] = useState<StoreCartItem[]>([]);
   const [chargement, setChargement] = useState(true);
-  const { utilisateur, estAuthentifie } = useAuth();
+  const { user: utilisateur, isAuthenticated: estAuthentifie } = useAuth();
 
   const recupererPanier = async () => {
     if (!estAuthentifie || !utilisateur) {
@@ -30,14 +30,13 @@ export const utiliserPanier = () => {
         return;
       }
       
-      // Optimisation: chargement parallèle des produits
       const promessesProduits = donneesPanier.items.map(async (article) => {
         try {
           const reponseProduit = await productsAPI.getById(article.productId);
           if (reponseProduit.data) {
             return {
-              produit: reponseProduit.data,
-              quantite: article.quantity
+              product: reponseProduit.data,
+              quantity: article.quantity
             };
           }
         } catch (err) {
@@ -86,8 +85,8 @@ export const utiliserPanier = () => {
       return;
     }
     
-    const indexArticleExistant = panier.findIndex(article => article.produit.id === produit.id);
-    const quantiteExistante = indexArticleExistant >= 0 ? panier[indexArticleExistant].quantite : 0;
+    const indexArticleExistant = panier.findIndex(article => article.product.id === produit.id);
+    const quantiteExistante = indexArticleExistant >= 0 ? panier[indexArticleExistant].quantity : 0;
     
     if (produit.stock !== undefined && (quantiteExistante + quantite) > produit.stock) {
       toast.error(`Stock insuffisant. Disponible: ${produit.stock}`);
@@ -99,10 +98,10 @@ export const utiliserPanier = () => {
       
       if (indexArticleExistant >= 0) {
         const panierMisAJour = [...panier];
-        panierMisAJour[indexArticleExistant].quantite += quantite;
+        panierMisAJour[indexArticleExistant].quantity += quantite;
         setPanier(panierMisAJour);
       } else {
-        setPanier([...panier, { produit, quantite }]);
+        setPanier([...panier, { product: produit, quantity: quantite }]);
       }
       
       toast.success('Produit ajouté au panier');
@@ -117,7 +116,7 @@ export const utiliserPanier = () => {
     
     try {
       await cartAPI.removeItem(utilisateur.id, idProduit);
-      setPanier(panier.filter(article => article.produit.id !== idProduit));
+      setPanier(panier.filter(article => article.product.id !== idProduit));
       toast.info('Produit supprimé du panier');
     } catch (erreur) {
       console.error("Erreur lors de la suppression du panier:", erreur);
@@ -143,8 +142,8 @@ export const utiliserPanier = () => {
       await cartAPI.updateItem(utilisateur.id, idProduit, quantite);
       
       const panierMisAJour = panier.map(article => {
-        if (article.produit.id === idProduit) {
-          return { ...article, quantite };
+        if (article.product.id === idProduit) {
+          return { ...article, quantity: quantite };
         }
         return article;
       });
@@ -170,7 +169,7 @@ export const utiliserPanier = () => {
 
   const obtenirTotalPanier = () => {
     return articlesSelectionnes.reduce((total, article) => {
-      return total + (article.produit.price * article.quantite);
+      return total + (article.product.price * article.quantity);
     }, 0);
   };
 

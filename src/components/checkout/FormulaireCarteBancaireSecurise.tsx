@@ -5,9 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from '@/components/ui/sonner';
-import { Shield, CreditCard, Lock, Plus, Trash2 } from 'lucide-react';
+import { Shield, CreditCard, Lock, Trash2 } from 'lucide-react';
 import { cryptageCartes } from '@/services/securite/cryptageCartes';
 import { cartesBancairesAPI, CarteBancaireSauvegardee } from '@/services/api/cartesBancaires';
 import LoadingSpinner from '@/components/ui/loading-spinner';
@@ -182,7 +181,6 @@ const FormulaireCarteBancaireSecurise: React.FC<ProprietesFormulaireCarteBancair
       let donneesValidation;
       
       if (utiliserNouvelleCart || !carteSelectionnee) {
-        // Nouvelle carte
         const donneesCarte = {
           numeroCarte,
           nomTitulaire,
@@ -192,16 +190,15 @@ const FormulaireCarteBancaireSecurise: React.FC<ProprietesFormulaireCarteBancair
         
         donneesValidation = {
           donneesNouvelleCarte: donneesCarte,
-          montant: Math.round(montantTotal * 100), // En centimes
+          montant: Math.round(montantTotal * 100),
           monnaie: 'EUR',
           idCommande,
           sauvegarderCarte
         };
       } else {
-        // Carte sauvegardée
         donneesValidation = {
           idCarte: carteSelectionnee,
-          cvv, // Toujours demander le CVV même pour les cartes sauvegardées
+          cvv,
           montant: Math.round(montantTotal * 100),
           monnaie: 'EUR',
           idCommande
@@ -211,19 +208,15 @@ const FormulaireCarteBancaireSecurise: React.FC<ProprietesFormulaireCarteBancair
       const reponse = await cartesBancairesAPI.validerPaiement3DS(donneesValidation);
       
       if (reponse.data.necessite3DS) {
-        // Redirection vers la validation 3DS
         setValidation3DS({
           actif: true,
           idTransaction: reponse.data.idTransaction,
           urlValidation: reponse.data.urlValidation3DS
         });
         
-        // Ouvrir la fenêtre de validation 3DS
         window.open(reponse.data.urlValidation3DS, '_blank', 'width=400,height=600');
-        
         toast.info('Validation 3DS requise. Une nouvelle fenêtre s\'est ouverte.');
       } else {
-        // Paiement accepté directement
         if (sauvegarderCarte && utiliserNouvelleCart) {
           await sauvegarderNouvelleCarte();
         }
@@ -245,7 +238,7 @@ const FormulaireCarteBancaireSecurise: React.FC<ProprietesFormulaireCarteBancair
         numeroCarte,
         nomTitulaire,
         dateExpiration,
-        cvv: '' // Ne jamais sauvegarder le CVV
+        cvv: ''
       });
 
       await cartesBancairesAPI.sauvegarderCarte({
@@ -262,22 +255,6 @@ const FormulaireCarteBancaireSecurise: React.FC<ProprietesFormulaireCarteBancair
     } catch (erreur) {
       console.error('Erreur sauvegarde carte:', erreur);
       toast.error('Erreur lors de la sauvegarde de la carte');
-    }
-  };
-
-  const confirmerValidation3DS = async (codeValidation: string) => {
-    try {
-      await cartesBancairesAPI.confirmerPaiement(validation3DS.idTransaction, codeValidation);
-      
-      if (sauvegarderCarte && utiliserNouvelleCart) {
-        await sauvegarderNouvelleCarte();
-      }
-      
-      toast.success('Paiement confirmé avec succès');
-      surReussite();
-    } catch (erreur) {
-      console.error('Erreur confirmation 3DS:', erreur);
-      toast.error('Erreur lors de la confirmation du paiement');
     }
   };
 
@@ -329,7 +306,6 @@ const FormulaireCarteBancaireSecurise: React.FC<ProprietesFormulaireCarteBancair
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Sélection du mode de paiement */}
           {cartesSauvegardees.length > 0 && (
             <div className="space-y-4">
               <div className="flex items-center space-x-2">
@@ -354,7 +330,6 @@ const FormulaireCarteBancaireSecurise: React.FC<ProprietesFormulaireCarteBancair
             </div>
           )}
 
-          {/* Liste des cartes sauvegardées */}
           {!utiliserNouvelleCart && cartesSauvegardees.length > 0 && (
             <div className="space-y-2">
               <Label>Sélectionner une carte</Label>
@@ -391,7 +366,6 @@ const FormulaireCarteBancaireSecurise: React.FC<ProprietesFormulaireCarteBancair
             </div>
           )}
 
-          {/* Formulaire nouvelle carte */}
           {utiliserNouvelleCart && (
             <div className="space-y-4">
               <div>
@@ -469,7 +443,6 @@ const FormulaireCarteBancaireSecurise: React.FC<ProprietesFormulaireCarteBancair
             </div>
           )}
 
-          {/* CVV pour cartes sauvegardées */}
           {!utiliserNouvelleCart && carteSelectionnee && (
             <div>
               <Label htmlFor="cvv-sauvegarde">Code CVV</Label>

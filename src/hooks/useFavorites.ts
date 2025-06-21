@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 export const utiliserFavoris = () => {
   const [favoris, setFavoris] = useState<Product[]>([]);
   const [chargement, setChargement] = useState(true);
-  const { utilisateur, estAuthentifie } = useAuth();
+  const { user: utilisateur, isAuthenticated: estAuthentifie } = useAuth();
 
   const recupererFavoris = async () => {
     if (!estAuthentifie || !utilisateur) {
