@@ -2,10 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Shield, CreditCard, Lock } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import { toast } from '@/components/ui/sonner';
 import { crypterDonneesCarte, decrypterDonneesCarte } from '@/services/securite/cryptageCartes';
 import { cartesBancairesAPI } from '@/services/api/cartesBancaires';
@@ -251,14 +252,10 @@ const FormulaireCarteBancaireSecurise: React.FC<ProprietesFormulaireCarteBancair
   return (
     <Card className="w-full max-w-md mx-auto">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <CreditCard className="h-5 w-5" />
+        <CardTitle className="flex items-center">
+          <Lock className="h-5 w-5 mr-2" />
           Paiement sécurisé
         </CardTitle>
-        <div className="flex items-center gap-2 text-sm text-green-600">
-          <Lock className="h-4 w-4" />
-          Données cryptées et sécurisées
-        </div>
       </CardHeader>
       
       <CardContent>

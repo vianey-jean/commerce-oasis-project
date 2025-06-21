@@ -16,7 +16,8 @@ import pubLayoutAPI, { PubLayout } from '@/services/pubLayoutAPI';
 import { useScrollDetection } from '@/hooks/useScrollDetection';
 
 interface ProprietesLayout {
-  enfants: React.ReactNode;
+  enfants?: React.ReactNode;
+  children?: React.ReactNode;
   masquerInvites?: boolean;
   // Propriétés SEO
   titrePage?: string;
@@ -28,6 +29,7 @@ interface ProprietesLayout {
 
 const Layout: React.FC<ProprietesLayout> = ({ 
   enfants, 
+  children,
   masquerInvites = false,
   titrePage,
   descriptionPage,
@@ -35,6 +37,9 @@ const Layout: React.FC<ProprietesLayout> = ({
   imageOGPage,
   typeContenuPage
 }) => {
+  // Use enfants if provided, otherwise use children
+  const content = enfants || children;
+
   const { data: produitsTendance } = useQuery({
     queryKey: ['produits-tendance'],
     queryFn: async (): Promise<Product[]> => {
@@ -89,7 +94,7 @@ const Layout: React.FC<ProprietesLayout> = ({
       </header>
       
       <main className="flex-grow" role="main">
-        {enfants}
+        {content}
         <BenefitsSection />
         <PaymentBadges />
       </main>

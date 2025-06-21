@@ -56,6 +56,11 @@ interface TypeContexteMagasin {
   ) => Promise<Order | null>;
   favorites: Product[];
   loadingFavorites: boolean;
+  
+  // Additional aliases for orders
+  orders: Order[];
+  loadingOrders: boolean;
+  fetchOrders: () => Promise<void>;
 }
 
 const ContexteMagasin = createContext<TypeContexteMagasin | undefined>(undefined);
@@ -156,7 +161,12 @@ export const FournisseurMagasin: React.FC<{ children: React.ReactNode }> = ({ ch
       getCartTotal: obtenirTotalPanier,
       createOrder: creerCommande,
       favorites: favoris,
-      loadingFavorites: chargementFavoris
+      loadingFavorites: chargementFavoris,
+      
+      // Orders aliases
+      orders: commandes,
+      loadingOrders: chargementCommandes,
+      fetchOrders: recupererCommandes
     }}>
       {children}
     </ContexteMagasin.Provider>

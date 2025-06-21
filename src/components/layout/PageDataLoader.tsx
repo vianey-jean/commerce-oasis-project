@@ -10,6 +10,15 @@ interface ProprietesChargeurDonneesPage {
   sousmessageChargement?: string;
   messageErreur?: string;
   enfants?: React.ReactNode;
+  children?: React.ReactNode;
+  
+  // Aliases for compatibility
+  fetchFunction?: () => Promise<any>;
+  onSuccess?: (donnees: any) => void;
+  onMaxRetriesReached?: () => void;
+  loadingMessage?: string;
+  loadingSubmessage?: string;
+  errorMessage?: string;
 }
 
 const ChargeurDonneesPage: React.FC<ProprietesChargeurDonneesPage> = ({
@@ -19,21 +28,39 @@ const ChargeurDonneesPage: React.FC<ProprietesChargeurDonneesPage> = ({
   messageChargement = "Chargement de votre boutique...",
   sousmessageChargement = "Préparation de votre expérience shopping premium...",
   messageErreur = "Erreur de chargement des données",
-  enfants
+  enfants,
+  children,
+  
+  // Aliases
+  fetchFunction,
+  onSuccess,
+  onMaxRetriesReached,
+  loadingMessage,
+  loadingSubmessage,
+  errorMessage
 }) => {
+  // Use aliases if provided, otherwise use French props
+  const finalFetchFunction = fetchFunction || fonctionRecuperation;
+  const finalOnSuccess = onSuccess || surReussite;
+  const finalOnMaxRetriesReached = onMaxRetriesReached || surMaxTentativesAtteint;
+  const finalLoadingMessage = loadingMessage || messageChargement;
+  const finalLoadingSubmessage = loadingSubmessage || sousmessageChargement;
+  const finalErrorMessage = errorMessage || messageErreur;
+  const content = enfants || children;
+
   return (
     <DataRetryLoader
-      fetchFunction={fonctionRecuperation}
-      onSuccess={surReussite}
-      onMaxRetriesReached={surMaxTentativesAtteint}
-      maxRetries={3} // Réduit de 6 à 3 pour des chargements plus rapides
-      retryInterval={2000} // Réduit de 5s à 2s
-      errorMessage={messageErreur}
+      fetchFunction={finalFetchFunction}
+      onSuccess={finalOnSuccess}
+      onMaxRetriesReached={finalOnMaxRetriesReached}
+      maxRetries={3}
+      retryInterval={2000}
+      errorMessage={finalErrorMessage}
       loadingVariant="boutique"
-      loadingMessage={messageChargement}
-      loadingSubmessage={sousmessageChargement}
+      loadingMessage={finalLoadingMessage}
+      loadingSubmessage={finalLoadingSubmessage}
     >
-      {enfants}
+      {content}
     </DataRetryLoader>
   );
 };
