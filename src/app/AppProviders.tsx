@@ -8,6 +8,8 @@ import { AuthProvider } from '@/contexts/AuthContext';
 import { StoreProvider } from '@/contexts/StoreContext';
 import { VideoCallProvider } from '@/contexts/VideoCallContext';
 import { Toaster } from '@/components/ui/sonner';
+import { Toaster as OldToaster } from '@/components/ui/toaster';
+import CookieManager from '@/components/prompts/CookieManager';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -16,6 +18,7 @@ const queryClient = new QueryClient({
       gcTime: 10 * 60 * 1000, // 10 minutes
       retry: 2,
       retryDelay: 1000,
+      refetchOnWindowFocus: false,
     },
   },
 });
@@ -35,7 +38,9 @@ const AppProviders: React.FC<{ children: React.ReactNode }> = ({ children }) => 
               <StoreProvider>
                 <VideoCallProvider>
                   {children}
+                  <CookieManager position="fixed" />
                   <Toaster />
+                  <OldToaster />
                 </VideoCallProvider>
               </StoreProvider>
             </AuthProvider>
