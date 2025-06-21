@@ -2,40 +2,40 @@
 import React from 'react';
 import DataRetryLoader from '@/components/data-loading/DataRetryLoader';
 
-interface PageDataLoaderProps {
-  fetchFunction: () => Promise<any>;
-  onSuccess: (data: any) => void;
-  onMaxRetriesReached?: () => void;
-  loadingMessage?: string;
-  loadingSubmessage?: string;
-  errorMessage?: string;
-  children?: React.ReactNode;
+interface ProprietesChargeurDonneesPage {
+  fonctionRecuperation: () => Promise<any>;
+  surReussite: (donnees: any) => void;
+  surMaxTentativesAtteint?: () => void;
+  messageChargement?: string;
+  sousmessageChargement?: string;
+  messageErreur?: string;
+  enfants?: React.ReactNode;
 }
 
-const PageDataLoader: React.FC<PageDataLoaderProps> = ({
-  fetchFunction,
-  onSuccess,
-  onMaxRetriesReached,
-  loadingMessage = "Chargement de votre boutique...",
-  loadingSubmessage = "Préparation de votre expérience shopping premium...",
-  errorMessage = "Erreur de chargement des données",
-  children
+const ChargeurDonneesPage: React.FC<ProprietesChargeurDonneesPage> = ({
+  fonctionRecuperation,
+  surReussite,
+  surMaxTentativesAtteint,
+  messageChargement = "Chargement de votre boutique...",
+  sousmessageChargement = "Préparation de votre expérience shopping premium...",
+  messageErreur = "Erreur de chargement des données",
+  enfants
 }) => {
   return (
     <DataRetryLoader
-      fetchFunction={fetchFunction}
-      onSuccess={onSuccess}
-      onMaxRetriesReached={onMaxRetriesReached}
-      maxRetries={6}
-      retryInterval={5000}
-      errorMessage={errorMessage}
+      fetchFunction={fonctionRecuperation}
+      onSuccess={surReussite}
+      onMaxRetriesReached={surMaxTentativesAtteint}
+      maxRetries={3} // Réduit de 6 à 3 pour des chargements plus rapides
+      retryInterval={2000} // Réduit de 5s à 2s
+      errorMessage={messageErreur}
       loadingVariant="boutique"
-      loadingMessage={loadingMessage}
-      loadingSubmessage={loadingSubmessage}
+      loadingMessage={messageChargement}
+      loadingSubmessage={sousmessageChargement}
     >
-      {children}
+      {enfants}
     </DataRetryLoader>
   );
 };
 
-export default PageDataLoader;
+export default ChargeurDonneesPage;

@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Heart, ShoppingCart, X, Star, Share2, Eye } from 'lucide-react';
+import { Heart, ShoppingCart, X, Share2, Eye } from 'lucide-react';
 import { Product } from '@/types/product';
 import { useStore } from '@/contexts/StoreContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -12,60 +12,62 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { getSecureProductId } from '@/services/secureIds';
 
-interface QuickViewModalProps {
-  product: Product | null;
-  isOpen: boolean;
-  onClose: () => void;
+interface ProprietesModalVueRapide {
+  produit: Product | null;
+  estOuvert: boolean;
+  fermer: () => void;
 }
 
-const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, isOpen, onClose }) => {
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [quantity, setQuantity] = useState(1);
-  const { addToCart, toggleFavorite, isFavorite } = useStore();
-  const { isAuthenticated } = useAuth();
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const ModalVueRapideProduit: React.FC<ProprietesModalVueRapide> = ({ produit, estOuvert, fermer }) => {
+  const [indexImageSelectionnee, setIndexImageSelectionnee] = useState(0);
+  const [quantite, setQuantite] = useState(1);
+  const { ajouterAuPanier, basculerFavori, estFavori } = useStore();
+  const { estAuthentifie } = useAuth();
+  const URL_BASE_API = import.meta.env.VITE_API_BASE_URL;
 
-  if (!product) return null;
+  if (!produit) return null;
 
-  const productImages = product.images && product.images.length > 0 
-    ? product.images 
-    : product.image ? [product.image] : [];
+  const imagesProduit = produit.images && produit.images.length > 0 
+    ? produit.images 
+    : produit.image ? [produit.image] : [];
 
-  const getImageUrl = (imagePath: string) => {
-    if (!imagePath) return '/placeholder.svg';
-    if (imagePath.startsWith('http')) return imagePath;
-    return `${API_BASE_URL}${imagePath}`;
+  const obtenirUrlImage = (cheminImage: string) => {
+    if (!cheminImage) return '/placeholder.svg';
+    if (cheminImage.startsWith('http')) return cheminImage;
+    return `${URL_BASE_API}${cheminImage}`;
   };
 
-  const handleAddToCart = () => {
-    if (!isAuthenticated) {
+  const gererAjoutPanier = () => {
+    if (!estAuthentifie) {
       toast.error("Vous devez être connecté pour ajouter un produit au panier");
       return;
     }
 
-    for (let i = 0; i < quantity; i++) {
-      addToCart(product);
+    for (let i = 0; i < quantite; i++) {
+      ajouterAuPanier(produit);
     }
-    toast.success(`${quantity} ${quantity > 1 ? 'exemplaires ajoutés' : 'exemplaire ajouté'} au panier`);
+    toast.success(`${quantite} ${quantite > 1 ? 'exemplaires ajoutés' : 'exemplaire ajouté'} au panier`);
   };
 
-  const handleToggleFavorite = () => {
-    if (!isAuthenticated) {
+  const gererBasculerFavori = () => {
+    if (!estAuthentifie) {
       toast.error("Vous devez être connecté pour ajouter aux favoris");
       return;
     }
-    toggleFavorite(product);
-    toast.success(isFavorite(product.id) ? "Retiré des favoris" : "Ajouté aux favoris");
+    basculerFavori(produit);
+    toast.success(estFavori(produit.id) ? "Retiré des favoris" : "Ajouté aux favoris");
   };
 
-  const isPromotionActive = product.promotion && 
-    product.promotionEnd && 
-    new Date(product.promotionEnd) > new Date();
+  const promotionActive = produit.promotion && 
+    produit.promotionEnd && 
+    new Date(produit.promotionEnd) > new Date();
 
-  const isInStock = product.isSold && (product.stock === undefined || product.stock > 0);
+  const enStock = produit.isSold && (produit.stock === undefined || produit.stock > 0);
+  const estNouveau = produit.dateAjout && 
+    new Date().getTime() - new Date(produit.dateAjout).getTime() < 7 * 24 * 60 * 60 * 1000;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={estOuvert} onOpenChange={fermer}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
@@ -74,11 +76,11 @@ const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, isOpen, onClos
           transition={{ duration: 0.2 }}
           className="grid grid-cols-1 md:grid-cols-2 gap-0"
         >
-          {/* Images */}
+          {/* Section Images */}
           <div className="relative bg-gray-50 p-6">
             <button
-              onClick={onClose}
-              className="absolute top-4 mr-6 right-4 z-10 p-2 bg-white rounded-full shadow-md hover:shadow-lg transition-shadow md:hidden"
+              onClick={fermer}
+              className="absolute top-4 right-4 z-10 p-2 bg-white rounded-full shadow-md hover:shadow-lg transition-shadow md:hidden"
             >
               <X className="h-4 w-4" />
             </button>
@@ -86,45 +88,45 @@ const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, isOpen, onClos
             <div className="relative mb-4">
               <AnimatePresence mode="wait">
                 <motion.img
-                  key={selectedImageIndex}
-                  src={getImageUrl(productImages[selectedImageIndex])}
-                  alt={product.name}
+                  key={indexImageSelectionnee}
+                  src={obtenirUrlImage(imagesProduit[indexImageSelectionnee])}
+                  alt={produit.name}
                   className="w-full h-80 object-contain rounded-lg"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.3 }}
                   onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    target.src = '/placeholder.svg';
+                    const cible = e.target as HTMLImageElement;
+                    cible.src = '/placeholder.svg';
                   }}
                 />
               </AnimatePresence>
               
-              {isPromotionActive && (
+              {promotionActive && (
                 <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">
-                  -{product.promotion}%
+                  -{produit.promotion}%
                 </div>
               )}
             </div>
 
-            {productImages.length > 1 && (
+            {imagesProduit.length > 1 && (
               <div className="flex gap-2 justify-center">
-                {productImages.slice(0, 4).map((image, index) => (
+                {imagesProduit.slice(0, 4).map((image, index) => (
                   <button
                     key={index}
-                    onClick={() => setSelectedImageIndex(index)}
+                    onClick={() => setIndexImageSelectionnee(index)}
                     className={`w-16 h-16 rounded-md overflow-hidden border-2 transition-all ${
-                      index === selectedImageIndex ? 'border-red-500' : 'border-transparent'
+                      index === indexImageSelectionnee ? 'border-red-500' : 'border-transparent'
                     }`}
                   >
                     <img
-                      src={getImageUrl(image)}
-                      alt={`${product.name} - ${index + 1}`}
+                      src={obtenirUrlImage(image)}
+                      alt={`${produit.name} - ${index + 1}`}
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = '/placeholder.svg';
+                        const cible = e.target as HTMLImageElement;
+                        cible.src = '/placeholder.svg';
                       }}
                     />
                   </button>
@@ -138,53 +140,52 @@ const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, isOpen, onClos
             <DialogHeader className="mb-4">
               <div className="flex items-center gap-2 mb-2">
                 <Badge variant="outline" className="text-xs">
-                  {product.category}
+                  {produit.category}
                 </Badge>
-                {product.dateAjout && new Date().getTime() - new Date(product.dateAjout).getTime() < 7 * 24 * 60 * 60 * 1000 && (
+                {estNouveau && (
                   <Badge className="bg-blue-600 text-white text-xs">Nouveau</Badge>
                 )}
               </div>
-              <DialogTitle className="text-2xl font-bold">{product.name}</DialogTitle>
+              <DialogTitle className="text-2xl font-bold">{produit.name}</DialogTitle>
             </DialogHeader>
 
-            {isPromotionActive ? (
+            {promotionActive ? (
               <div className="mb-4">
                 <div className="flex items-center gap-2">
                   <p className="text-lg text-gray-500 line-through">
-                    {typeof product.originalPrice === 'number'
-                      ? product.originalPrice.toFixed(2)
-                      : product.price.toFixed(2)}{' '}
-                    €
+                    {typeof produit.originalPrice === 'number'
+                      ? produit.originalPrice.toFixed(2)
+                      : produit.price.toFixed(2)} €
                   </p>
                   <span className="bg-red-600 text-white px-2 py-0.5 text-xs font-bold rounded">
-                    -{product.promotion}%
+                    -{produit.promotion}%
                   </span>
                 </div>
                 <p className="text-2xl font-bold text-red-600">
-                  {product.price.toFixed(2)} €
+                  {produit.price.toFixed(2)} €
                 </p>
               </div>
             ) : (
               <p className="text-2xl font-bold mb-4">
-                {product.price.toFixed(2)} €
+                {produit.price.toFixed(2)} €
               </p>
             )}
 
             <div className="mb-4 max-h-24 overflow-y-auto text-sm text-gray-700">
-              {product.description}
+              {produit.description}
             </div>
 
             <div className="mb-6">
               <div className="flex items-center space-x-2">
                 <p className="font-medium text-sm">Disponibilité:</p>
-                <span className={isInStock ? 'text-green-600 text-sm' : 'text-red-600 text-sm'}>
-                  {isInStock ? 'En stock' : 'Rupture de stock'}
+                <span className={enStock ? 'text-green-600 text-sm' : 'text-red-600 text-sm'}>
+                  {enStock ? 'En stock' : 'Rupture de stock'}
                 </span>
               </div>
 
-              {product.stock !== undefined && (
+              {produit.stock !== undefined && (
                 <p className="text-sm text-gray-600">
-                  {product.stock} unité{product.stock !== 1 ? 's' : ''} disponible{product.stock !== 1 ? 's' : ''}
+                  {produit.stock} unité{produit.stock !== 1 ? 's' : ''} disponible{produit.stock !== 1 ? 's' : ''}
                 </p>
               )}
             </div>
@@ -192,18 +193,18 @@ const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, isOpen, onClos
             <div className="flex items-center space-x-4 mb-6">
               <div className="flex items-center border border-gray-300 rounded-md">
                 <button
-                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  disabled={quantity <= 1}
+                  onClick={() => setQuantite(Math.max(1, quantite - 1))}
+                  disabled={quantite <= 1}
                   className="px-3 py-1 text-gray-600 disabled:text-gray-300"
                 >
                   -
                 </button>
                 <span className="px-4 py-1 border-x border-gray-300 min-w-[40px] text-center">
-                  {quantity}
+                  {quantite}
                 </span>
                 <button
-                  onClick={() => setQuantity(quantity + 1)}
-                  disabled={product.stock !== undefined && quantity >= product.stock}
+                  onClick={() => setQuantite(quantite + 1)}
+                  disabled={produit.stock !== undefined && quantite >= produit.stock}
                   className="px-3 py-1 text-gray-600 disabled:text-gray-300"
                 >
                   +
@@ -213,8 +214,8 @@ const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, isOpen, onClos
 
             <div className="flex space-x-3">
               <Button 
-                onClick={handleAddToCart} 
-                disabled={!isInStock}
+                onClick={gererAjoutPanier} 
+                disabled={!enStock}
                 className="flex-1 bg-red-600 hover:bg-red-700"
               >
                 <ShoppingCart className="mr-2 h-4 w-4" />
@@ -224,11 +225,11 @@ const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, isOpen, onClos
               <Button
                 variant="outline"
                 size="icon"
-                onClick={handleToggleFavorite}
+                onClick={gererBasculerFavori}
                 className="rounded-full"
               >
                 <Heart
-                  className={`h-4 w-4 ${isFavorite(product.id) ? 'fill-red-500 text-red-500' : ''}`}
+                  className={`h-4 w-4 ${estFavori(produit.id) ? 'fill-red-500 text-red-500' : ''}`}
                 />
               </Button>
               
@@ -236,7 +237,7 @@ const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, isOpen, onClos
                 variant="outline"
                 size="icon"
                 onClick={() => {
-                  const url = window.location.origin + `/${getSecureProductId(product.id)}`;
+                  const url = window.location.origin + `/${getSecureProductId(produit.id)}`;
                   navigator.clipboard.writeText(url);
                   toast.success("Lien copié!");
                 }}
@@ -248,7 +249,7 @@ const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, isOpen, onClos
 
             <div className="mt-6 text-center">
               <Button variant="link" asChild>
-                <Link to={`/${getSecureProductId(product.id)}`}>
+                <Link to={`/${getSecureProductId(produit.id)}`}>
                   <Eye className="mr-2 h-4 w-4" />
                   Voir la page produit
                 </Link>
@@ -261,4 +262,4 @@ const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, isOpen, onClos
   );
 };
 
-export default QuickViewModal;
+export default ModalVueRapideProduit;
