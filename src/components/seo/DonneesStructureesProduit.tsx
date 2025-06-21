@@ -35,7 +35,7 @@ const DonneesStructureesProduit: React.FC<ProprietesDS> = ({
         "@type": "Organization",
         "name": "Riziky-Boutic"
       }
-    },
+    } as any,
     "aggregateRating": {
       "@type": "AggregateRating",
       "ratingValue": "4.5",

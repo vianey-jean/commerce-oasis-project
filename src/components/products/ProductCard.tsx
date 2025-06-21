@@ -192,7 +192,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
       >
         <Card className={`overflow-hidden ${heightClasses[size]} flex flex-col border-0 shadow-lg hover:shadow-2xl transition-all duration-500 rounded-2xl bg-gradient-to-br from-white to-gray-50 dark:from-neutral-900 dark:to-black ${featured ? 'ring-2 ring-gradient-to-r from-red-500 to-pink-500 shadow-2xl' : ''}`}>
           {/* Image Container with Enhanced Effects */}
-          <div className="relative h-[65%] bg-gradient-to-br from-gray-50 to-gray-100 dark:from-neutral-800 dark:to-neutral-900 overflow-hidden rounded-t-2xl">
+          <div className="relative h-[65%] bg-gradient-to-br from-gray-50 to-gray-100 dark:from-neutral-800 dark:to-neutral-900 overflow-hidden rounded">
             <Link to={`/produit/${secureId}`} className="block h-full">
               <AnimatePresence mode="wait">
                 {displayImages.length > 0 ? (
@@ -212,7 +212,7 @@ const ProductCard: React.FC<ProductCardProps> = ({
                     transition={{ duration: 0.4 }}
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-neutral-800 dark:to-neutral-900">
+                  <div className="w-full h-full flex items-center justify-center bg-gray-100">
                     <ShoppingCart className="h-16 w-16 text-gray-400" />
                   </div>
                 )}
@@ -403,9 +403,9 @@ const ProductCard: React.FC<ProductCardProps> = ({
       </motion.div>
 
       <QuickViewModal
-        product={product}
-        isOpen={isQuickViewOpen}
-        onClose={() => setIsQuickViewOpen(false)}
+        produit={product}
+        estOuverte={isQuickViewOpen}
+        fermer={() => setIsQuickViewOpen(false)}
       />
     </>
   );

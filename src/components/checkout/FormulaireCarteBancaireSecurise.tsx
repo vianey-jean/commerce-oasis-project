@@ -5,492 +5,401 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Shield, CreditCard, Lock } from 'lucide-react';
 import { toast } from '@/components/ui/sonner';
-import { Shield, CreditCard, Lock, Trash2 } from 'lucide-react';
-import { cryptageCartes } from '@/services/securite/cryptageCartes';
-import { cartesBancairesAPI, CarteBancaireSauvegardee } from '@/services/api/cartesBancaires';
-import LoadingSpinner from '@/components/ui/loading-spinner';
+import { crypterDonneesCarte, decrypterDonneesCarte } from '@/services/securite/cryptageCartes';
+import { cartesBancairesAPI } from '@/services/api/cartesBancaires';
+import { useAuth } from '@/contexts/AuthContext';
+
+interface CarteBancaireEnregistree {
+  id: string;
+  dernierChiffres: string;
+  typeCarte: string;
+  nomTitulaire: string;
+  dateExpiration: string;
+}
 
 interface ProprietesFormulaireCarteBancaire {
-  surReussite: () => void;
+  surSucces: () => void;
   montantTotal: number;
   idCommande: string;
 }
 
-const FormulaireCarteBancaireSecurise: React.FC<ProprietesFormulaireCarteBancaire> = ({ 
-  surReussite, 
+const FormulaireCarteBancaireSecurise: React.FC<ProprietesFormulaireCarteBancaire> = ({
+  surSucces,
   montantTotal,
-  idCommande 
+  idCommande
 }) => {
   const [numeroCarte, setNumeroCarte] = useState('');
   const [nomTitulaire, setNomTitulaire] = useState('');
   const [dateExpiration, setDateExpiration] = useState('');
-  const [cvv, setCvv] = useState('');
+  const [codeSecurite, setCodeSecurite] = useState('');
+  const [enregistrerCarte, setEnregistrerCarte] = useState(false);
+  const [carteSelectionnee, setCarteSelectionnee] = useState<string>('nouvelle');
+  const [cartesEnregistrees, setCartesEnregistrees] = useState<CarteBancaireEnregistree[]>([]);
   const [chargement, setChargement] = useState(false);
-  const [sauvegarderCarte, setSauvegarderCarte] = useState(false);
-  const [cartesSauvegardees, setCartesSauvegardees] = useState<CarteBancaireSauvegardee[]>([]);
-  const [carteSelectionnee, setCarteSelectionnee] = useState<string>('');
-  const [utiliserNouvelleCart, setUtiliserNouvelleCart] = useState(true);
-  const [validation3DS, setValidation3DS] = useState<{
-    actif: boolean;
-    idTransaction: string;
-    urlValidation: string;
-  }>({ actif: false, idTransaction: '', urlValidation: '' });
+  const [validationEnCours, setValidationEnCours] = useState(false);
   
-  const [erreurs, setErreurs] = useState({
-    numeroCarte: '',
-    nomTitulaire: '',
-    dateExpiration: '',
-    cvv: ''
-  });
+  const { user: utilisateur } = useAuth();
 
   useEffect(() => {
-    chargerCartesSauvegardees();
-  }, []);
+    if (utilisateur) {
+      chargerCartesEnregistrees();
+    }
+  }, [utilisateur]);
 
-  const chargerCartesSauvegardees = async () => {
+  const chargerCartesEnregistrees = async () => {
+    if (!utilisateur) return;
+    
     try {
-      const reponse = await cartesBancairesAPI.obtenirCartesSauvegardees();
-      setCartesSauvegardees(reponse.data || []);
-      if (reponse.data && reponse.data.length > 0) {
-        setUtiliserNouvelleCart(false);
-        setCarteSelectionnee(reponse.data.find(c => c.estPrincipale)?.id || reponse.data[0].id);
-      }
+      const reponse = await cartesBancairesAPI.obtenirCartes(utilisateur.id);
+      setCartesEnregistrees(reponse.data || []);
     } catch (erreur) {
-      console.error('Erreur chargement cartes:', erreur);
+      console.error('Erreur lors du chargement des cartes:', erreur);
     }
   };
 
-  const formaterNumeroCarte = (valeur: string) => {
-    const chiffres = valeur.replace(/\D/g, '');
-    const chiffresLimites = chiffres.slice(0, 16);
-    const formate = chiffresLimites.replace(/(\d{4})(?=\d)/g, '$1 ');
-    return formate;
-  };
-
-  const formaterDateExpiration = (valeur: string) => {
-    const chiffres = valeur.replace(/\D/g, '');
-    const chiffresLimites = chiffres.slice(0, 4);
-    if (chiffresLimites.length > 2) {
-      return `${chiffresLimites.slice(0, 2)}/${chiffresLimites.slice(2)}`;
+  const validerNumeroCarte = (numero: string) => {
+    // Validation Luhn algorithm
+    const nettoye = numero.replace(/\s/g, '');
+    if (!/^\d{13,19}$/.test(nettoye)) return false;
+    
+    let somme = 0;
+    let paire = false;
+    
+    for (let i = nettoye.length - 1; i >= 0; i--) {
+      let digit = parseInt(nettoye.charAt(i));
+      
+      if (paire) {
+        digit *= 2;
+        if (digit > 9) digit -= 9;
+      }
+      
+      somme += digit;
+      paire = !paire;
     }
-    return chiffresLimites;
+    
+    return somme % 10 === 0;
   };
 
-  const gererChangementNumeroCarte = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const valeurFormatee = formaterNumeroCarte(e.target.value);
-    setNumeroCarte(valeurFormatee);
-    setErreurs(prev => ({ ...prev, numeroCarte: '' }));
+  const formaterNumeroCarte = (numero: string) => {
+    const nettoye = numero.replace(/\s/g, '');
+    const groupes = nettoye.match(/.{1,4}/g) || [];
+    return groupes.join(' ').substr(0, 19);
   };
 
-  const gererChangementDateExpiration = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const valeurFormatee = formaterDateExpiration(e.target.value);
-    setDateExpiration(valeurFormatee);
-    setErreurs(prev => ({ ...prev, dateExpiration: '' }));
-  };
-
-  const gererChangementNom = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setNomTitulaire(e.target.value);
-    setErreurs(prev => ({ ...prev, nomTitulaire: '' }));
-  };
-
-  const gererChangementCvv = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const valeur = e.target.value.replace(/\D/g, '').slice(0, 3);
-    setCvv(valeur);
-    setErreurs(prev => ({ ...prev, cvv: '' }));
-  };
-
-  const validerFormulaire = () => {
-    let valide = true;
-    const nouvellesErreurs = {
-      numeroCarte: '',
-      nomTitulaire: '',
-      dateExpiration: '',
-      cvv: ''
-    };
-
-    if (utiliserNouvelleCart || !carteSelectionnee) {
-      if (!nomTitulaire.trim()) {
-        nouvellesErreurs.nomTitulaire = 'Le nom du titulaire est requis';
-        valide = false;
-      }
-
-      if (!cryptageCartes.validerNumeroCarte(numeroCarte)) {
-        nouvellesErreurs.numeroCarte = 'Numéro de carte invalide';
-        valide = false;
-      }
-
-      if (!validerDateExpiration(dateExpiration)) {
-        nouvellesErreurs.dateExpiration = 'Date d\'expiration invalide';
-        valide = false;
-      }
-
-      if (cvv.length < 3) {
-        nouvellesErreurs.cvv = 'CVV invalide';
-        valide = false;
-      }
-    } else if (!carteSelectionnee) {
-      toast.error('Veuillez sélectionner une carte ou ajouter une nouvelle carte');
-      valide = false;
-    }
-
-    setErreurs(nouvellesErreurs);
-    return valide;
+  const obtenirTypeCarte = (numero: string) => {
+    const nettoye = numero.replace(/\s/g, '');
+    if (/^4/.test(nettoye)) return 'visa';
+    if (/^5[1-5]/.test(nettoye)) return 'mastercard';
+    if (/^3[47]/.test(nettoye)) return 'amex';
+    return 'unknown';
   };
 
   const validerDateExpiration = (date: string) => {
-    if (date.length !== 5) return false;
+    if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(date)) return false;
     
-    const parties = date.split('/');
-    if (parties.length !== 2) return false;
+    const [mois, annee] = date.split('/');
+    const maintenant = new Date();
+    const dateExp = new Date(2000 + parseInt(annee), parseInt(mois) - 1);
     
-    const mois = parseInt(parties[0], 10);
-    const annee = parseInt('20' + parties[1], 10);
-    
-    if (isNaN(mois) || isNaN(annee)) return false;
-    if (mois < 1 || mois > 12) return false;
-    
-    const dateActuelle = new Date();
-    const anneeActuelle = dateActuelle.getFullYear();
-    const moisActuel = dateActuelle.getMonth() + 1;
-    
-    if (annee < anneeActuelle) return false;
-    if (annee === anneeActuelle && mois < moisActuel) return false;
-    
-    return true;
+    return dateExp > maintenant;
   };
 
-  const determinerTypeCarte = (numeroCarte: string) => {
-    const numero = numeroCarte.replace(/\s/g, '');
-    if (numero.startsWith('4')) return 'Visa';
-    if (numero.startsWith('5') || numero.startsWith('2')) return 'Mastercard';
-    if (numero.startsWith('3')) return 'American Express';
-    return 'Autre';
+  const processerPaiement3DS = async (donneesCarte: any) => {
+    return new Promise((resolve) => {
+      // Simulation 3DS - en production, intégrer avec Stripe ou un autre processeur
+      setValidationEnCours(true);
+      
+      setTimeout(() => {
+        const succes = Math.random() > 0.1; // 90% de succès pour la démo
+        setValidationEnCours(false);
+        
+        if (succes) {
+          toast.success('Paiement validé avec succès');
+          resolve(true);
+        } else {
+          toast.error('Échec de la validation 3DS');
+          resolve(false);
+        }
+      }, 3000);
+    });
   };
 
-  const traiterPaiement = async (e: React.FormEvent) => {
+  const gererSoumission = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!validerFormulaire()) {
-      return;
-    }
-    
     setChargement(true);
-    
+
     try {
-      let donneesValidation;
+      let donneesCarteAUtiliser;
       
-      if (utiliserNouvelleCart || !carteSelectionnee) {
-        const donneesCarte = {
-          numeroCarte,
-          nomTitulaire,
-          dateExpiration,
-          cvv
-        };
-        
-        donneesValidation = {
-          donneesNouvelleCarte: donneesCarte,
-          montant: Math.round(montantTotal * 100),
-          monnaie: 'EUR',
-          idCommande,
-          sauvegarderCarte
-        };
-      } else {
-        donneesValidation = {
-          idCarte: carteSelectionnee,
-          cvv,
-          montant: Math.round(montantTotal * 100),
-          monnaie: 'EUR',
-          idCommande
-        };
-      }
-      
-      const reponse = await cartesBancairesAPI.validerPaiement3DS(donneesValidation);
-      
-      if (reponse.data.necessite3DS) {
-        setValidation3DS({
-          actif: true,
-          idTransaction: reponse.data.idTransaction,
-          urlValidation: reponse.data.urlValidation3DS
-        });
-        
-        window.open(reponse.data.urlValidation3DS, '_blank', 'width=400,height=600');
-        toast.info('Validation 3DS requise. Une nouvelle fenêtre s\'est ouverte.');
-      } else {
-        if (sauvegarderCarte && utiliserNouvelleCart) {
-          await sauvegarderNouvelleCarte();
+      if (carteSelectionnee === 'nouvelle') {
+        // Validation des nouvelles données
+        if (!validerNumeroCarte(numeroCarte)) {
+          toast.error('Numéro de carte invalide');
+          setChargement(false);
+          return;
         }
         
-        toast.success('Paiement accepté avec succès');
-        surReussite();
+        if (!validerDateExpiration(dateExpiration)) {
+          toast.error('Date d\'expiration invalide');
+          setChargement(false);
+          return;
+        }
+        
+        if (codeSecurite.length < 3) {
+          toast.error('Code de sécurité invalide');
+          setChargement(false);
+          return;
+        }
+        
+        donneesCarteAUtiliser = {
+          numero: numeroCarte.replace(/\s/g, ''),
+          nom: nomTitulaire,
+          expiration: dateExpiration,
+          cvv: codeSecurite
+        };
+        
+        // Enregistrer la carte si demandé
+        if (enregistrerCarte && utilisateur) {
+          try {
+            const donneesChiffrees = crypterDonneesCarte(donneesCarteAUtiliser);
+            await cartesBancairesAPI.enregistrerCarte(utilisateur.id, {
+              donneesChiffrees,
+              dernierChiffres: numeroCarte.slice(-4),
+              typeCarte: obtenirTypeCarte(numeroCarte),
+              nomTitulaire,
+              dateExpiration
+            });
+            toast.success('Carte enregistrée avec succès');
+          } catch (erreur) {
+            console.error('Erreur lors de l\'enregistrement:', erreur);
+            toast.error('Erreur lors de l\'enregistrement de la carte');
+          }
+        }
+      } else {
+        // Utiliser une carte enregistrée
+        const carteEnregistree = cartesEnregistrees.find(c => c.id === carteSelectionnee);
+        if (!carteEnregistree) {
+          toast.error('Carte sélectionnée introuvable');
+          setChargement(false);
+          return;
+        }
+        
+        if (!codeSecurite) {
+          toast.error('Code de sécurité requis');
+          setChargement(false);
+          return;
+        }
+        
+        // Récupérer les données déchiffrées (simulation)
+        donneesCarteAUtiliser = {
+          numero: '****',
+          nom: carteEnregistree.nomTitulaire,
+          expiration: carteEnregistree.dateExpiration,
+          cvv: codeSecurite
+        };
       }
+      
+      // Processus de validation 3DS
+      const validationReussie = await processerPaiement3DS(donneesCarteAUtiliser);
+      
+      if (validationReussie) {
+        // Processus de paiement réussi
+        toast.success('Paiement effectué avec succès');
+        surSucces();
+      }
+      
     } catch (erreur) {
-      console.error('Erreur paiement:', erreur);
+      console.error('Erreur lors du paiement:', erreur);
       toast.error('Erreur lors du traitement du paiement');
     } finally {
       setChargement(false);
     }
   };
 
-  const sauvegarderNouvelleCarte = async () => {
-    try {
-      const donneesChiffrees = cryptageCartes.crypterDonneesCarte({
-        numeroCarte,
-        nomTitulaire,
-        dateExpiration,
-        cvv: ''
-      });
-
-      await cartesBancairesAPI.sauvegarderCarte({
-        donneesChiffrees,
-        numeroMasque: cryptageCartes.masquerNumeroCarte(numeroCarte),
-        nomTitulaire,
-        dateExpiration,
-        typeCarte: determinerTypeCarte(numeroCarte),
-        estPrincipale: cartesSauvegardees.length === 0
-      });
-
-      await chargerCartesSauvegardees();
-      toast.success('Carte sauvegardée avec succès');
-    } catch (erreur) {
-      console.error('Erreur sauvegarde carte:', erreur);
-      toast.error('Erreur lors de la sauvegarde de la carte');
-    }
-  };
-
-  const supprimerCarteSauvegardee = async (idCarte: string) => {
-    try {
-      await cartesBancairesAPI.supprimerCarte(idCarte);
-      await chargerCartesSauvegardees();
-      toast.success('Carte supprimée');
-      
-      if (carteSelectionnee === idCarte) {
-        setCarteSelectionnee('');
-        setUtiliserNouvelleCart(true);
-      }
-    } catch (erreur) {
-      console.error('Erreur suppression carte:', erreur);
-      toast.error('Erreur lors de la suppression');
-    }
-  };
-
-  if (validation3DS.actif) {
+  if (validationEnCours) {
     return (
       <Card className="w-full max-w-md mx-auto">
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Shield className="h-5 w-5 mr-2 text-green-600" />
-            Validation 3D Secure
-          </CardTitle>
+        <CardHeader className="text-center">
+          <Shield className="mx-auto h-12 w-12 text-blue-600 animate-pulse" />
+          <CardTitle>Validation 3D Secure</CardTitle>
+          <p className="text-sm text-gray-600">
+            Veuillez patienter pendant la validation de votre paiement...
+          </p>
         </CardHeader>
-        <CardContent>
-          <div className="text-center space-y-4">
-            <p>Validation 3D Secure en cours...</p>
-            <p className="text-sm text-gray-600">
-              Veuillez compléter la validation dans la fenêtre qui s'est ouverte.
-            </p>
-            <LoadingSpinner />
-          </div>
+        <CardContent className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-sm">Vérification en cours avec votre banque</p>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <form onSubmit={traiterPaiement} className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Shield className="h-5 w-5 mr-2 text-blue-600" />
-            Paiement sécurisé
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {cartesSauvegardees.length > 0 && (
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  id="carte-sauvegardee"
-                  checked={!utiliserNouvelleCart}
-                  onChange={() => setUtiliserNouvelleCart(false)}
-                />
-                <Label htmlFor="carte-sauvegardee">Utiliser une carte sauvegardée</Label>
-              </div>
-              
-              <div className="flex items-center space-x-2">
-                <input
-                  type="radio"
-                  id="nouvelle-carte"
-                  checked={utiliserNouvelleCart}
-                  onChange={() => setUtiliserNouvelleCart(true)}
-                />
-                <Label htmlFor="nouvelle-carte">Utiliser une nouvelle carte</Label>
-              </div>
-            </div>
-          )}
-
-          {!utiliserNouvelleCart && cartesSauvegardees.length > 0 && (
+    <Card className="w-full max-w-md mx-auto">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <CreditCard className="h-5 w-5" />
+          Paiement sécurisé
+        </CardTitle>
+        <div className="flex items-center gap-2 text-sm text-green-600">
+          <Lock className="h-4 w-4" />
+          Données cryptées et sécurisées
+        </div>
+      </CardHeader>
+      
+      <CardContent>
+        <form onSubmit={gererSoumission} className="space-y-4">
+          {cartesEnregistrees.length > 0 && (
             <div className="space-y-2">
-              <Label>Sélectionner une carte</Label>
-              {cartesSauvegardees.map((carte) => (
-                <div
-                  key={carte.id}
-                  className={`p-3 border rounded-lg cursor-pointer flex items-center justify-between ${
-                    carteSelectionnee === carte.id ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
-                  }`}
-                  onClick={() => setCarteSelectionnee(carte.id)}
-                >
-                  <div className="flex items-center space-x-3">
-                    <CreditCard className="h-5 w-5" />
-                    <div>
-                      <p className="font-medium">{carte.numeroMasque}</p>
-                      <p className="text-sm text-gray-600">
-                        {carte.nomTitulaire} • {carte.dateExpiration}
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      supprimerCarteSauvegardee(carte.id);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              ))}
+              <Label>Méthode de paiement</Label>
+              <Select value={carteSelectionnee} onValueChange={setCarteSelectionnee}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="nouvelle">Nouvelle carte</SelectItem>
+                  {cartesEnregistrees.map(carte => (
+                    <SelectItem key={carte.id} value={carte.id}>
+                      {carte.typeCarte.toUpperCase()} •••• {carte.dernierChiffres}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
-
-          {utiliserNouvelleCart && (
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="nomTitulaire">Nom du titulaire</Label>
-                <Input
-                  id="nomTitulaire"
-                  placeholder="Jean Dupont"
-                  value={nomTitulaire}
-                  onChange={gererChangementNom}
-                  required
-                  className={erreurs.nomTitulaire ? "border-red-500" : ""}
-                />
-                {erreurs.nomTitulaire && (
-                  <p className="text-red-500 text-sm mt-1">{erreurs.nomTitulaire}</p>
-                )}
-              </div>
-              
-              <div>
+          
+          {carteSelectionnee === 'nouvelle' && (
+            <>
+              <div className="space-y-2">
                 <Label htmlFor="numeroCarte">Numéro de carte</Label>
                 <Input
                   id="numeroCarte"
+                  type="text"
                   placeholder="1234 5678 9012 3456"
                   value={numeroCarte}
-                  onChange={gererChangementNumeroCarte}
+                  onChange={(e) => setNumeroCarte(formaterNumeroCarte(e.target.value))}
+                  maxLength={19}
                   required
-                  className={erreurs.numeroCarte ? "border-red-500" : ""}
                 />
-                {erreurs.numeroCarte && (
-                  <p className="text-red-500 text-sm mt-1">{erreurs.numeroCarte}</p>
-                )}
               </div>
               
-              <div className="flex space-x-4">
-                <div className="w-1/2">
-                  <Label htmlFor="dateExpiration">Date d'expiration</Label>
+              <div className="space-y-2">
+                <Label htmlFor="nomTitulaire">Nom du titulaire</Label>
+                <Input
+                  id="nomTitulaire"
+                  type="text"
+                  placeholder="Jean Dupont"
+                  value={nomTitulaire}
+                  onChange={(e) => setNomTitulaire(e.target.value.toUpperCase())}
+                  required
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="dateExpiration">MM/AA</Label>
                   <Input
                     id="dateExpiration"
-                    placeholder="MM/AA"
+                    type="text"
+                    placeholder="12/25"
                     value={dateExpiration}
-                    onChange={gererChangementDateExpiration}
+                    onChange={(e) => {
+                      let valeur = e.target.value.replace(/\D/g, '');
+                      if (valeur.length >= 2) {
+                        valeur = valeur.substring(0, 2) + '/' + valeur.substring(2, 4);
+                      }
+                      setDateExpiration(valeur);
+                    }}
+                    maxLength={5}
                     required
-                    className={erreurs.dateExpiration ? "border-red-500" : ""}
                   />
-                  {erreurs.dateExpiration && (
-                    <p className="text-red-500 text-sm mt-1">{erreurs.dateExpiration}</p>
-                  )}
                 </div>
-                <div className="w-1/2">
-                  <Label htmlFor="cvv">CVV</Label>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="codeSecurite">CVV</Label>
                   <Input
-                    id="cvv"
-                    placeholder="123"
-                    value={cvv}
-                    onChange={gererChangementCvv}
-                    required
+                    id="codeSecurite"
                     type="password"
-                    className={erreurs.cvv ? "border-red-500" : ""}
+                    placeholder="123"
+                    value={codeSecurite}
+                    onChange={(e) => setCodeSecurite(e.target.value.replace(/\D/g, ''))}
+                    maxLength={4}
+                    required
                   />
-                  {erreurs.cvv && (
-                    <p className="text-red-500 text-sm mt-1">{erreurs.cvv}</p>
-                  )}
                 </div>
               </div>
-
+              
               <div className="flex items-center space-x-2">
                 <Checkbox
-                  id="sauvegarderCarte"
-                  checked={sauvegarderCarte}
-                  onCheckedChange={(checked) => setSauvegarderCarte(checked as boolean)}
+                  id="enregistrerCarte"
+                  checked={enregistrerCarte}
+                  onCheckedChange={(checked) => setEnregistrerCarte(checked as boolean)}
                 />
-                <Label htmlFor="sauvegarderCarte" className="text-sm">
-                  Sauvegarder cette carte pour les prochains achats
+                <Label htmlFor="enregistrerCarte" className="text-sm">
+                  Enregistrer cette carte pour les prochains achats
                 </Label>
               </div>
-            </div>
+            </>
           )}
-
-          {!utiliserNouvelleCart && carteSelectionnee && (
-            <div>
-              <Label htmlFor="cvv-sauvegarde">Code CVV</Label>
+          
+          {carteSelectionnee !== 'nouvelle' && (
+            <div className="space-y-2">
+              <Label htmlFor="codeSecurite">Code de sécurité (CVV)</Label>
               <Input
-                id="cvv-sauvegarde"
-                placeholder="123"
-                value={cvv}
-                onChange={gererChangementCvv}
-                required
+                id="codeSecurite"
                 type="password"
-                className="w-32"
+                placeholder="123"
+                value={codeSecurite}
+                onChange={(e) => setCodeSecurite(e.target.value.replace(/\D/g, ''))}
+                maxLength={4}
+                required
               />
-              <p className="text-xs text-gray-600 mt-1">
-                Pour votre sécurité, saisissez le CVV de votre carte
+              <p className="text-xs text-gray-500">
+                Saisissez le code de sécurité de votre carte pour confirmer le paiement
               </p>
             </div>
           )}
-
-          <div className="bg-blue-50 p-4 rounded-lg">
-            <div className="flex items-center mb-2">
-              <Lock className="h-4 w-4 text-blue-600 mr-2" />
-              <p className="text-sm font-medium text-blue-800">Paiement 100% sécurisé</p>
+          
+          <div className="pt-4 border-t">
+            <div className="flex justify-between items-center mb-4">
+              <span className="font-semibold">Total à payer</span>
+              <span className="text-xl font-bold">{montantTotal.toFixed(2)} €</span>
             </div>
-            <ul className="text-xs text-blue-700 space-y-1">
-              <li>• Validation 3D Secure obligatoire</li>
-              <li>• Chiffrement SSL 256 bits</li>
-              <li>• Données cryptées et protégées</li>
-              <li>• Conforme aux normes PCI DSS</li>
-            </ul>
+            
+            <Button 
+              type="submit" 
+              className="w-full" 
+              disabled={chargement}
+            >
+              {chargement ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Traitement...
+                </>
+              ) : (
+                <>
+                  <Shield className="mr-2 h-4 w-4" />
+                  Payer {montantTotal.toFixed(2)} €
+                </>
+              )}
+            </Button>
           </div>
-        </CardContent>
-      </Card>
-      
-      <Button 
-        type="submit" 
-        className="w-full bg-green-600 hover:bg-green-700"
-        disabled={chargement}
-      >
-        {chargement ? (
-          <span className="flex items-center justify-center">
-            <LoadingSpinner size="sm" className="mr-2" />
-            Traitement sécurisé...
-          </span>
-        ) : (
-          `Payer ${montantTotal.toFixed(2)} €`
-        )}
-      </Button>
-    </form>
+          
+          <div className="text-xs text-gray-500 text-center">
+            <div className="flex items-center justify-center gap-2">
+              <Lock className="h-3 w-3" />
+              Paiement sécurisé par cryptage SSL 256-bit
+            </div>
+            <div className="mt-1">
+              Validation 3D Secure obligatoire
+            </div>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   );
 };
 

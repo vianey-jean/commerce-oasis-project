@@ -36,6 +36,24 @@ interface TypeContexteMagasin {
   ) => Promise<Order | null>;
   setArticlesSelectionnes: (articles: StoreCartItem[]) => void;
   recupererPanier: () => Promise<void>;
+  
+  // Aliases pour compatibilité avec les composants existants
+  cart: StoreCartItem[];
+  addToCart: (produit: Product, quantite?: number) => void;
+  removeFromCart: (idProduit: string) => void;
+  updateQuantity: (idProduit: string, quantite: number) => void;
+  toggleFavorite: (produit: Product) => void;
+  isFavorite: (idProduit: string) => boolean;
+  favoriteCount: number;
+  loadingCart: boolean;
+  selectedCartItems: StoreCartItem[];
+  setSelectedCartItems: (articles: StoreCartItem[]) => void;
+  getCartTotal: () => number;
+  createOrder: (
+    adresseLivraison: any, 
+    methodePaiement: string, 
+    codePromo?: {code: string, productId: string, pourcentage: number}
+  ) => Promise<Order | null>;
 }
 
 const ContexteMagasin = createContext<TypeContexteMagasin | undefined>(undefined);
@@ -120,7 +138,21 @@ export const FournisseurMagasin: React.FC<{ children: React.ReactNode }> = ({ ch
       nombreFavoris,
       creerCommande,
       setArticlesSelectionnes,
-      recupererPanier
+      recupererPanier,
+      
+      // Aliases pour compatibilité
+      cart: panier,
+      addToCart: ajouterAuPanier,
+      removeFromCart: supprimerDuPanier,
+      updateQuantity: mettreAJourQuantite,
+      toggleFavorite: basculerFavori,
+      isFavorite: estFavori,
+      favoriteCount: nombreFavoris,
+      loadingCart: chargementPanier,
+      selectedCartItems: articlesSelectionnes,
+      setSelectedCartItems: setArticlesSelectionnes,
+      getCartTotal: obtenirTotalPanier,
+      createOrder: creerCommande
     }}>
       {children}
     </ContexteMagasin.Provider>

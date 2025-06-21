@@ -64,10 +64,6 @@ const ModalVueRapide: React.FC<ProprietesModalVueRapide> = ({ produit, estOuvert
     return `${URL_BASE_API}${cheminImage}`;
   };
 
-  const obtenirUrlProduitSecurisee = (idProduit: string) => {
-    return `/produit/${obtenirIdSecurise(idProduit)}`;
-  };
-
   if (!estOuverte) return null;
 
   const images = produit.images && produit.images.length > 0 ? produit.images : [produit.image];
