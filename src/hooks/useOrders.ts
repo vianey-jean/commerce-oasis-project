@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Order } from '@/types/order';
 import { ordersAPI } from '@/services/api';
@@ -19,7 +20,7 @@ export const useOrders = () => {
     
     setChargement(true);
     try {
-      const reponse = await ordersAPI.getUserOrders(utilisateur.id);
+      const reponse = await ordersAPI.getUserOrders();
       if (reponse.data && Array.isArray(reponse.data)) {
         setCommandes(reponse.data);
       } else {

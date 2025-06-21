@@ -3,7 +3,7 @@ import React, { createContext, useContext } from 'react';
 import { utiliserProduits } from '@/hooks/useProducts';
 import { utiliserPanier } from '@/hooks/useCart';
 import { utiliserFavoris } from '@/hooks/useFavorites';
-import { utiliserCommandes } from '@/hooks/useOrders';
+import { useOrders } from '@/hooks/useOrders';
 import { Product } from '@/types/product';
 import { StoreCartItem } from '@/types/cart';
 import { Order } from '@/types/order';
@@ -54,6 +54,8 @@ interface TypeContexteMagasin {
     methodePaiement: string, 
     codePromo?: {code: string, productId: string, pourcentage: number}
   ) => Promise<Order | null>;
+  favorites: Product[];
+  loadingFavorites: boolean;
 }
 
 const ContexteMagasin = createContext<TypeContexteMagasin | undefined>(undefined);
@@ -92,7 +94,7 @@ export const FournisseurMagasin: React.FC<{ children: React.ReactNode }> = ({ ch
     chargement: chargementCommandes,
     recupererCommandes,
     creerCommande: creerNouvelleCommande
-  } = utiliserCommandes();
+  } = useOrders();
 
   const mettreAJourQuantite = (idProduit: string, quantite: number) => {
     mettreAJourQuantitePanier(idProduit, quantite, produits);
@@ -152,7 +154,9 @@ export const FournisseurMagasin: React.FC<{ children: React.ReactNode }> = ({ ch
       selectedCartItems: articlesSelectionnes,
       setSelectedCartItems: setArticlesSelectionnes,
       getCartTotal: obtenirTotalPanier,
-      createOrder: creerCommande
+      createOrder: creerCommande,
+      favorites: favoris,
+      loadingFavorites: chargementFavoris
     }}>
       {children}
     </ContexteMagasin.Provider>
