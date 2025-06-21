@@ -1,4 +1,3 @@
-
 import React from 'react';
 import Navbar from './Navbar';
 import Footer from './Footer';
@@ -9,6 +8,7 @@ import LayoutPrompts from './LayoutPrompts';
 import ClientServiceChatWidget from '@/components/chat/ClientServiceChatWidget';
 import AdminServiceChatWidget from '@/components/chat/AdminServiceChatWidget';
 import ScrollToTop from '@/components/ui/ScrollToTop';
+import SEOHead from '@/components/seo/SEOHead';
 import { useQuery } from '@tanstack/react-query';
 import { Product } from '@/contexts/StoreContext';
 import { productsAPI } from '@/services/api';
@@ -18,9 +18,23 @@ import { useScrollDetection } from '@/hooks/useScrollDetection';
 interface ProprietesLayout {
   enfants: React.ReactNode;
   masquerInvites?: boolean;
+  // Propriétés SEO
+  titrePage?: string;
+  descriptionPage?: string;
+  motsClesPage?: string;
+  imageOGPage?: string;
+  typeContenuPage?: string;
 }
 
-const Layout: React.FC<ProprietesLayout> = ({ enfants, masquerInvites = false }) => {
+const Layout: React.FC<ProprietesLayout> = ({ 
+  enfants, 
+  masquerInvites = false,
+  titrePage,
+  descriptionPage,
+  motsClesPage,
+  imageOGPage,
+  typeContenuPage
+}) => {
   const { data: produitsTendance } = useQuery({
     queryKey: ['produits-tendance'],
     queryFn: async (): Promise<Product[]> => {
@@ -61,6 +75,14 @@ const Layout: React.FC<ProprietesLayout> = ({ enfants, masquerInvites = false })
 
   return (
     <div className="flex flex-col min-h-screen bg-neutral-50 dark:bg-neutral-950">
+      <SEOHead
+        titre={titrePage}
+        description={descriptionPage}
+        motsCles={motsClesPage}
+        imageOG={imageOGPage}
+        typeContenu={typeContenuPage}
+      />
+      
       <header className="sticky top-0 z-50">
         <Navbar />
         <PromoBanner pubLayoutItems={elementsPubLayout} isLoading={chargementPubLayout} />

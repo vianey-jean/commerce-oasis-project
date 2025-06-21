@@ -23,6 +23,7 @@ import CartSummary from '@/components/cart/CartSummary';
 import LoadingSpinner from '@/components/ui/loading-spinner';
 import { formatPrice } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import FormulaireCarteBancaireSecurise from '@/components/checkout/FormulaireCarteBancaireSecurise';
 
 // Définition des prix de livraison par ville
 const DELIVERY_PRICES = {
@@ -296,7 +297,12 @@ const CheckoutPage = () => {
   // Si aucun élément n'est sélectionné, retourner au panier
   if (selectedCartItems.length === 0) {
     return (
-      <Layout>
+      <Layout
+        titrePage="Finaliser votre commande - Riziky-Boutic"
+        descriptionPage="Finalisez votre achat en toute sécurité avec notre système de paiement crypté et validation 3DS"
+        motsClesPage="commande, paiement sécurisé, 3DS, carte bancaire, livraison La Réunion"
+        typeContenuPage="website"
+      >
         <div className="max-w-4xl mx-auto px-4 py-12">
           <div className="text-center">
             <ShoppingCart className="h-12 w-12 mx-auto text-gray-400 mb-4" />
@@ -313,7 +319,12 @@ const CheckoutPage = () => {
   
   if (loading) {
     return (
-      <Layout>
+      <Layout
+        titrePage="Finaliser votre commande - Riziky-Boutic"
+        descriptionPage="Finalisez votre achat en toute sécurité avec notre système de paiement crypté et validation 3DS"
+        motsClesPage="commande, paiement sécurisé, 3DS, carte bancaire, livraison La Réunion"
+        typeContenuPage="website"
+      >
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
           <div className="max-w-4xl mx-auto px-4 py-12">
             <div className="flex flex-col items-center justify-center min-h-[500px]">
@@ -336,7 +347,12 @@ const CheckoutPage = () => {
   }
   
   return (
-    <Layout>
+    <Layout
+      titrePage="Finaliser votre commande - Riziky-Boutic"
+      descriptionPage="Finalisez votre achat en toute sécurité avec notre système de paiement crypté et validation 3DS"
+      motsClesPage="commande, paiement sécurisé, 3DS, carte bancaire, livraison La Réunion"
+      typeContenuPage="website"
+    >
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
         <div className="max-w-7xl mx-auto px-4 py-8">
           {/* En-tête moderne avec gradient */}
@@ -415,23 +431,18 @@ const CheckoutPage = () => {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.4 }}
             >
-              <div className="bg-white p-8 rounded-2xl shadow-xl border border-gray-200">
-                <div className="text-center mb-6">
-                  <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <Shield className="h-8 w-8 text-white" />
-                  </div>
-                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Paiement sécurisé</h2>
-                  <p className="text-gray-600">Vos données sont protégées par cryptage SSL</p>
-                </div>
-                <CreditCardForm onSuccess={handlePaymentSuccess} />
-                <Button 
-                  variant="outline" 
-                  className="mt-6 w-full border-gray-300 hover:border-gray-400"
-                  onClick={() => setShowCardForm(false)}
-                >
-                  Retour aux options de paiement
-                </Button>
-              </div>
+              <FormulaireCarteBancaireSecurise
+                onSuccess={handlePaymentSuccess}
+                montantTotal={orderTotal}
+                idCommande={`CMD-${Date.now()}`}
+              />
+              <Button 
+                variant="outline" 
+                className="mt-6 w-full border-gray-300 hover:border-gray-400"
+                onClick={() => setShowCardForm(false)}
+              >
+                Retour aux options de paiement
+              </Button>
             </motion.div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -542,7 +553,7 @@ const CheckoutPage = () => {
                               <SelectContent>
                                 <SelectItem value="La Réunion">🇷🇪 La Réunion</SelectItem>
                                 <SelectItem value="France">🇫🇷 France métropolitaine</SelectItem>
-                                <SelectItem value="Madagascar">🇲🇬 Madagascar</SelectItem>
+                                <SelectItem value="Madagascar">🇲 Madagascar</SelectItem>
                                 <SelectItem value="Mayotte">🇾🇹 Mayotte</SelectItem>
                               </SelectContent>
                             </Select>

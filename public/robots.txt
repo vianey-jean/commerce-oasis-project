@@ -1,14 +1,25 @@
-User-agent: Googlebot
-Allow: /
-
-User-agent: Bingbot
-Allow: /
-
-User-agent: Twitterbot
-Allow: /
-
-User-agent: facebookexternalhit
-Allow: /
 
 User-agent: *
 Allow: /
+
+# Pages importantes pour le référencement
+Allow: /produits
+Allow: /categories
+Allow: /boutique
+Allow: /apropos
+Allow: /contact
+
+# Pages à ne pas indexer
+Disallow: /admin
+Disallow: /panier
+Disallow: /commandes
+Disallow: /profil
+Disallow: /checkout
+Disallow: /api/
+Disallow: /auth/
+
+# Sitemap
+Sitemap: https://votre-domaine.com/sitemap.xml
+
+# Délai entre les requêtes (en secondes)
+Crawl-delay: 1
