@@ -1,235 +1,264 @@
 
-import React, { useState, useRef, useEffect } from 'react';
-import { X, Plus, Minus, ShoppingCart, Heart, Star, Package, Truck, Shield } from 'lucide-react';
+import React, { useState } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { utiliserMagasin } from '@/contexts/StoreContext';
-import { useAuth } from '@/contexts/AuthContext';
+import { Heart, ShoppingCart, X, Star, Share2, Eye } from 'lucide-react';
 import { Product } from '@/types/product';
+import { useStore } from '@/contexts/StoreContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { toast } from '@/components/ui/sonner';
-import { obtenirIdSecurise } from '@/services/secureIds';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Link } from 'react-router-dom';
+import { getSecureProductId } from '@/services/secureIds';
 
-interface ProprietesModalVueRapide {
-  produit: Product;
-  estOuverte: boolean;
-  fermer: () => void;
+interface QuickViewModalProps {
+  product: Product | null;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-const ModalVueRapide: React.FC<ProprietesModalVueRapide> = ({ produit, estOuverte, fermer }) => {
-  const [quantite, setQuantite] = useState(1);
-  const [imageSelectionnee, setImageSelectionnee] = useState(0);
-  const refModal = useRef<HTMLDivElement>(null);
-  const { ajouterAuPanier, basculerFavori, estFavori } = utiliserMagasin();
-  const { isAuthenticated: estAuthentifie } = useAuth();
-  const URL_BASE_API = import.meta.env.VITE_API_BASE_URL;
+const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, isOpen, onClose }) => {
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [quantity, setQuantity] = useState(1);
+  const { addToCart, toggleFavorite, isFavorite } = useStore();
+  const { isAuthenticated } = useAuth();
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-  useEffect(() => {
-    if (estOuverte) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [estOuverte]);
+  if (!product) return null;
 
-  const gererClicExterieur = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (refModal.current && !refModal.current.contains(e.target as Node)) {
-      fermer();
-    }
+  const productImages = product.images && product.images.length > 0 
+    ? product.images 
+    : product.image ? [product.image] : [];
+
+  const getImageUrl = (imagePath: string) => {
+    if (!imagePath) return '/placeholder.svg';
+    if (imagePath.startsWith('http')) return imagePath;
+    return `${API_BASE_URL}${imagePath}`;
   };
 
-  const gererAjoutPanier = () => {
-    if (!estAuthentifie) {
+  const handleAddToCart = () => {
+    if (!isAuthenticated) {
       toast.error("Vous devez être connecté pour ajouter un produit au panier");
       return;
     }
-    ajouterAuPanier(produit, quantite);
-    toast.success(`${quantite} ${produit.name} ajouté${quantite > 1 ? 's' : ''} au panier`);
-    fermer();
+
+    for (let i = 0; i < quantity; i++) {
+      addToCart(product);
+    }
+    toast.success(`${quantity} ${quantity > 1 ? 'exemplaires ajoutés' : 'exemplaire ajouté'} au panier`);
   };
 
-  const gererBasculeFavori = () => {
-    if (!estAuthentifie) {
+  const handleToggleFavorite = () => {
+    if (!isAuthenticated) {
       toast.error("Vous devez être connecté pour ajouter aux favoris");
       return;
     }
-    basculerFavori(produit);
+    toggleFavorite(product);
+    toast.success(isFavorite(product.id) ? "Retiré des favoris" : "Ajouté aux favoris");
   };
 
-  const obtenirUrlImageSecurisee = (cheminImage: string) => {
-    if (!cheminImage) return '/placeholder.svg';
-    if (cheminImage.startsWith('http')) return cheminImage;
-    return `${URL_BASE_API}${cheminImage}`;
-  };
+  const isPromotionActive = product.promotion && 
+    product.promotionEnd && 
+    new Date(product.promotionEnd) > new Date();
 
-  if (!estOuverte) return null;
-
-  const images = produit.images && produit.images.length > 0 ? produit.images : [produit.image];
-  const prixPromo = produit.promotion ? produit.price * (1 - produit.promotion / 100) : produit.price;
-  const economie = produit.promotion ? produit.price - prixPromo : 0;
+  const isInStock = product.isSold && (product.stock === undefined || product.stock > 0);
 
   return (
-    <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={gererClicExterieur}>
-      <div ref={refModal} className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-        <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between rounded-t-2xl z-10">
-          <h2 className="text-xl font-bold truncate">{produit.name}</h2>
-          <Button variant="ghost" size="sm" onClick={fermer} className="shrink-0">
-            <X className="h-5 w-5" />
-          </Button>
-        </div>
-
-        <div className="p-6">
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="space-y-4">
-              <div className="aspect-square bg-gray-100 rounded-xl overflow-hidden">
-                <img
-                  src={obtenirUrlImageSecurisee(images[imageSelectionnee])}
-                  alt={produit.name}
-                  className="w-full h-full object-cover"
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.2 }}
+          className="grid grid-cols-1 md:grid-cols-2 gap-0"
+        >
+          {/* Images */}
+          <div className="relative bg-gray-50 p-6">
+            <button
+              onClick={onClose}
+              className="absolute top-4 mr-6 right-4 z-10 p-2 bg-white rounded-full shadow-md hover:shadow-lg transition-shadow md:hidden"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            
+            <div className="relative mb-4">
+              <AnimatePresence mode="wait">
+                <motion.img
+                  key={selectedImageIndex}
+                  src={getImageUrl(productImages[selectedImageIndex])}
+                  alt={product.name}
+                  className="w-full h-80 object-contain rounded-lg"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.3 }}
                   onError={(e) => {
-                    (e.target as HTMLImageElement).src = '/placeholder.svg';
+                    const target = e.target as HTMLImageElement;
+                    target.src = '/placeholder.svg';
                   }}
                 />
-              </div>
+              </AnimatePresence>
               
-              {images.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto">
-                  {images.map((image, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setImageSelectionnee(index)}
-                      className={`shrink-0 w-16 h-16 rounded-lg overflow-hidden border-2 transition-colors ${
-                        index === imageSelectionnee ? 'border-red-500' : 'border-gray-200'
-                      }`}
-                    >
-                      <img
-                        src={obtenirUrlImageSecurisee(image)}
-                        alt={`${produit.name} ${index + 1}`}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = '/placeholder.svg';
-                        }}
-                      />
-                    </button>
-                  ))}
+              {isPromotionActive && (
+                <div className="absolute top-4 left-4 bg-red-600 text-white px-3 py-1 rounded-full text-sm font-bold">
+                  -{product.promotion}%
                 </div>
               )}
             </div>
 
-            <div className="space-y-6">
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge variant="secondary">{produit.category}</Badge>
-                  {produit.promotion && (
-                    <Badge variant="destructive">-{produit.promotion}%</Badge>
-                  )}
-                </div>
-                
-                <div className="flex items-center gap-1 mb-3">
-                  {[...Array(5)].map((_, i) => (
-                    <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                  ))}
-                  <span className="text-sm text-gray-500 ml-2">(4.8)</span>
-                </div>
+            {productImages.length > 1 && (
+              <div className="flex gap-2 justify-center">
+                {productImages.slice(0, 4).map((image, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setSelectedImageIndex(index)}
+                    className={`w-16 h-16 rounded-md overflow-hidden border-2 transition-all ${
+                      index === selectedImageIndex ? 'border-red-500' : 'border-transparent'
+                    }`}
+                  >
+                    <img
+                      src={getImageUrl(image)}
+                      alt={`${product.name} - ${index + 1}`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = '/placeholder.svg';
+                      }}
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
 
-                <div className="space-y-2">
-                  {produit.promotion ? (
-                    <div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl font-bold text-red-600">
-                          {prixPromo.toFixed(2)} €
-                        </span>
-                        <span className="text-lg text-gray-500 line-through">
-                          {produit.price.toFixed(2)} €
-                        </span>
-                      </div>
-                      <div className="text-sm text-green-600 font-medium">
-                        Vous économisez {economie.toFixed(2)} €
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="text-2xl font-bold text-gray-800">
-                      {produit.price.toFixed(2)} €
-                    </div>
-                  )}
+          {/* Informations produit */}
+          <div className="p-6">
+            <DialogHeader className="mb-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Badge variant="outline" className="text-xs">
+                  {product.category}
+                </Badge>
+                {product.dateAjout && new Date().getTime() - new Date(product.dateAjout).getTime() < 7 * 24 * 60 * 60 * 1000 && (
+                  <Badge className="bg-blue-600 text-white text-xs">Nouveau</Badge>
+                )}
+              </div>
+              <DialogTitle className="text-2xl font-bold">{product.name}</DialogTitle>
+            </DialogHeader>
+
+            {isPromotionActive ? (
+              <div className="mb-4">
+                <div className="flex items-center gap-2">
+                  <p className="text-lg text-gray-500 line-through">
+                    {typeof product.originalPrice === 'number'
+                      ? product.originalPrice.toFixed(2)
+                      : product.price.toFixed(2)}{' '}
+                    €
+                  </p>
+                  <span className="bg-red-600 text-white px-2 py-0.5 text-xs font-bold rounded">
+                    -{product.promotion}%
+                  </span>
                 </div>
+                <p className="text-2xl font-bold text-red-600">
+                  {product.price.toFixed(2)} €
+                </p>
+              </div>
+            ) : (
+              <p className="text-2xl font-bold mb-4">
+                {product.price.toFixed(2)} €
+              </p>
+            )}
+
+            <div className="mb-4 max-h-24 overflow-y-auto text-sm text-gray-700">
+              {product.description}
+            </div>
+
+            <div className="mb-6">
+              <div className="flex items-center space-x-2">
+                <p className="font-medium text-sm">Disponibilité:</p>
+                <span className={isInStock ? 'text-green-600 text-sm' : 'text-red-600 text-sm'}>
+                  {isInStock ? 'En stock' : 'Rupture de stock'}
+                </span>
               </div>
 
-              {produit.description && (
-                <div>
-                  <h3 className="font-semibold mb-2">Description</h3>
-                  <p className="text-gray-600 text-sm leading-relaxed">{produit.description}</p>
-                </div>
+              {product.stock !== undefined && (
+                <p className="text-sm text-gray-600">
+                  {product.stock} unité{product.stock !== 1 ? 's' : ''} disponible{product.stock !== 1 ? 's' : ''}
+                </p>
               )}
+            </div>
 
-              <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-lg">
-                <Package className="h-5 w-5 text-blue-600" />
-                <div className="text-sm">
-                  <div className="font-medium">Stock disponible</div>
-                  <div className="text-gray-600">{produit.stock || 'En stock'}</div>
-                </div>
+            <div className="flex items-center space-x-4 mb-6">
+              <div className="flex items-center border border-gray-300 rounded-md">
+                <button
+                  onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  disabled={quantity <= 1}
+                  className="px-3 py-1 text-gray-600 disabled:text-gray-300"
+                >
+                  -
+                </button>
+                <span className="px-4 py-1 border-x border-gray-300 min-w-[40px] text-center">
+                  {quantity}
+                </span>
+                <button
+                  onClick={() => setQuantity(quantity + 1)}
+                  disabled={product.stock !== undefined && quantity >= product.stock}
+                  className="px-3 py-1 text-gray-600 disabled:text-gray-300"
+                >
+                  +
+                </button>
               </div>
+            </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <span className="font-medium">Quantité:</span>
-                  <div className="flex items-center border rounded-lg">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setQuantite(Math.max(1, quantite - 1))}
-                      disabled={quantite <= 1}
-                    >
-                      <Minus className="h-4 w-4" />
-                    </Button>
-                    <span className="px-4 py-2 font-medium">{quantite}</span>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setQuantite(quantite + 1)}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+            <div className="flex space-x-3">
+              <Button 
+                onClick={handleAddToCart} 
+                disabled={!isInStock}
+                className="flex-1 bg-red-600 hover:bg-red-700"
+              >
+                <ShoppingCart className="mr-2 h-4 w-4" />
+                Ajouter au panier
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleToggleFavorite}
+                className="rounded-full"
+              >
+                <Heart
+                  className={`h-4 w-4 ${isFavorite(product.id) ? 'fill-red-500 text-red-500' : ''}`}
+                />
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => {
+                  const url = window.location.origin + `/${getSecureProductId(product.id)}`;
+                  navigator.clipboard.writeText(url);
+                  toast.success("Lien copié!");
+                }}
+                className="rounded-full"
+              >
+                <Share2 className="h-4 w-4" />
+              </Button>
+            </div>
 
-                <div className="flex gap-3">
-                  <Button 
-                    className="flex-1 bg-red-600 hover:bg-red-700" 
-                    onClick={gererAjoutPanier}
-                  >
-                    <ShoppingCart className="h-4 w-4 mr-2" />
-                    Ajouter au panier
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="icon"
-                    onClick={gererBasculeFavori}
-                    className={estFavori(produit.id) ? 'text-red-500 border-red-500' : ''}
-                  >
-                    <Heart className={`h-4 w-4 ${estFavori(produit.id) ? 'fill-red-500' : ''}`} />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-3 pt-4 border-t">
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <Truck className="h-4 w-4" />
-                  <span>Livraison gratuite à partir de 50€</span>
-                </div>
-                <div className="flex items-center gap-3 text-sm text-gray-600">
-                  <Shield className="h-4 w-4" />
-                  <span>Garantie satisfait ou remboursé</span>
-                </div>
-              </div>
+            <div className="mt-6 text-center">
+              <Button variant="link" asChild>
+                <Link to={`/${getSecureProductId(product.id)}`}>
+                  <Eye className="mr-2 h-4 w-4" />
+                  Voir la page produit
+                </Link>
+              </Button>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
+        </motion.div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
-export default ModalVueRapide;
+export default QuickViewModal;

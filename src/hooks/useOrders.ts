@@ -1,95 +1,124 @@
 
 import { useState, useEffect } from 'react';
 import { Order } from '@/types/order';
-import { ordersAPI } from '@/services/api';
+import { ordersAPI, cartAPI } from '@/services/api';
+import { StoreCartItem } from '@/types/cart';
 import { toast } from '@/components/ui/sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import { StoreCartItem } from '@/types/cart';
 
 export const useOrders = () => {
-  const [commandes, setCommandes] = useState<Order[]>([]);
-  const [chargement, setChargement] = useState(true);
-  const { user: utilisateur, isAuthenticated: estAuthentifie } = useAuth();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { isAuthenticated, user } = useAuth();
 
-  const recupererCommandes = async () => {
-    if (!estAuthentifie || !utilisateur) {
-      setCommandes([]);
-      setChargement(false);
+  const fetchOrders = async () => {
+    if (!isAuthenticated) {
+      setOrders([]);
+      setLoading(false);
       return;
     }
     
-    setChargement(true);
+    setLoading(true);
     try {
-      const reponse = await ordersAPI.getUserOrders();
-      if (reponse.data && Array.isArray(reponse.data)) {
-        setCommandes(reponse.data);
+      const response = await ordersAPI.getUserOrders();
+      if (Array.isArray(response.data)) {
+        setOrders(response.data);
       } else {
-        setCommandes([]);
+        setOrders([]);
       }
-    } catch (erreur) {
-      console.error("Erreur lors du chargement des commandes:", erreur);
-      setCommandes([]);
+    } catch (error) {
+      console.error("Erreur lors du chargement des commandes:", error);
+      setOrders([]);
     } finally {
-      setChargement(false);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (estAuthentifie && utilisateur) {
-      recupererCommandes();
+    if (isAuthenticated) {
+      fetchOrders();
     } else {
-      setCommandes([]);
-      setChargement(false);
+      setOrders([]);
+      setLoading(false);
     }
-  }, [estAuthentifie, utilisateur]);
+  }, [isAuthenticated]);
 
-  const creerCommande = async (
-    adresseLivraison: any,
-    methodePaiement: string,
-    articlesSelectionnes: StoreCartItem[],
+  const createOrder = async (
+    shippingAddress: any,
+    paymentMethod: string,
+    selectedCartItems: StoreCartItem[],
     codePromo?: { code: string; productId: string; pourcentage: number }
   ): Promise<Order | null> => {
-    if (!estAuthentifie || !utilisateur) {
-      toast.error('Vous devez être connecté pour passer une commande');
+    if (!isAuthenticated || !user || selectedCartItems.length === 0) {
+      toast.error('Impossible de créer la commande: utilisateur non connecté ou panier vide');
       return null;
     }
-    
+
     try {
-      const donneesCommande = {
-        userId: utilisateur.id,
-        items: articlesSelectionnes.map(article => ({
-          productId: article.product.id,
-          quantity: article.quantity,
-          price: article.product.price
-        })),
-        shippingAddress: adresseLivraison,
-        paymentMethod: methodePaiement,
-        promoCode: codePromo
+      console.log('Preparing order payload with items:', selectedCartItems.length);
+      
+      const orderItems = selectedCartItems.map(item => {
+        const finalPrice = codePromo && codePromo.productId === item.product.id
+          ? item.product.price * (1 - codePromo.pourcentage / 100)
+          : item.product.price;
+
+        return {
+          productId: item.product.id,
+          name: item.product.name,
+          price: finalPrice,
+          originalPrice: item.product.originalPrice || item.product.price,
+          quantity: item.quantity,
+          image: item.product.images && item.product.images.length > 0 
+            ? item.product.images[0] 
+            : item.product.image,
+          subtotal: finalPrice * item.quantity,
+          codePromoApplied: codePromo && codePromo.productId === item.product.id
+        };
+      });
+      
+      console.log('Order items mapped:', orderItems);
+
+      const orderPayload = {
+        items: orderItems,
+        shippingAddress,
+        paymentMethod,
+        codePromo: codePromo || null
       };
 
-      const reponse = await ordersAPI.create(donneesCommande);
+      console.log('Sending order payload:', orderPayload);
       
-      if (reponse.data) {
+      const response = await ordersAPI.create(orderPayload);
+
+      if (response.data) {
+        // Supprimer seulement les produits commandés du panier
+        console.log('Suppression des produits commandés du panier...');
+        for (const item of selectedCartItems) {
+          try {
+            await cartAPI.removeItem(user.id, item.product.id);
+            console.log(`Produit ${item.product.id} supprimé du panier`);
+          } catch (error) {
+            console.error(`Erreur lors de la suppression du produit ${item.product.id} du panier:`, error);
+          }
+        }
+        
         toast.success('Commande créée avec succès');
-        await recupererCommandes();
-        return reponse.data;
+        fetchOrders();
+        return response.data;
+      } else {
+        toast.error('Échec de la création de la commande');
+        return null;
       }
-      
-      return null;
-    } catch (erreur) {
-      console.error("Erreur lors de la création de la commande:", erreur);
+    } catch (error) {
+      console.error("Erreur lors de la création de la commande:", error);
       toast.error('Erreur lors de la création de la commande');
       return null;
     }
   };
 
   return {
-    commandes,
-    chargement,
-    recupererCommandes,
-    creerCommande
+    orders,
+    loading,
+    fetchOrders,
+    createOrder
   };
 };
-
-// Alias pour compatibilité
-export const utiliserCommandes = useOrders;

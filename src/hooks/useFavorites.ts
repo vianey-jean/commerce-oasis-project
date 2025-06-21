@@ -5,46 +5,46 @@ import { favoritesAPI } from '@/services/favoritesAPI';
 import { toast } from '@/components/ui/sonner';
 import { useAuth } from '@/contexts/AuthContext';
 
-export const utiliserFavoris = () => {
-  const [favoris, setFavoris] = useState<Product[]>([]);
-  const [chargement, setChargement] = useState(true);
-  const { user: utilisateur, isAuthenticated: estAuthentifie } = useAuth();
+export const useFavorites = () => {
+  const [favorites, setFavorites] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { user, isAuthenticated } = useAuth();
 
-  const recupererFavoris = async () => {
-    if (!estAuthentifie || !utilisateur) {
-      setFavoris([]);
-      setChargement(false);
+  const fetchFavorites = async () => {
+    if (!isAuthenticated || !user) {
+      setFavorites([]);
+      setLoading(false);
       return;
     }
     
-    setChargement(true);
+    setLoading(true);
     try {
-      const reponse = await favoritesAPI.get(utilisateur.id);
-      if (reponse.data && reponse.data.items && Array.isArray(reponse.data.items)) {
-        setFavoris(reponse.data.items);
+      const response = await favoritesAPI.get(user.id);
+      if (response.data && response.data.items && Array.isArray(response.data.items)) {
+        setFavorites(response.data.items);
       } else {
-        setFavoris([]);
+        setFavorites([]);
       }
-    } catch (erreur) {
-      console.error("Erreur lors du chargement des favoris:", erreur);
-      setFavoris([]);
+    } catch (error) {
+      console.error("Erreur lors du chargement des favoris:", error);
+      setFavorites([]);
     } finally {
-      setChargement(false);
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (estAuthentifie && utilisateur) {
-      recupererFavoris();
+    if (isAuthenticated && user) {
+      fetchFavorites();
     } else {
-      setFavoris([]);
-      setChargement(false);
+      setFavorites([]);
+      setLoading(false);
     }
-  }, [estAuthentifie, utilisateur]);
+  }, [isAuthenticated, user]);
 
-  const basculerFavori = async (produit: Product) => {
-    if (!estAuthentifie || !utilisateur) {
-      toast.error('Vous devez être connecté pour ajouter un produit aux favoris', {
+  const toggleFavorite = async (product: Product) => {
+    if (!isAuthenticated || !user) {
+      toast.error('Vous devez être connecté pour ajouter un produit au favoris', {
         style: { backgroundColor: '#EF4444', color: 'white', fontWeight: 'bold' },
         duration: 4000,
         position: 'top-center',
@@ -52,33 +52,33 @@ export const utiliserFavoris = () => {
       return;
     }
     
-    const estDejaDansFavoris = favoris.some(fav => fav.id === produit.id);
+    const isFav = favorites.some(fav => fav.id === product.id);
     
     try {
-      if (estDejaDansFavoris) {
-        await favoritesAPI.removeItem(utilisateur.id, produit.id);
-        setFavoris(favoris.filter(fav => fav.id !== produit.id));
+      if (isFav) {
+        await favoritesAPI.removeItem(user.id, product.id);
+        setFavorites(favorites.filter(fav => fav.id !== product.id));
         toast.info('Produit retiré des favoris');
       } else {
-        await favoritesAPI.addItem(utilisateur.id, produit.id);
-        setFavoris([...favoris, produit]);
+        await favoritesAPI.addItem(user.id, product.id);
+        setFavorites([...favorites, product]);
         toast.success('Produit ajouté aux favoris');
       }
-    } catch (erreur) {
-      console.error("Erreur lors de la gestion des favoris:", erreur);
+    } catch (error) {
+      console.error("Erreur lors de la gestion des favoris:", error);
       toast.error('Erreur lors de la gestion des favoris');
     }
   };
 
-  const estFavori = (idProduit: string) => {
-    return favoris.some(fav => fav.id === idProduit);
+  const isFavorite = (productId: string) => {
+    return favorites.some(fav => fav.id === productId);
   };
 
   return {
-    favoris,
-    chargement,
-    basculerFavori,
-    estFavori,
-    nombreFavoris: favoris.length
+    favorites,
+    loading,
+    toggleFavorite,
+    isFavorite,
+    favoriteCount: favorites.length
   };
 };

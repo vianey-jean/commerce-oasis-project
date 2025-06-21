@@ -1,3 +1,4 @@
+
 import React from 'react';
 import Navbar from './Navbar';
 import Footer from './Footer';
@@ -8,62 +9,42 @@ import LayoutPrompts from './LayoutPrompts';
 import ClientServiceChatWidget from '@/components/chat/ClientServiceChatWidget';
 import AdminServiceChatWidget from '@/components/chat/AdminServiceChatWidget';
 import ScrollToTop from '@/components/ui/ScrollToTop';
-import SEOHead from '@/components/seo/SEOHead';
 import { useQuery } from '@tanstack/react-query';
 import { Product } from '@/contexts/StoreContext';
 import { productsAPI } from '@/services/api';
 import pubLayoutAPI, { PubLayout } from '@/services/pubLayoutAPI';
 import { useScrollDetection } from '@/hooks/useScrollDetection';
 
-interface ProprietesLayout {
-  enfants?: React.ReactNode;
-  children?: React.ReactNode;
-  masquerInvites?: boolean;
-  // Propriétés SEO
-  titrePage?: string;
-  descriptionPage?: string;
-  motsClesPage?: string;
-  imageOGPage?: string;
-  typeContenuPage?: string;
+interface LayoutProps {
+  children: React.ReactNode;
+  hidePrompts?: boolean;
 }
 
-const Layout: React.FC<ProprietesLayout> = ({ 
-  enfants, 
-  children,
-  masquerInvites = false,
-  titrePage,
-  descriptionPage,
-  motsClesPage,
-  imageOGPage,
-  typeContenuPage
-}) => {
-  // Use enfants if provided, otherwise use children
-  const content = enfants || children;
-
-  const { data: produitsTendance } = useQuery({
-    queryKey: ['produits-tendance'],
+const Layout: React.FC<LayoutProps> = ({ children, hidePrompts = false }) => {
+  const { data: trendingProducts } = useQuery({
+    queryKey: ['trending-products'],
     queryFn: async (): Promise<Product[]> => {
       try {
-        const reponse = await productsAPI.getMostFavorited();
-        return reponse.data || [];
-      } catch (erreur) {
-        console.error('Erreur lors du chargement des produits populaires:', erreur);
+        const response = await productsAPI.getMostFavorited();
+        return response.data || [];
+      } catch (error) {
+        console.error('Erreur lors du chargement des produits populaires:', error);
         return [];
       }
     },
-    enabled: !masquerInvites,
-    staleTime: 15 * 60 * 1000, // Augmenté de 10min à 15min pour réduire les requêtes
-    retry: 1, // Réduit de 2 à 1 tentative
-    retryDelay: 2000, // Réduit le délai de retry
+    enabled: !hidePrompts,
+    staleTime: 10 * 60 * 1000,
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
   });
 
-  const { data: elementsPubLayout = [], isLoading: chargementPubLayout } = useQuery({
+  const { data: pubLayoutItems = [], isLoading: isLoadingPubLayout } = useQuery({
     queryKey: ['pub-layout'],
     queryFn: async (): Promise<PubLayout[]> => {
       try {
         return await pubLayoutAPI.getAll();
-      } catch (erreur) {
-        console.error('Erreur lors du chargement des publicités:', erreur);
+      } catch (error) {
+        console.error('Erreur lors du chargement des publicités:', error);
         return [
           { id: "1", icon: "ThumbsUp", text: "Livraison gratuite à partir de 50€ d'achat" },
           { id: "2", icon: "Gift", text: "-10% sur votre première commande avec le code WELCOME10" },
@@ -71,30 +52,22 @@ const Layout: React.FC<ProprietesLayout> = ({
         ];
       }
     },
-    staleTime: 60 * 1000, // Augmenté de 30s à 60s
-    refetchInterval: 60 * 1000, // Augmenté de 30s à 60s pour réduire la charge
-    refetchOnWindowFocus: false, // Désactivé pour améliorer les performances
+    staleTime: 30 * 1000,
+    refetchInterval: 30 * 1000,
+    refetchOnWindowFocus: true,
   });
 
-  const aDefileVue = useScrollDetection(200, masquerInvites);
+  const hasScrolled = useScrollDetection(200, hidePrompts);
 
   return (
     <div className="flex flex-col min-h-screen bg-neutral-50 dark:bg-neutral-950">
-      <SEOHead
-        titre={titrePage}
-        description={descriptionPage}
-        motsCles={motsClesPage}
-        imageOG={imageOGPage}
-        typeContenu={typeContenuPage}
-      />
-      
       <header className="sticky top-0 z-50">
         <Navbar />
-        <PromoBanner pubLayoutItems={elementsPubLayout} isLoading={chargementPubLayout} />
+        <PromoBanner pubLayoutItems={pubLayoutItems} isLoading={isLoadingPubLayout} />
       </header>
       
       <main className="flex-grow" role="main">
-        {content}
+        {children}
         <BenefitsSection />
         <PaymentBadges />
       </main>
@@ -102,9 +75,9 @@ const Layout: React.FC<ProprietesLayout> = ({
       <Footer />
       
       <LayoutPrompts 
-        hidePrompts={masquerInvites}
-        trendingProducts={produitsTendance}
-        hasScrolled={aDefileVue}
+        hidePrompts={hidePrompts}
+        trendingProducts={trendingProducts}
+        hasScrolled={hasScrolled}
       />
 
       <ClientServiceChatWidget />

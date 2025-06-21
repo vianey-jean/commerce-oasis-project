@@ -1,188 +1,143 @@
+
 import React, { createContext, useContext } from 'react';
-import { utiliserProduits } from '@/hooks/useProducts';
-import { utiliserPanier } from '@/hooks/useCart';
-import { utiliserFavoris } from '@/hooks/useFavorites';
+import { useProducts } from '@/hooks/useProducts';
+import { useCart } from '@/hooks/useCart';
+import { useFavorites } from '@/hooks/useFavorites';
 import { useOrders } from '@/hooks/useOrders';
 import { Product } from '@/types/product';
 import { StoreCartItem } from '@/types/cart';
 import { Order } from '@/types/order';
 
-interface TypeContexteMagasin {
-  produits: Product[];
-  favoris: Product[];
-  panier: StoreCartItem[];
-  articlesSelectionnes: StoreCartItem[];
-  commandes: Order[];
-  chargementProduits: boolean;
-  chargementFavoris: boolean;
-  chargementPanier: boolean;
-  chargementCommandes: boolean;
-  ajouterAuPanier: (produit: Product, quantite?: number) => void;
-  supprimerDuPanier: (idProduit: string) => void;
-  mettreAJourQuantite: (idProduit: string, quantite: number) => void;
-  viderPanier: () => void;
-  obtenirTotalPanier: () => number;
-  basculerFavori: (produit: Product) => void;
-  estFavori: (idProduit: string) => boolean;
-  obtenirProduitParId: (id: string) => Product | undefined;
-  recupererProduits: (nomCategorie?: string) => Promise<void>;
-  recupererCommandes: () => Promise<void>;
-  nombreFavoris: number;
-  creerCommande: (
-    adresseLivraison: any, 
-    methodePaiement: string, 
-    codePromo?: {code: string, productId: string, pourcentage: number}
-  ) => Promise<Order | null>;
-  setArticlesSelectionnes: (articles: StoreCartItem[]) => void;
-  recupererPanier: () => Promise<void>;
-  
-  // Aliases pour compatibilité avec les composants existants
-  products: Product[]; // Added to interface
-  cart: StoreCartItem[];
-  addToCart: (produit: Product, quantite?: number) => void;
-  removeFromCart: (idProduit: string) => void;
-  updateQuantity: (idProduit: string, quantite: number) => void;
-  toggleFavorite: (produit: Product) => void;
-  isFavorite: (idProduit: string) => boolean;
-  favoriteCount: number;
-  loadingCart: boolean;
-  selectedCartItems: StoreCartItem[];
-  setSelectedCartItems: (articles: StoreCartItem[]) => void;
-  getCartTotal: () => number;
-  createOrder: (
-    adresseLivraison: any, 
-    methodePaiement: string, 
-    codePromo?: {code: string, productId: string, pourcentage: number}
-  ) => Promise<Order | null>;
+interface StoreContextType {
+  products: Product[];
   favorites: Product[];
-  loadingFavorites: boolean;
-  
-  // Additional aliases for orders
+  cart: StoreCartItem[];
+  selectedCartItems: StoreCartItem[];
   orders: Order[];
+  loadingProducts: boolean;
+  loadingFavorites: boolean;
+  loadingCart: boolean;
   loadingOrders: boolean;
+  addToCart: (product: Product, quantity?: number) => void;
+  removeFromCart: (productId: string) => void;
+  updateQuantity: (productId: string, quantity: number) => void;
+  clearCart: () => void;
+  getCartTotal: () => number;
+  toggleFavorite: (product: Product) => void;
+  isFavorite: (productId: string) => boolean;
+  getProductById: (id: string) => Product | undefined;
+  fetchProducts: (categoryName?: string) => Promise<void>;
   fetchOrders: () => Promise<void>;
+  favoriteCount: number;
+  createOrder: (
+    shippingAddress: any, 
+    paymentMethod: string, 
+    codePromo?: {code: string, productId: string, pourcentage: number}
+  ) => Promise<Order | null>;
+  setSelectedCartItems: (items: StoreCartItem[]) => void;
+  fetchCart: () => Promise<void>;
 }
 
-const ContexteMagasin = createContext<TypeContexteMagasin | undefined>(undefined);
+const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
-export const FournisseurMagasin: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { 
-    produits, 
-    chargement: chargementProduits, 
-    recupererProduits, 
-    obtenirProduitParId 
-  } = utiliserProduits();
+    products, 
+    loading: loadingProducts, 
+    fetchProducts, 
+    getProductById 
+  } = useProducts();
 
   const {
-    panier,
-    articlesSelectionnes,
-    chargement: chargementPanier,
-    ajouterAuPanier,
-    supprimerDuPanier,
-    mettreAJourQuantite: mettreAJourQuantitePanier,
-    viderPanier,
-    obtenirTotalPanier,
-    setArticlesSelectionnes,
-    recupererPanier
-  } = utiliserPanier();
+    cart,
+    selectedCartItems,
+    loading: loadingCart,
+    addToCart,
+    removeFromCart,
+    updateQuantity: updateCartQuantity,
+    clearCart,
+    getCartTotal,
+    setSelectedCartItems,
+    fetchCart
+  } = useCart();
 
   const {
-    favoris,
-    chargement: chargementFavoris,
-    basculerFavori,
-    estFavori,
-    nombreFavoris
-  } = utiliserFavoris();
+    favorites,
+    loading: loadingFavorites,
+    toggleFavorite,
+    isFavorite,
+    favoriteCount
+  } = useFavorites();
 
   const {
-    commandes,
-    chargement: chargementCommandes,
-    recupererCommandes,
-    creerCommande: creerNouvelleCommande
+    orders,
+    loading: loadingOrders,
+    fetchOrders,
+    createOrder: createNewOrder
   } = useOrders();
 
-  const mettreAJourQuantite = (idProduit: string, quantite: number) => {
-    mettreAJourQuantitePanier(idProduit, quantite, produits);
+  const updateQuantity = (productId: string, quantity: number) => {
+    updateCartQuantity(productId, quantity, products);
   };
 
-  const creerCommande = async (
-    adresseLivraison: any,
-    methodePaiement: string,
+  const createOrder = async (
+    shippingAddress: any,
+    paymentMethod: string,
     codePromo?: { code: string; productId: string; pourcentage: number }
   ): Promise<Order | null> => {
-    const resultat = await creerNouvelleCommande(adresseLivraison, methodePaiement, articlesSelectionnes, codePromo);
+    const result = await createNewOrder(shippingAddress, paymentMethod, selectedCartItems, codePromo);
     
-    if (resultat) {
-      await recupererPanier();
-      setArticlesSelectionnes([]);
-      recupererProduits();
+    if (result) {
+      // Recharger le panier pour refléter les suppressions
+      await fetchCart();
+      
+      // Vider les items sélectionnés
+      setSelectedCartItems([]);
+      
+      // Mettre à jour les produits pour refléter le stock actualisé
+      fetchProducts();
     }
     
-    return resultat;
+    return result;
   };
 
   return (
-    <ContexteMagasin.Provider value={{
-      produits,
-      favoris,
-      panier,
-      articlesSelectionnes,
-      commandes,
-      chargementProduits,
-      chargementFavoris,
-      chargementPanier,
-      chargementCommandes,
-      ajouterAuPanier,
-      supprimerDuPanier,
-      mettreAJourQuantite,
-      viderPanier,
-      obtenirTotalPanier,
-      basculerFavori,
-      estFavori,
-      obtenirProduitParId,
-      recupererProduits,
-      recupererCommandes,
-      nombreFavoris,
-      creerCommande,
-      setArticlesSelectionnes,
-      recupererPanier,
-      
-      // Aliases pour compatibilité
-      products: produits,
-      cart: panier,
-      addToCart: ajouterAuPanier,
-      removeFromCart: supprimerDuPanier,
-      updateQuantity: mettreAJourQuantite,
-      toggleFavorite: basculerFavori,
-      isFavorite: estFavori,
-      favoriteCount: nombreFavoris,
-      loadingCart: chargementPanier,
-      selectedCartItems: articlesSelectionnes,
-      setSelectedCartItems: setArticlesSelectionnes,
-      getCartTotal: obtenirTotalPanier,
-      createOrder: creerCommande,
-      favorites: favoris,
-      loadingFavorites: chargementFavoris,
-      
-      // Orders aliases
-      orders: commandes,
-      loadingOrders: chargementCommandes,
-      fetchOrders: recupererCommandes
+    <StoreContext.Provider value={{
+      products,
+      favorites,
+      cart,
+      selectedCartItems,
+      orders,
+      loadingProducts,
+      loadingFavorites,
+      loadingCart,
+      loadingOrders,
+      addToCart,
+      removeFromCart,
+      updateQuantity,
+      clearCart,
+      getCartTotal,
+      toggleFavorite,
+      isFavorite,
+      getProductById,
+      fetchProducts,
+      fetchOrders,
+      favoriteCount,
+      createOrder,
+      setSelectedCartItems,
+      fetchCart
     }}>
       {children}
-    </ContexteMagasin.Provider>
+    </StoreContext.Provider>
   );
 };
 
-export const utiliserMagasin = () => {
-  const contexte = useContext(ContexteMagasin);
-  if (!contexte) {
-    throw new Error('utiliserMagasin doit être utilisé dans un FournisseurMagasin');
+export const useStore = () => {
+  const context = useContext(StoreContext);
+  if (!context) {
+    throw new Error('useStore must be used within a StoreProvider');
   }
-  return contexte;
+  return context;
 };
 
-// Exports pour la compatibilité
-export const StoreProvider = FournisseurMagasin;
-export const useStore = utiliserMagasin;
 export type { Product };
