@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/components/ui/sonner';
+import { Shield, Lock } from 'lucide-react';
 import { crypterDonneesCarte, decrypterDonneesCarte } from '@/services/securite/cryptageCartes';
 import { cartesBancairesAPI } from '@/services/api/cartesBancaires';
 import { useAuth } from '@/contexts/AuthContext';

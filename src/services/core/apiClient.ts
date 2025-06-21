@@ -55,3 +55,7 @@ clientApi.interceptors.response.use(
     return Promise.reject(erreur);
   }
 );
+
+// Export with alias for compatibility
+export const apiClient = clientApi;
+export default clientApi;

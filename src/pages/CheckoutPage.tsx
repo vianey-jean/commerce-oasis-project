@@ -432,7 +432,7 @@ const CheckoutPage = () => {
               transition={{ duration: 0.4 }}
             >
               <FormulaireCarteBancaireSecurise
-                onSuccess={handlePaymentSuccess}
+                surSucces={handlePaymentSuccess}
                 montantTotal={orderTotal}
                 idCommande={`CMD-${Date.now()}`}
               />

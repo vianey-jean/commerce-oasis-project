@@ -148,6 +148,7 @@ export const FournisseurMagasin: React.FC<{ children: React.ReactNode }> = ({ ch
       recupererPanier,
       
       // Aliases pour compatibilité
+      products: produits, // Added missing products alias
       cart: panier,
       addToCart: ajouterAuPanier,
       removeFromCart: supprimerDuPanier,
