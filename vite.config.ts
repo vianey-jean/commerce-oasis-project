@@ -13,6 +13,9 @@ export default defineConfig({
       '@emoji-mart/react': path.resolve(__dirname, 'node_modules/@emoji-mart/react')
     },
   },
+  define: {
+    global: 'globalThis',
+  },
   build: {
     rollupOptions: {
       output: {
