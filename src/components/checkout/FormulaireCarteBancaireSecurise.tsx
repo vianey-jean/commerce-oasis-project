@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,8 +25,14 @@ interface ProprietesFormulaireCarteBancaire {
   idCommande: string;
 }
 
-const FormulaireCarteBancaireSecurise: React.FC<ProprietesFormulaireCarteBancaire> = ({
+// Alias pour compatibilité avec les props utilisées
+interface ProprietesFormulaireCarteBancaireSecurise extends ProprietesFormulaireCarteBancaire {
+  onSuccess?: () => void;
+}
+
+const FormulaireCarteBancaireSecurise: React.FC<ProprietesFormulaireCarteBancaireSecurise> = ({
   surSucces,
+  onSuccess,
   montantTotal,
   idCommande
 }) => {
@@ -53,7 +58,7 @@ const FormulaireCarteBancaireSecurise: React.FC<ProprietesFormulaireCarteBancair
     if (!utilisateur) return;
     
     try {
-      const reponse = await cartesBancairesAPI.obtenirCartes(utilisateur.id);
+      const reponse = await cartesBancairesAPI.obtenirCartesSauvegardees();
       setCartesEnregistrees(reponse.data || []);
     } catch (erreur) {
       console.error('Erreur lors du chargement des cartes:', erreur);
@@ -165,12 +170,13 @@ const FormulaireCarteBancaireSecurise: React.FC<ProprietesFormulaireCarteBancair
         if (enregistrerCarte && utilisateur) {
           try {
             const donneesChiffrees = crypterDonneesCarte(donneesCarteAUtiliser);
-            await cartesBancairesAPI.enregistrerCarte(utilisateur.id, {
+            await cartesBancairesAPI.sauvegarderCarte({
               donneesChiffrees,
               dernierChiffres: numeroCarte.slice(-4),
               typeCarte: obtenirTypeCarte(numeroCarte),
               nomTitulaire,
-              dateExpiration
+              dateExpiration,
+              estPrincipale: false
             });
             toast.success('Carte enregistrée avec succès');
           } catch (erreur) {
@@ -208,7 +214,12 @@ const FormulaireCarteBancaireSecurise: React.FC<ProprietesFormulaireCarteBancair
       if (validationReussie) {
         // Processus de paiement réussi
         toast.success('Paiement effectué avec succès');
-        surSucces();
+        // Utiliser onSuccess ou surSucces selon ce qui est fourni
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          surSucces();
+        }
       }
       
     } catch (erreur) {

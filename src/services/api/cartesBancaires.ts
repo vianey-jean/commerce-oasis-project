@@ -1,58 +1,55 @@
 
-import { clientApi } from '../core/apiClient';
+import axios, { AxiosResponse } from 'axios';
 
-export interface CarteBancaireSauvegardee {
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+
+export interface CarteBancaireEnregistree {
   id: string;
-  utilisateurId: string;
-  numeroMasque: string;
+  dernierChiffres: string;
+  typeCarte: string;
   nomTitulaire: string;
   dateExpiration: string;
-  typeCarte: string;
+  donneesChiffrees: string;
   estPrincipale: boolean;
-  dateCreation: string;
 }
 
-export const cartesBancairesAPI = {
-  /**
-   * Récupère les cartes sauvegardées de l'utilisateur
-   */
-  obtenirCartesSauvegardees: () => 
-    clientApi.get<CarteBancaireSauvegardee[]>('/cartes-bancaires/utilisateur'),
+export interface CarteBancaireSauvegardee extends CarteBancaireEnregistree {}
 
-  /**
-   * Sauvegarde une nouvelle carte
-   */
+export const cartesBancairesAPI = {
+  obtenirCartesSauvegardees: (): Promise<AxiosResponse<CarteBancaireSauvegardee[]>> => {
+    return axios.get(`${API_BASE_URL}/api/cartes-bancaires`);
+  },
+
+  // Alias pour compatibilité
+  obtenirCartes: (userId: string): Promise<AxiosResponse<CarteBancaireEnregistree[]>> => {
+    return axios.get(`${API_BASE_URL}/api/cartes-bancaires?userId=${userId}`);
+  },
+
   sauvegarderCarte: (donneesCarte: {
     donneesChiffrees: string;
-    numeroMasque: string;
+    dernierChiffres: string;
+    typeCarte: string;
     nomTitulaire: string;
     dateExpiration: string;
-    typeCarte: string;
     estPrincipale: boolean;
-  }) => 
-    clientApi.post<CarteBancaireSauvegardee>('/cartes-bancaires', donneesCarte),
+  }): Promise<AxiosResponse<CarteBancaireSauvegardee>> => {
+    return axios.post(`${API_BASE_URL}/api/cartes-bancaires`, donneesCarte);
+  },
 
-  /**
-   * Supprime une carte sauvegardée
-   */
-  supprimerCarte: (idCarte: string) => 
-    clientApi.delete(`/cartes-bancaires/${idCarte}`),
+  // Alias pour compatibilité
+  enregistrerCarte: (userId: string, donneesCarte: any): Promise<AxiosResponse<CarteBancaireEnregistree>> => {
+    return axios.post(`${API_BASE_URL}/api/cartes-bancaires`, { ...donneesCarte, userId });
+  },
 
-  /**
-   * Valide le paiement avec 3DS
-   */
+  supprimerCarte: (idCarte: string): Promise<AxiosResponse<void>> => {
+    return axios.delete(`${API_BASE_URL}/api/cartes-bancaires/${idCarte}`);
+  },
+
   validerPaiement3DS: (donneesValidation: {
-    idCarte?: string;
-    donneesNouvelleCarte?: any;
     montant: number;
-    monnaie: string;
-    idCommande: string;
-  }) => 
-    clientApi.post('/paiements/validation-3ds', donneesValidation),
-
-  /**
-   * Confirme le paiement après validation 3DS
-   */
-  confirmerPaiement: (idTransaction: string, codeValidation: string) => 
-    clientApi.post('/paiements/confirmer', { idTransaction, codeValidation })
+    carteBancaire: any;
+    commande: string;
+  }): Promise<AxiosResponse<{ succes: boolean; transactionId: string }>> => {
+    return axios.post(`${API_BASE_URL}/api/paiements/3ds`, donneesValidation);
+  }
 };

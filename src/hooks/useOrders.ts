@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Order } from '@/types/order';
 import { ordersAPI } from '@/services/api';
@@ -6,7 +5,7 @@ import { toast } from '@/components/ui/sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { StoreCartItem } from '@/types/cart';
 
-export const utiliserCommandes = () => {
+export const useOrders = () => {
   const [commandes, setCommandes] = useState<Order[]>([]);
   const [chargement, setChargement] = useState(true);
   const { user: utilisateur, isAuthenticated: estAuthentifie } = useAuth();
@@ -90,3 +89,6 @@ export const utiliserCommandes = () => {
     creerCommande
   };
 };
+
+// Alias pour compatibilité
+export const utiliserCommandes = useOrders;
