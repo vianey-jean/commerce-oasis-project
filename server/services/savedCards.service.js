@@ -1,4 +1,3 @@
-
 const database = require('../core/database');
 const crypto = require('crypto');
 
@@ -38,7 +37,7 @@ class SavedCardsService {
 
   getUserCards(userId) {
     const cards = database.read(this.cardsFile);
-    return cards.filter(card => card.userI === userId).map(card => ({
+    return cards.filter(card => card.userId === userId).map(card => ({
       id: card.id,
       userId: card.userId,
       lastFourDigits: card.lastFourDigits,

@@ -1,3 +1,4 @@
+
 const { initializeDataFiles } = require('./dataFiles');
 
 const setupRoutes = (app) => {
@@ -23,6 +24,7 @@ const setupRoutes = (app) => {
     'categories.json',
     'visitors.json',
     'sales-notifications.json',
+    'saved-cards.json',
   ];
 
   const dataDir = path.join(__dirname, '../data');
@@ -56,6 +58,8 @@ const setupRoutes = (app) => {
   app.use('/api/visitors', require('../routes/visitors'));
   app.use('/api/sales-notifications', require('../routes/sales-notifications'));
   app.use('/api/site-settings', require('../routes/site-settings'));
+  app.use('/api/saved-cards', require('../routes/saved-cards'));
+  app.use('/api/payments', require('../routes/payments'));
 };
 
 module.exports = setupRoutes;
