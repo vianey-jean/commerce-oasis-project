@@ -2,10 +2,10 @@
 const express = require('express');
 const router = express.Router();
 const savedCardsService = require('../services/savedCards.service');
-const authMiddleware = require('../middlewares/auth');
+const { authenticateToken } = require('../middlewares/auth');
 
 // Middleware d'authentification pour toutes les routes
-router.use(authMiddleware);
+router.use(authenticateToken);
 
 // Récupérer les cartes de l'utilisateur
 router.get('/', async (req, res) => {
