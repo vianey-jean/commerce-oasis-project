@@ -1,11 +1,10 @@
-
 const express = require('express');
 const router = express.Router();
 const savedCardsService = require('../services/savedCards.service');
-const { authenticateToken } = require('../middlewares/auth');
+const { isAuthenticated } = require('../middlewares/auth');
 
 // Middleware d'authentification
-router.use(authenticateToken);
+router.use(isAuthenticated);
 
 // Traiter un paiement avec une carte sauvegardée
 router.post('/process-saved-card', async (req, res) => {
