@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -320,6 +319,15 @@ const CreditCardForm: React.FC<CreditCardFormProps> = ({ onSuccess }) => {
     await processPayment();
   };
 
+  // Handlers pour les checkboxes avec conversion du type CheckedState
+  const handleSaveCardChange = (checked: boolean | 'indeterminate') => {
+    setSaveCard(checked === true);
+  };
+
+  const handleSetAsDefaultChange = (checked: boolean | 'indeterminate') => {
+    setSetAsDefault(checked === true);
+  };
+
   if (requires3DS) {
     return (
       <div className="text-center space-y-4 p-6">
@@ -439,7 +447,7 @@ const CreditCardForm: React.FC<CreditCardFormProps> = ({ onSuccess }) => {
                 <Checkbox
                   id="saveCard"
                   checked={saveCard}
-                  onCheckedChange={setSaveCard}
+                  onCheckedChange={handleSaveCardChange}
                 />
                 <Label htmlFor="saveCard" className="text-sm">
                   Enregistrer cette carte pour les prochains achats
@@ -451,7 +459,7 @@ const CreditCardForm: React.FC<CreditCardFormProps> = ({ onSuccess }) => {
                   <Checkbox
                     id="setAsDefault"
                     checked={setAsDefault}
-                    onCheckedChange={setSetAsDefault}
+                    onCheckedChange={handleSetAsDefaultChange}
                   />
                   <Label htmlFor="setAsDefault" className="text-sm text-gray-600">
                     Définir comme carte par défaut
