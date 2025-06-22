@@ -61,15 +61,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const response = await authAPI.login({ email, password });
       localStorage.setItem('authToken', response.data.token);
       setUser(response.data.user);
-     toast({
-  title: 'Connexion réussie',
-  className: 'bg-green-500 text-white', // fond vert + texte blanc
-  variant: 'default',
-});
+      toast({
+        title: 'Connexion réussie',
+        className: 'bg-green-500 text-white',
+        variant: 'default',
+      });
 
-
-      // Navigation via window.location pour éviter les problèmes de hooks
-      window.location.href = '/';
+      // Récupérer l'URL de redirection sauvegardée
+      const redirectUrl = localStorage.getItem('redirectAfterLogin');
+      localStorage.removeItem('redirectAfterLogin');
+      
+      // Rediriger vers la page précédente ou l'accueil
+      window.location.href = redirectUrl || '/';
     } catch (error: any) {
       console.error("Erreur de connexion:", error);
       
@@ -85,14 +88,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = () => {
     localStorage.removeItem('authToken');
-    localStorage.removeItem('maintenanceAdminBypass'); // Supprimer le marqueur admin
+    localStorage.removeItem('maintenanceAdminBypass');
+    localStorage.removeItem('redirectAfterLogin'); // Nettoyer aussi cette clé
     setUser(null);
     toast({
       title: 'Vous êtes déconnecté',
       variant: 'destructive',
     });
 
-    // Navigation via window.location pour éviter les problèmes de hooks
     window.location.href = '/login';
   };
 
@@ -106,8 +109,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         variant: 'default',
       });
 
-      // Navigation via window.location pour éviter les problèmes de hooks
-      window.location.href = '/';
+      // Récupérer l'URL de redirection sauvegardée
+      const redirectUrl = localStorage.getItem('redirectAfterLogin');
+      localStorage.removeItem('redirectAfterLogin');
+      
+      // Rediriger vers la page précédente ou l'accueil
+      window.location.href = redirectUrl || '/';
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Erreur lors de l\'inscription';
       toast({

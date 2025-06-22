@@ -10,6 +10,7 @@ router.use(isAuthenticated);
 // Récupérer les cartes de l'utilisateur
 router.get('/', async (req, res) => {
   try {
+    console.log('GET /saved-cards - User:', req.user?.id);
     const cards = savedCardsService.getUserCards(req.user.id);
     res.json(cards);
   } catch (error) {
@@ -21,6 +22,7 @@ router.get('/', async (req, res) => {
 // Sauvegarder une nouvelle carte
 router.post('/', async (req, res) => {
   try {
+    console.log('POST /saved-cards - User:', req.user?.id, 'Body:', req.body);
     const { cardNumber, cardName, expiryDate, cvv, saveCard, setAsDefault } = req.body;
     
     if (!cardNumber || !cardName || !expiryDate || !cvv) {
@@ -46,6 +48,7 @@ router.post('/', async (req, res) => {
 // Supprimer une carte
 router.delete('/:cardId', async (req, res) => {
   try {
+    console.log('DELETE /saved-cards/:cardId - User:', req.user?.id, 'CardId:', req.params.cardId);
     const { cardId } = req.params;
     const success = savedCardsService.deleteCard(req.user.id, cardId);
     
@@ -63,6 +66,7 @@ router.delete('/:cardId', async (req, res) => {
 // Définir une carte par défaut
 router.put('/:cardId/default', async (req, res) => {
   try {
+    console.log('PUT /saved-cards/:cardId/default - User:', req.user?.id, 'CardId:', req.params.cardId);
     const { cardId } = req.params;
     savedCardsService.setDefaultCard(req.user.id, cardId);
     res.json({ success: true });

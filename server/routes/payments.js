@@ -10,6 +10,7 @@ router.use(isAuthenticated);
 // Traiter un paiement avec une carte sauvegardée
 router.post('/process-saved-card', async (req, res) => {
   try {
+    console.log('POST /payments/process-saved-card - User:', req.user?.id, 'Body:', req.body);
     const { cardId, amount, currency } = req.body;
     
     if (!cardId || !amount) {
@@ -32,6 +33,7 @@ router.post('/process-saved-card', async (req, res) => {
 // Traiter un paiement avec une nouvelle carte
 router.post('/process-new-card', async (req, res) => {
   try {
+    console.log('POST /payments/process-new-card - User:', req.user?.id, 'Body:', req.body);
     const { cardData, amount, currency } = req.body;
     
     if (!cardData || !amount) {
@@ -54,6 +56,7 @@ router.post('/process-new-card', async (req, res) => {
 // Confirmer un paiement 3DS
 router.post('/confirm-3ds', async (req, res) => {
   try {
+    console.log('POST /payments/confirm-3ds - User:', req.user?.id, 'Body:', req.body);
     const { paymentIntentId, confirmationData } = req.body;
     
     if (!paymentIntentId || !confirmationData) {

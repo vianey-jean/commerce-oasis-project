@@ -36,18 +36,23 @@ class SavedCardsService {
   }
 
   getUserCards(userId) {
-    const cards = database.read(this.cardsFile);
-    return cards.filter(card => card.userId === userId).map(card => ({
-      id: card.id,
-      userId: card.userId,
-      lastFourDigits: card.lastFourDigits,
-      cardType: card.cardType,
-      expiryMonth: card.expiryMonth,
-      expiryYear: card.expiryYear,
-      cardholderName: card.cardholderName,
-      isDefault: card.isDefault,
-      createdAt: card.createdAt
-    }));
+    try {
+      const cards = database.read(this.cardsFile);
+      return cards.filter(card => card.userId === userId).map(card => ({
+        id: card.id,
+        userId: card.userId,
+        lastFourDigits: card.lastFourDigits,
+        cardType: card.cardType,
+        expiryMonth: card.expiryMonth,
+        expiryYear: card.expiryYear,
+        cardholderName: card.cardholderName,
+        isDefault: card.isDefault,
+        createdAt: card.createdAt
+      }));
+    } catch (error) {
+      console.error('Erreur getUserCards:', error);
+      return [];
+    }
   }
 
   saveCard(userId, cardData) {
