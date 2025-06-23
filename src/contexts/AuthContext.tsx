@@ -1,247 +1,199 @@
-import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
-import { authAPI, User } from '../services/api';
-import { UpdateProfileData } from '@/types/auth';
-import { useToast } from '@/hooks/use-toast';
+
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { LoginCredentials, PasswordResetData, PasswordResetRequest, RegistrationData, User } from '../types';
+import { authService } from '../service/api';
+import { useToast } from '@/components/ui/use-toast';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  isAdmin: boolean;
-  loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  isLoading: boolean;
+  login: (credentials: LoginCredentials) => Promise<boolean>;
   logout: () => void;
-  register: (nom: string, email: string, password: string) => Promise<void>;
-  forgotPassword: (email: string) => Promise<void>;
-  resetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
-  updateProfile: (data: UpdateProfileData) => Promise<void>;
-  updatePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  register: (data: RegistrationData) => Promise<boolean>;
+  checkEmail: (email: string) => Promise<boolean>;
+  resetPasswordRequest: (data: PasswordResetRequest) => Promise<boolean>;
+  resetPassword: (data: PasswordResetData) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  const validateToken = async () => {
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-      setLoading(false);
-      return false;
-    }
-    
-    try {
-      const response = await authAPI.verifyToken();
-      if (response.data && response.data.valid) {
-        setUser(response.data.user);
-        return true;
-      }
-    } catch (error) {
-      console.error("Erreur de vérification du token:", error);
-      localStorage.removeItem('authToken');
-    }
-    
-    setLoading(false);
-    return false;
-  };
-
   useEffect(() => {
-    const verifyToken = async () => {
-      await validateToken();
-      setLoading(false);
-    };
-
-    verifyToken();
+    // Check if user is already logged in
+    const currentUser = authService.getCurrentUser();
+    setUser(currentUser);
+    setIsLoading(false);
   }, []);
 
-  const login = async (email: string, password: string): Promise<void> => {
+  const login = async (credentials: LoginCredentials): Promise<boolean> => {
     try {
-      console.log("Tentative de connexion avec:", { email });
-      const response = await authAPI.login({ email, password });
-      localStorage.setItem('authToken', response.data.token);
-      setUser(response.data.user);
-      toast({
-        title: 'Connexion réussie',
-        className: 'bg-green-500 text-white',
-        variant: 'default',
-      });
-
-      // Récupérer l'URL de redirection sauvegardée
-      const redirectUrl = localStorage.getItem('redirectAfterLogin');
-      localStorage.removeItem('redirectAfterLogin');
+      setIsLoading(true);
+      const loggedInUser = await authService.login(credentials);
       
-      // Rediriger vers la page précédente ou l'accueil
-      window.location.href = redirectUrl || '/';
-    } catch (error: any) {
-      console.error("Erreur de connexion:", error);
-      
-      const errorMessage = error.response?.data?.message || "Erreur de connexion";
+      if (loggedInUser) {
+        setUser(loggedInUser);
+        authService.setCurrentUser(loggedInUser);
+        toast({
+          title: "Connexion réussie",
+          description: `Bienvenue ${loggedInUser.firstName} ${loggedInUser.lastName}`,
+          className: "bg-green-500 text-white",
+        });
+        return true;
+      } else {
+        toast({
+          title: "Échec de la connexion",
+          description: "Email ou mot de passe incorrect",
+          variant: "destructive",
+        });
+        return false;
+      }
+    } catch (error) {
       toast({
-        title: errorMessage,
-        variant: 'destructive',
+        title: "Erreur",
+        description: "Une erreur s'est produite lors de la connexion",
+        variant: "destructive",
       });
-
-      throw error;
+      return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('maintenanceAdminBypass');
-    localStorage.removeItem('redirectAfterLogin'); // Nettoyer aussi cette clé
     setUser(null);
+    authService.setCurrentUser(null);
     toast({
-      title: 'Vous êtes déconnecté',
-      variant: 'destructive',
+      title: "Déconnexion réussie",
+      description: "Vous avez été déconnecté avec succès",
     });
-
+    // Redirect to login page after logout
     window.location.href = '/login';
   };
 
-  const register = async (nom: string, email: string, password: string) => {
+  const register = async (data: RegistrationData): Promise<boolean> => {
     try {
-      const response = await authAPI.register({ nom, email, password });
-      localStorage.setItem('authToken', response.data.token);
-      setUser(response.data.user);
-      toast({
-        title: 'Inscription réussie',
-        variant: 'default',
-      });
-
-      // Récupérer l'URL de redirection sauvegardée
-      const redirectUrl = localStorage.getItem('redirectAfterLogin');
-      localStorage.removeItem('redirectAfterLogin');
+      setIsLoading(true);
+      const newUser = await authService.register(data);
       
-      // Rediriger vers la page précédente ou l'accueil
-      window.location.href = redirectUrl || '/';
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Erreur lors de l\'inscription';
-      toast({
-        title: errorMessage,
-        variant: 'destructive',
-      });
-      throw error;
-    }
-  };
-
-  const forgotPassword = async (email: string) => {
-    try {
-      await authAPI.forgotPassword(email);
-    } catch (error) {
-      console.error("Erreur de demande de réinitialisation:", error);
-      toast({
-        title: 'Une erreur est survenue',
-        variant: 'destructive',
-      });
-     
-      throw error;
-    }
-  };
-
-  const resetPassword = async (email: string, code: string, newPassword: string) => {
-    try {
-      await authAPI.resetPassword({ email, passwordUnique: code, newPassword });
-    } catch (error) {
-      console.error("Erreur de réinitialisation de mot de passe:", error);
-      toast({
-        title: 'Une erreur est survenue',
-        variant: 'destructive',
-      });
-      
-      throw error;
-    }
-  };
-
-  const updateProfile = async (data: UpdateProfileData) => {
-    try {
-      if (!user) throw new Error('Utilisateur non connecté');
-      
-      const isTokenValid = await validateToken();
-      if (!isTokenValid) {
+      if (newUser) {
+        setUser(newUser);
+        authService.setCurrentUser(newUser);
         toast({
-          title: 'Votre session a expiré, veuillez vous reconnecter',
-          variant: 'destructive',
+          title: "Inscription réussie",
+          description: `Bienvenue ${newUser.firstName} ${newUser.lastName}`,
+          className: "notification-success",
         });
-        window.location.href = '/login';
-        throw new Error('Session expirée');
+        return true;
+      } else {
+        toast({
+          title: "Échec de l'inscription",
+          description: "Cet email est déjà utilisé",
+          variant: "destructive",
+        });
+        return false;
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Une erreur s'est produite lors de l'inscription",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const checkEmail = async (email: string): Promise<boolean> => {
+    try {
+      return await authService.checkEmail(email);
+    } catch (error) {
+      return false;
+    }
+  };
+
+  const resetPasswordRequest = async (data: PasswordResetRequest): Promise<boolean> => {
+    try {
+      setIsLoading(true);
+      const exists = await authService.resetPasswordRequest(data);
+      
+      if (!exists) {
+        toast({
+          title: "Échec de la réinitialisation",
+          description: "Cet email n'existe pas dans notre système",
+          variant: "destructive",
+        });
       }
       
-      const response = await authAPI.updateProfile(user.id, data);
-      setUser(prev => prev ? { ...prev, ...response.data } : null);
+      return exists;
+    } catch (error) {
       toast({
-        title: 'Profil mis à jour avec succès',
-        variant: 'default',
+        title: "Erreur",
+        description: "Une erreur s'est produite lors de la réinitialisation",
+        variant: "destructive",
       });
-     
-    } catch (error: any) {
-      console.error("Erreur de mise à jour du profil:", error);
-      toast({
-        title: error.response?.data?.message || 'Erreur lors de la mise à jour du profil',
-        variant: 'destructive',
-      });
-     
-      throw error;
+      return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const updatePassword = async (currentPassword: string, newPassword: string) => {
+  const resetPassword = async (data: PasswordResetData): Promise<boolean> => {
     try {
-      if (!user) throw new Error('Utilisateur non connecté');
+      setIsLoading(true);
+      const success = await authService.resetPassword(data);
       
-      const isTokenValid = await validateToken();
-      if (!isTokenValid) {
+      if (success) {
         toast({
-          title: 'Votre session a expiré, veuillez vous reconnecter',
-          variant: 'destructive',
+          title: "Réinitialisation réussie",
+          description: "Votre mot de passe a été réinitialisé avec succès",
+          className: "notification-success",
         });
-        window.location.href = '/login';
-        throw new Error('Session expirée');
+      } else {
+        toast({
+          title: "Échec de la réinitialisation",
+          description: "Le nouveau mot de passe doit être différent de l'ancien",
+          variant: "destructive",
+        });
       }
       
-      await authAPI.updatePassword(user.id, currentPassword, newPassword);
+      return success;
+    } catch (error) {
       toast({
-        title: 'Mot de passe mis à jour avec succès',
-        variant: 'default',
+        title: "Erreur",
+        description: "Une erreur s'est produite lors de la réinitialisation",
+        variant: "destructive",
       });
-      
-    } catch (error: any) {
-      console.error("Erreur de mise à jour du mot de passe:", error);
-      toast({
-        title: error.response?.data?.message || 'Erreur lors de la mise à jour du mot de passe',
-        variant: 'destructive',
-      });
-     
-      throw error;
+      return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const isAuthenticated = !!user;
-  const isAdmin = user?.role === 'admin';
-
-  const value: AuthContextType = {
+  const value = {
     user,
-    isAuthenticated,
-    isAdmin,
-    loading,
+    isAuthenticated: !!user,
+    isLoading,
     login,
     logout,
     register,
-    forgotPassword,
+    checkEmail,
+    resetPasswordRequest,
     resetPassword,
-    updateProfile,
-    updatePassword,
   };
 
-  return (
-    <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-export const useAuth = () => {
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth doit être utilisé avec AuthProvider');
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };

@@ -1,177 +1,150 @@
 
 import React from 'react';
-import { useSearchParams } from 'react-router-dom';
-import Layout from '@/components/layout/Layout';
-import ProductCatalogGrid from '@/components/products/ProductGrid';
-import CustomerTestimonialSection from '@/components/reviews/TestimonialSection';
-import PageDataLoader from '@/components/layout/PageDataLoader';
-import HomeHeader from '@/components/home/HomeHeader';
-import FeaturedProductsCarousel from '@/components/home/FeaturedProductsCarousel';
-import PromotionalProductsGrid from '@/components/home/PromotionalProductsGrid';
-import FlashSaleBanner from '@/components/flash-sale/FlashSaleBanner';
-import { useHomePageData } from '@/hooks/useHomePageData';
-import { useCarouselAutoplay } from '@/hooks/useCarouselAutoplay';
-import SalesNotification from '@/components/engagement/SalesNotification';
-import LiveVisitorCounter from '@/components/engagement/LiveVisitorCounter';
-import { Sparkles, TrendingUp, Star, ShoppingBag } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import Layout from '@/components/Layout';
+import { useAuth } from '@/contexts/AuthContext';
 
-const HomePage = () => {
-  const [searchParams] = useSearchParams();
-  const {
-    featuredProductCatalog,
-    newArrivalProducts,
-    promotionalProducts,
-    completeProductCatalog,
-    filteredProductCatalog,
-    dataLoadingComplete,
-    setFilteredProductCatalog,
-    loadEcommerceProductData,
-    handleDataLoadingSuccess,
-    handleMaxRetriesReached
-  } = useHomePageData();
-
-  useCarouselAutoplay(!searchParams.get('q'), dataLoadingComplete, featuredProductCatalog.length);
-
-  React.useEffect(() => {
-    const searchQuery = searchParams.get('q');
-    
-    if (searchQuery && searchQuery.length >= 3) {
-      const filteredResults = completeProductCatalog.filter(
-        product =>
-          product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          product.category.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setFilteredProductCatalog(filteredResults);
-    } else {
-      setFilteredProductCatalog(completeProductCatalog);
-    }
-  }, [searchParams, completeProductCatalog, setFilteredProductCatalog]);
-
+const HomePage: React.FC = () => {
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-neutral-50 via-white to-neutral-50 dark:from-neutral-950 dark:via-neutral-900 dark:to-neutral-950">
-        <PageDataLoader
-          fetchFunction={loadEcommerceProductData}
-          onSuccess={handleDataLoadingSuccess}
-          onMaxRetriesReached={handleMaxRetriesReached}
-          loadingMessage="Chargement de votre boutique..."
-          loadingSubmessage="Préparation de votre expérience shopping premium..."
-          errorMessage="Erreur de chargement des produits"
-        >
-          {/* Hero Section moderne */}
-          <div className="relative overflow-hidden bg-gradient-to-r from-red-500/10 via-rose-500/10 to-pink-500/10 dark:from-red-500/5 dark:via-rose-500/5 dark:to-pink-500/5">
-            <div className="absolute inset-0 bg-grid-neutral-100/50 dark:bg-grid-neutral-800/50" />
-            <div className="container mx-auto px-4 py-6 relative">
-              <HomeHeader />
+      <div className="relative">
+        {/* Hero section */}
+        <div className="bg-gradient-to-b from-white to-gray-100">
+          <div className="container mx-auto px-4 py-16 sm:py-24">
+            <div className="text-center">
+              <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl md:text-6xl">
+                <span className="block">Gestion de vente</span>
+                <span className="block text-app-red">Simplifiée et efficace</span>
+              </h1>
+              <p className="mt-3 max-w-md mx-auto text-base text-gray-500 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
+                Une solution complète pour gérer vos ventes, suivre vos produits et maximiser vos bénéfices.
+              </p>
               
-              {/* Section de bienvenue avec animation */}
-              <div className="text-center max-w-4xl mx-auto mb-8 h-[100px]">
-                <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-red-600 via-rose-600 to-pink-600 bg-clip-text text-transparent mb-3 animate-fade-in">
-                  Découvrez l'Excellence
-                </h1>
-
-                <p className="text-md md:text-lg text-neutral-600 dark:text-neutral-300 mb-4 leading-relaxed animate-fade-in">
-                  Votre destination beauté pour des produits de qualité premium qui subliment votre style naturel.
-                </p>
-
-                <div className="flex items-center justify-center space-x-6 text-sm text-neutral-500 dark:text-neutral-400">
-                  <div className="flex items-center space-x-1 animate-fade-in">
-                    <Star className="h-4 w-4 text-yellow-500" />
-                    <span>Qualité Premium</span>
+              {!isAuthenticated && (
+                <div className="mt-10 sm:flex sm:justify-center">
+                  <div className="rounded-md shadow">
+                    <Button 
+                      className="w-full px-8 py-6 text-lg font-medium rounded-md bg-app-red hover:bg-opacity-90"
+                      onClick={() => navigate('/register')}
+                    >
+                      S'inscrire
+                    </Button>
                   </div>
-                  <div className="flex items-center space-x-1 animate-fade-in">
-                    <TrendingUp className="h-4 w-4 text-green-500" />
-                    <span>Tendances 2025</span>
+                  <div className="mt-3 sm:mt-0 sm:ml-3">
+                    <Button 
+                      variant="outline"
+                      className="w-full px-8 py-6 text-lg font-medium rounded-md border-app-purple text-app-purple hover:bg-app-purple hover:text-white"
+                      onClick={() => navigate('/login')}
+                    >
+                      Se connecter
+                    </Button>
                   </div>
-                  <div className="flex items-center space-x-1 animate-fade-in">
-                    <ShoppingBag className="h-4 w-4 text-blue-500" />
-                    <span>Livraison Offerte</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        {/* Features section */}
+        <div className="py-16 bg-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="lg:text-center">
+              <h2 className="text-base text-app-purple font-semibold tracking-wide uppercase">Fonctionnalités</h2>
+              <p className="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl">
+                Une meilleure façon de gérer vos ventes
+              </p>
+              <p className="mt-4 max-w-2xl text-xl text-gray-500 lg:mx-auto">
+                Découvrez comment notre application peut vous aider à organiser et optimiser votre activité commerciale.
+              </p>
+            </div>
+            
+            <div className="mt-10">
+              <div className="space-y-10 md:space-y-0 md:grid md:grid-cols-2 md:gap-x-8 md:gap-y-10">
+                <div className="relative">
+                  <div className="absolute flex items-center justify-center h-12 w-12 rounded-md bg-app-blue text-white">
+                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+                    </svg>
+                  </div>
+                  <div className="ml-16">
+                    <h3 className="text-lg font-medium text-gray-900">Suivi des ventes en temps réel</h3>
+                    <p className="mt-2 text-base text-gray-500">
+                      Suivez toutes vos transactions en temps réel. Visualisez vos ventes quotidiennes, hebdomadaires et mensuelles.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="relative">
+                  <div className="absolute flex items-center justify-center h-12 w-12 rounded-md bg-app-red text-white">
+                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                  </div>
+                  <div className="ml-16">
+                    <h3 className="text-lg font-medium text-gray-900">Gestion d'inventaire</h3>
+                    <p className="mt-2 text-base text-gray-500">
+                      Gérez facilement votre inventaire de produits. Recevez des alertes lorsque les stocks sont bas.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="relative">
+                  <div className="absolute flex items-center justify-center h-12 w-12 rounded-md bg-app-purple text-white">
+                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                    </svg>
+                  </div>
+                  <div className="ml-16">
+                    <h3 className="text-lg font-medium text-gray-900">Rapports détaillés</h3>
+                    <p className="mt-2 text-base text-gray-500">
+                      Générez des rapports détaillés sur vos performances commerciales. Exportez-les facilement en PDF.
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="relative">
+                  <div className="absolute flex items-center justify-center h-12 w-12 rounded-md bg-app-green text-white">
+                    <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div className="ml-16">
+                    <h3 className="text-lg font-medium text-gray-900">Analyse des bénéfices</h3>
+                    <p className="mt-2 text-base text-gray-500">
+                      Analysez vos marges et bénéfices pour chaque produit. Identifiez vos produits les plus rentables.
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-
-          <div className="container mx-auto px-4 py-8">
-            {searchParams.get('q') && (
-              <div className="mb-12 bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-800 p-8">
-                <ProductCatalogGrid
-                  products={filteredProductCatalog}
-                  title={`Résultats de recherche : "${searchParams.get('q')}"`}
-                />
-              </div>
-            )}
-
-            {!searchParams.get('q') && (
-              <div className="mb-12 animate-fade-in">
-                <FlashSaleBanner />
-              </div>
-            )}
-
-            {!searchParams.get('q') && (
-              <div className="mb-12 bg-gradient-to-r from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800 rounded-xl p-8 shadow-sm border border-neutral-200 dark:border-neutral-700 animate-fade-in">
-                <FeaturedProductsCarousel products={featuredProductCatalog} />
-              </div>
-            )}
-
-            {!searchParams.get('q') && (
-              <div className="mb-12 bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-800 p-8 animate-fade-in" data-section="promotional">
-                <div className="text-center mb-8">
-                  <div className="flex items-center justify-center mb-4">
-                    <div className="bg-gradient-to-r from-orange-500 to-red-500 p-2 rounded-xl">
-                      <TrendingUp className="h-6 w-6 text-white" />
-                    </div>
-                  </div>
-                  <h2 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-                    Promotions Exceptionnelles
-                  </h2>
+        </div>
+        
+        {/* CTA section */}
+        <div className="bg-app-dark">
+          <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 lg:flex lg:items-center lg:justify-between">
+            <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+              <span className="block">Prêt à commencer?</span>
+              <span className="block text-app-purple">Inscrivez-vous gratuitement dès aujourd'hui.</span>
+            </h2>
+            {!isAuthenticated && (
+              <div className="mt-8 flex lg:mt-0 lg:flex-shrink-0">
+                <div className="inline-flex rounded-md shadow">
+                  <Button 
+                    className="px-5 py-6 text-lg font-medium rounded-md bg-app-red hover:bg-opacity-90"
+                    onClick={() => navigate('/register')}
+                  >
+                    Commencer maintenant
+                  </Button>
                 </div>
-                <PromotionalProductsGrid products={promotionalProducts} />
               </div>
             )}
-
-            <div className="mb-12 bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/20 dark:to-indigo-950/20 rounded-xl shadow-sm border border-blue-200 dark:border-blue-800 p-8 animate-fade-in" data-section="new-arrivals">
-              <div className="text-center mb-8">
-                <div className="flex items-center justify-center mb-4">
-                  <div className="bg-gradient-to-r from-blue-500 to-indigo-500 p-2 rounded-xl">
-                    <Star className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                  Dernières Nouveautés
-                </h2>
-              </div>
-              <ProductCatalogGrid products={newArrivalProducts} title="" />
-            </div>
-
-            <div className="mb-12 bg-white dark:bg-neutral-900 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-800 p-8 animate-fade-in" data-section="complete-catalog">
-              <div className="text-center mb-8">
-                <div className="flex items-center justify-center mb-4">
-                  <div className="bg-gradient-to-r from-purple-500 to-pink-500 p-2 rounded-xl">
-                    <ShoppingBag className="h-6 w-6 text-white" />
-                  </div>
-                </div>
-                <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                  Notre Catalogue Complet
-                </h2>
-              </div>
-              <ProductCatalogGrid 
-                products={completeProductCatalog} 
-                title="" 
-                showViewAllButton={true}
-              />
-            </div>
-
-            <div className="bg-gradient-to-r from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-neutral-800 rounded-xl shadow-sm border border-neutral-200 dark:border-neutral-700 p-8 animate-fade-in">
-              <CustomerTestimonialSection />
-            </div>
           </div>
-        </PageDataLoader>
-
-        {/* Composants pour les administrateurs uniquement */}
-        <SalesNotification />
-        <LiveVisitorCounter />
+        </div>
       </div>
     </Layout>
   );

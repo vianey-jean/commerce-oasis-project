@@ -3,158 +3,162 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: 0 0% 100%;
-  --foreground: 0 0% 3.9%;
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
 
-  --card: 0 0% 100%;
-  --card-foreground: 0 0% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
 
-  --popover: 0 0% 100%;
-  --popover-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
 
-  --primary: 0 72.2% 50.6%;
-  --primary-foreground: 0 85.7% 97.3%;
+    --primary: 354 82% 57%;  /* Red color */
+    --primary-foreground: 210 40% 98%;
 
-  --secondary: 0 0% 96.1%;
-  --secondary-foreground: 0 0% 9%;
+    --secondary: 195 82% 49%;  /* Blue color */
+    --secondary-foreground: 222.2 47.4% 11.2%;
 
-  --muted: 0 0% 96.1%;
-  --muted-foreground: 0 0% 45.1%;
+    --accent: 258 82% 75%;  /* Purple color */
+    --accent-foreground: 222.2 47.4% 11.2%;
 
-  --accent: 0 0% 96.1%;
-  --accent-foreground: 0 0% 9%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
 
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 0 0% 98%;
+    --success: 142 69% 58%;  /* Green color */
 
-  --border: 0 0% 89.8%;
-  --input: 0 0% 89.8%;
-  --ring: 0 72.2% 50.6%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 354 82% 57%;
 
-  --radius: 0.5rem;
-}
+    --radius: 0.5rem;
 
-.dark {
-  --background: 0 0% 3.9%;
-  --foreground: 0 0% 98%;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
 
-  --card: 0 0% 3.9%;
-  --card-foreground: 0 0% 98%;
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
 
-  --popover: 0 0% 3.9%;
-  --popover-foreground: 0 0% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
 
-  --primary: 0 72.2% 50.6%;
-  --primary-foreground: 0 85.7% 97.3%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
 
-  --secondary: 0 0% 14.9%;
-  --secondary-foreground: 0 0% 98%;
+    --primary: 354 82% 57%;
+    --primary-foreground: 210 40% 98%;
 
-  --muted: 0 0% 14.9%;
-  --muted-foreground: 0 0% 63.9%;
+    --secondary: 195 82% 49%;
+    --secondary-foreground: 210 40% 98%;
 
-  --accent: 0 0% 14.9%;
-  --accent-foreground: 0 0% 98%;
+    --accent: 258 82% 75%;
+    --accent-foreground: 210 40% 98%;
 
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
 
-  --border: 0 0% 14.9%;
-  --input: 0 0% 14.9%;
-  --ring: 0 72.2% 50.6%;
+    --success: 142 69% 58%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 354 82% 57%;
+    
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
 }
 
 @layer base {
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
 
-#root {
-  margin: 0 auto;
+/* Custom components */
+@layer components {
+  .btn-primary {
+    @apply bg-app-red hover:bg-opacity-90 text-white dark:bg-app-purple dark:hover:bg-opacity-90;
+  }
+  
+  .btn-success {
+    @apply bg-app-green hover:bg-opacity-90 text-white;
+  }
+  
+  .btn-accent {
+    @apply bg-app-purple hover:bg-opacity-90 text-white;
+  }
+  
+  .notification-success {
+    @apply bg-app-green text-white p-3 rounded-md shadow-md;
+  }
+  
+  .notification-error {
+    @apply bg-app-red text-white p-3 rounded-md shadow-md;
+  }
+
+  /* 3D Effects */
+  .btn-3d {
+    @apply transform transition-transform hover:translate-y-[-3px] hover:shadow-lg active:translate-y-[-1px];
+  }
+
+  .card-3d {
+    @apply transform transition-transform hover:translate-y-[-5px] hover:shadow-xl;
+  }
+
+  .tab-3d {
+    @apply transform transition-transform hover:translate-y-[-2px];
+  }
 }
 
-.nav-icon {
-  @apply transition-transform duration-200 hover:scale-105;
-}
+/* Responsive tables */
+@layer utilities {
+  .table-responsive {
+    @apply overflow-x-auto;
+  }
 
+  .table-responsive table {
+    @apply min-w-full;
+  }
 
-
-/* Animations */
-@keyframes fade-in {
-  0% { opacity: 0; }
-  100% { opacity: 1; }
-}
-
-.fade-in {
-  animation: fade-in 0.3s ease-in-out;
-}
-
-@keyframes shimmer {
-  0% { background-position: -200%; }
-  100% { background-position: 200%; }
-}
-
-.shimmer-effect {
-  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-}
-
-/* Améliorations pour touches de luxe */
-.glass-effect {
-  @apply backdrop-blur-sm bg-white/80 dark:bg-black/80;
-}
-
-.luxury-gradient {
-  @apply bg-gradient-to-r from-neutral-50 to-neutral-100 dark:from-neutral-900 dark:to-black;
-}
-
-.card-hover {
-  @apply transition-all duration-300 hover:shadow-lg;
-}
-
-/* Style pour les nouvelles étiquettes de produits */
-.product-badge {
-  @apply absolute top-2 right-2 px-2 py-1 text-xs font-bold rounded;
-}
-
-.sale-badge {
-  @apply product-badge bg-red-600 text-white;
-}
-
-.new-badge {
-  @apply product-badge bg-blue-600 text-white;
-}
-
-.exclusive-badge {
-  @apply product-badge bg-purple-600 text-white;
-}
-
-/* Style pour les icônes */
-.navbar-icon {
-  @apply h-6 w-6;
-}
-
-/* Composant de carte produit amélioré */
-.product-card {
-  @apply rounded-xl overflow-hidden transition-all duration-300;
-}
-
-.product-card:hover {
-  @apply shadow-xl transform translate-y-[-5px];
-}
-
-/* Améliorations pour les images */
-.product-image {
-  @apply object-contain w-full h-auto transition-transform duration-300;
-}
-
-.product-card:hover .product-image {
-  @apply transform scale-105;
+  @media (max-width: 640px) {
+    .table-responsive-stack {
+      @apply block;
+    }
+    
+    .table-responsive-stack thead {
+      @apply hidden;
+    }
+    
+    .table-responsive-stack tbody,
+    .table-responsive-stack tr {
+      @apply block w-full;
+    }
+    
+    .table-responsive-stack td {
+      @apply block text-right pl-16 relative border-b border-gray-200 py-2;
+    }
+    
+    .table-responsive-stack td::before {
+      @apply content-[attr(data-label)] absolute top-2 left-2 font-semibold text-left;
+    }
+  }
 }
