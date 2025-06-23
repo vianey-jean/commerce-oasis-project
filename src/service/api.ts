@@ -1,4 +1,3 @@
-
 // Configuration de base de l'API
 import axios from 'axios';
 
@@ -50,6 +49,44 @@ export const authService = {
   getCurrentUser() {
     const token = localStorage.getItem('authToken');
     return token ? { token } : null;
+  },
+
+  setCurrentUser(user: any) {
+    if (user && user.token) {
+      localStorage.setItem('authToken', user.token);
+    } else {
+      localStorage.removeItem('authToken');
+    }
+  },
+
+  async checkEmail(email: string) {
+    try {
+      const response = await api.post('/auth/check-email', { email });
+      return response.data.exists;
+    } catch (error) {
+      console.error('Error checking email:', error);
+      return false;
+    }
+  },
+
+  async resetPasswordRequest(data: { email: string }) {
+    try {
+      const response = await api.post('/auth/reset-password-request', data);
+      return response.data.exists;
+    } catch (error) {
+      console.error('Error requesting password reset:', error);
+      return false;
+    }
+  },
+
+  async resetPassword(data: { email: string; newPassword: string; confirmPassword: string }) {
+    try {
+      const response = await api.post('/auth/reset-password', data);
+      return response.data.success;
+    } catch (error) {
+      console.error('Error resetting password:', error);
+      return false;
+    }
   }
 };
 
@@ -179,6 +216,11 @@ export const pretProduitService = {
 
   async updatePretProduit(id: string, pret: any) {
     const response = await api.put(`/pret-produits/${id}`, pret);
+    return response.data;
+  },
+
+  async deletePretProduit(id: string) {
+    const response = await api.delete(`/pret-produits/${id}`);
     return response.data;
   }
 };

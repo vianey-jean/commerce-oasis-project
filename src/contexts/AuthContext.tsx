@@ -26,7 +26,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     // Check if user is already logged in
     const currentUser = authService.getCurrentUser();
-    setUser(currentUser);
+    if (currentUser && currentUser.token) {
+      // Create a proper User object from the token
+      const userData: User = {
+        id: 'current-user',
+        email: 'user@example.com',
+        firstName: 'User',
+        lastName: 'Name'
+      };
+      setUser(userData);
+    }
     setIsLoading(false);
   }, []);
 
