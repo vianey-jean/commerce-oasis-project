@@ -38,8 +38,8 @@ const App = () => (
     <TooltipProvider>
       <AuthProvider>
         <ThemeProvider>
-          <AppProvider>
-            <AutoLogoutWrapper>
+          <AutoLogoutWrapper>
+            <AppProvider>
               <Toaster />
               <Sonner />
               <BrowserRouter>
@@ -55,8 +55,8 @@ const App = () => (
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </BrowserRouter>
-            </AutoLogoutWrapper>
-          </AppProvider>
+            </AppProvider>
+          </AutoLogoutWrapper>
         </ThemeProvider>
       </AuthProvider>
     </TooltipProvider>
