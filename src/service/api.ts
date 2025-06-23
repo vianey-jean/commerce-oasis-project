@@ -1,7 +1,8 @@
+
 // Configuration de base de l'API
 import axios from 'axios';
 
-const API_BASE_URL = 'https://api.example.com';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://server-gestion-ventes.onrender.com';
 
 // Configuration d'Axios
 const api = axios.create({
