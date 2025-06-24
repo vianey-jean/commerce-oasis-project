@@ -1,5 +1,7 @@
+
 import React, { useEffect, useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Sale } from '@/types';
 import SalesTable from '@/components/dashboard/SalesTable';
 import AddSaleForm from '@/components/dashboard/AddSaleForm';
@@ -39,6 +41,8 @@ const VentesProduits: React.FC = () => {
     setSelectedMonth,
     setSelectedYear
   } = useApp();
+  
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const { formatEuro } = useCurrencyFormatter();
   
@@ -86,8 +90,13 @@ const VentesProduits: React.FC = () => {
     console.log(`Filtered sales for month ${selectedMonth}, year ${selectedYear}: ${filtered.length} sales`);
   }, [sales, selectedMonth, selectedYear, setSelectedMonth, setSelectedYear]);
 
-  // Charger les données au montage du composant
+  // Charger les données au montage du composant seulement si authentifié
   useEffect(() => {
+    if (!isAuthenticated || authLoading) {
+      console.log('User not authenticated, not loading data');
+      return;
+    }
+
     const loadData = async () => {
       setLoadError(null);
       
@@ -116,7 +125,18 @@ const VentesProduits: React.FC = () => {
     };
     
     loadData();
-  }, [fetchProducts, fetchSales, toast]);
+  }, [fetchProducts, fetchSales, toast, isAuthenticated, authLoading]);
+
+  // Si l'utilisateur n'est pas authentifié, afficher un message
+  if (!isAuthenticated) {
+    return (
+      <div className="flex justify-center items-center py-12">
+        <div className="flex items-center space-x-4 p-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg">
+          <p className="text-lg text-gray-600 dark:text-gray-300">Veuillez vous connecter pour accéder à cette page.</p>
+        </div>
+      </div>
+    );
+  }
 
   // Gestion du clic sur une ligne du tableau des ventes
   const handleRowClick = (sale: Sale) => {
@@ -241,7 +261,7 @@ const VentesProduits: React.FC = () => {
         </div>
         
         {/* Indicateur de chargement modernisé */}
-        {appLoading && (
+        {(appLoading || authLoading) && (
           <div className="flex justify-center items-center py-12">
             <div className="flex items-center space-x-4 p-6 bg-white dark:bg-gray-800 rounded-xl shadow-lg">
               <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
@@ -251,12 +271,14 @@ const VentesProduits: React.FC = () => {
         )}
         
         {/* Tableau des ventes */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
-          <SalesTable 
-            sales={filteredSales} 
-            onRowClick={handleRowClick} 
-          />
-        </div>
+        {!appLoading && !authLoading && (
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden">
+            <SalesTable 
+              sales={filteredSales} 
+              onRowClick={handleRowClick} 
+            />
+          </div>
+        )}
       </ModernContainer>
       
       {/* Formulaires dans des dialogues */}
