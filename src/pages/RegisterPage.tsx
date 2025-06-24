@@ -4,7 +4,7 @@ import { Navigate, Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, User, Mail, MapPin, Phone, Shield, Sparkles, UserPlus } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -140,213 +140,303 @@ const RegisterPage = () => {
   const isFormDisabled = !isEmailAvailable || isEmailChecking || isSubmitting || !isPasswordValid;
   
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
-        <h1 className="text-2xl font-bold mb-6 text-center">Inscription</h1>
-        
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="nom"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nom</FormLabel>
-                    <FormControl>
-                      <Input placeholder=" " {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="prenom"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Prénom</FormLabel>
-                    <FormControl>
-                      <Input placeholder=" " {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background decoration */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-emerald-400/20 to-teal-400/20 rounded-full blur-3xl animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-cyan-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute top-1/4 right-1/4 w-60 h-60 bg-gradient-to-br from-purple-400/10 to-pink-400/10 rounded-full blur-3xl animate-bounce" style={{ animationDuration: '6s' }}></div>
+      </div>
+
+      <div className="w-full max-w-md relative z-10">
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl shadow-2xl mb-4 relative">
+            <UserPlus className="w-8 h-8 text-white" />
+            <div className="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent rounded-2xl"></div>
+          </div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent mb-2">
+            Inscription
+          </h1>
+          <p className="text-gray-600">Créez votre compte en quelques étapes</p>
+        </div>
+
+        <div className="backdrop-blur-xl bg-white/80 shadow-2xl border-0 relative overflow-hidden rounded-2xl">
+          <div className="absolute inset-0 bg-gradient-to-br from-white/40 via-white/20 to-transparent"></div>
+          
+          <div className="relative z-10 p-6">
+            <div className="text-center mb-6">
+              <div className="flex items-center justify-center gap-2">
+                <Sparkles className="w-5 h-5 text-emerald-500" />
+                <h2 className="text-xl font-semibold bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">
+                  Vos informations
+                </h2>
+                <Sparkles className="w-5 h-5 text-teal-500" />
+              </div>
             </div>
             
-            <FormField
-              control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <Input 
-                        type="email" 
-                        placeholder="" 
-                        {...field} 
-                        className={!isEmailAvailable ? "border-red-500" : ""}
-                      />
-                      {isEmailChecking && (
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                          <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
-                        </div>
-                      )}
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="genre"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Genre</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Sélectionnez votre genre" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="homme">Homme</SelectItem>
-                      <SelectItem value="femme">Femme</SelectItem>
-                      <SelectItem value="autre">Autre</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="adresse"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Adresse</FormLabel>
-                  <FormControl>
-                    <Input placeholder="123 Rue de Paris, 75001 Paris" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Téléphone</FormLabel>
-                  <FormControl>
-                    <Input placeholder="0612345678" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="password"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Mot de passe</FormLabel>
-                  <div className="relative">
-                    <FormControl>
-                      <Input 
-                        type={showPassword ? "text" : "password"} 
-                        {...field} 
-                      />
-                    </FormControl>
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2"
-                    >
-                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                    </button>
-                  </div>
-                  <PasswordStrengthIndicator 
-                    password={field.value} 
-                    onValidityChange={handlePasswordValidityChange}
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="nom"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-medium text-gray-700 flex items-center gap-1">
+                          <User className="w-3 h-3 text-emerald-500" />
+                          Nom
+                        </FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Votre nom" 
+                            className="h-10 bg-white/50 backdrop-blur-sm border border-gray-200/50 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200/50 transition-all duration-300 rounded-lg text-sm"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage className="text-xs" />
+                      </FormItem>
+                    )}
                   />
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="confirmPassword"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Confirmer le mot de passe</FormLabel>
-                  <div className="relative">
-                    <FormControl>
-                      <Input 
-                        type={showConfirmPassword ? "text" : "password"} 
-                        {...field} 
+                  
+                  <FormField
+                    control={form.control}
+                    name="prenom"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-xs font-medium text-gray-700 flex items-center gap-1">
+                          <User className="w-3 h-3 text-teal-500" />
+                          Prénom
+                        </FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Votre prénom" 
+                            className="h-10 bg-white/50 backdrop-blur-sm border border-gray-200/50 focus:border-teal-400 focus:ring-2 focus:ring-teal-200/50 transition-all duration-300 rounded-lg text-sm"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormMessage className="text-xs" />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                
+                <FormField
+                  control={form.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-medium text-gray-700 flex items-center gap-1">
+                        <Mail className="w-3 h-3 text-emerald-500" />
+                        Email
+                      </FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input 
+                            type="email" 
+                            placeholder="votre@email.com" 
+                            className={`h-10 pl-8 bg-white/50 backdrop-blur-sm border transition-all duration-300 rounded-lg text-sm ${
+                              !isEmailAvailable ? "border-red-300 focus:border-red-400 focus:ring-red-200/50" : "border-gray-200/50 focus:border-emerald-400 focus:ring-emerald-200/50"
+                            }`}
+                            {...field} 
+                          />
+                          <Mail className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400" />
+                          {isEmailChecking && (
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                              <div className="animate-spin h-3 w-3 border-2 border-emerald-500 border-t-transparent rounded-full"></div>
+                            </div>
+                          )}
+                        </div>
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="genre"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-medium text-gray-700">Genre</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-10 bg-white/50 backdrop-blur-sm border border-gray-200/50 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200/50 transition-all duration-300 rounded-lg text-sm">
+                            <SelectValue placeholder="Sélectionnez votre genre" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent className="bg-white/95 backdrop-blur-xl border-gray-200/50">
+                          <SelectItem value="homme">Homme</SelectItem>
+                          <SelectItem value="femme">Femme</SelectItem>
+                          <SelectItem value="autre">Autre</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="adresse"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-medium text-gray-700 flex items-center gap-1">
+                        <MapPin className="w-3 h-3 text-teal-500" />
+                        Adresse
+                      </FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input 
+                            placeholder="123 Rue de Paris, 75001 Paris" 
+                            className="h-10 pl-8 bg-white/50 backdrop-blur-sm border border-gray-200/50 focus:border-teal-400 focus:ring-2 focus:ring-teal-200/50 transition-all duration-300 rounded-lg text-sm"
+                            {...field} 
+                          />
+                          <MapPin className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400" />
+                        </div>
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-medium text-gray-700 flex items-center gap-1">
+                        <Phone className="w-3 h-3 text-emerald-500" />
+                        Téléphone
+                      </FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input 
+                            placeholder="0612345678" 
+                            className="h-10 pl-8 bg-white/50 backdrop-blur-sm border border-gray-200/50 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200/50 transition-all duration-300 rounded-lg text-sm"
+                            {...field} 
+                          />
+                          <Phone className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400" />
+                        </div>
+                      </FormControl>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-medium text-gray-700 flex items-center gap-1">
+                        <Shield className="w-3 h-3 text-emerald-500" />
+                        Mot de passe
+                      </FormLabel>
+                      <div className="relative">
+                        <FormControl>
+                          <Input 
+                            type={showPassword ? "text" : "password"} 
+                            className="h-10 pl-8 pr-10 bg-white/50 backdrop-blur-sm border border-gray-200/50 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-200/50 transition-all duration-300 rounded-lg text-sm"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <Shield className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400" />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 hover:bg-gray-100 rounded transition-colors"
+                        >
+                          {showPassword ? <EyeOff className="w-3 h-3 text-gray-400" /> : <Eye className="w-3 h-3 text-gray-400" />}
+                        </button>
+                      </div>
+                      <PasswordStrengthIndicator 
+                        password={field.value} 
+                        onValidityChange={handlePasswordValidityChange}
                       />
-                    </FormControl>
-                    <div 
-                      className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    >
-                      {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-medium text-gray-700">Confirmer le mot de passe</FormLabel>
+                      <div className="relative">
+                        <FormControl>
+                          <Input 
+                            type={showConfirmPassword ? "text" : "password"} 
+                            className="h-10 pl-8 pr-10 bg-white/50 backdrop-blur-sm border border-gray-200/50 focus:border-teal-400 focus:ring-2 focus:ring-teal-200/50 transition-all duration-300 rounded-lg text-sm"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <Shield className="absolute left-2.5 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400" />
+                        <div 
+                          className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer p-0.5 hover:bg-gray-100 rounded transition-colors"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        >
+                          {showConfirmPassword ? <EyeOff className="w-3 h-3 text-gray-400" /> : <Eye className="w-3 h-3 text-gray-400" />}
+                        </div>
+                      </div>
+                      <FormMessage className="text-xs" />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="acceptTerms"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-lg p-3 bg-gradient-to-r from-emerald-50/50 to-teal-50/50 border border-emerald-200/30">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          className="data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500"
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-none">
+                        <FormLabel className="text-xs text-gray-700">
+                          J'accepte les conditions d'utilisation et la politique de confidentialité
+                        </FormLabel>
+                        <FormMessage className="text-xs" />
+                      </div>
+                    </FormItem>
+                  )}
+                />
+                
+                <Button 
+                  type="submit" 
+                  disabled={isFormDisabled} 
+                  className="w-full h-11 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                >
+                  {isSubmitting ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                      Inscription en cours...
                     </div>
-                  </div>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <FormField
-              control={form.control}
-              name="acceptTerms"
-              render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md p-4 border">
-                  <FormControl>
-                    <Checkbox
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
-                    />
-                  </FormControl>
-                  <div className="space-y-1 leading-none">
-                    <FormLabel>
-                      J'accepte les conditions d'utilisation et la politique de confidentialité
-                    </FormLabel>
-                    <FormMessage />
-                  </div>
-                </FormItem>
-              )}
-            />
-            
-            <Button 
-              type="submit" 
-              disabled={isFormDisabled} 
-              className="w-full"
-            >
-              {isSubmitting ? "Inscription en cours..." : "S'inscrire"}
-            </Button>
-            
-            <div className="text-center mt-4">
-              <p className="text-sm text-gray-600">
-                Déjà inscrit ?{" "}
-                <Link to="/connexion" className="text-primary font-medium">
-                  Se connecter
-                </Link>
-              </p>
-            </div>
-          </form>
-        </Form>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <UserPlus className="w-4 h-4" />
+                      S'inscrire
+                    </div>
+                  )}
+                </Button>
+                
+                <div className="text-center mt-4">
+                  <p className="text-xs text-gray-600">
+                    Déjà inscrit ?{" "}
+                    <Link to="/connexion" className="font-medium text-emerald-600 hover:text-emerald-700 transition-colors">
+                      Se connecter
+                    </Link>
+                  </p>
+                </div>
+              </form>
+            </Form>
+          </div>
+        </div>
       </div>
     </div>
   );
