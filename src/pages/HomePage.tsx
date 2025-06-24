@@ -55,7 +55,7 @@ const HomePage: React.FC = () => {
                   </Button>
                   <Button 
                     variant="outline"
-                    className="px-8 py-4 text-lg font-semibold rounded-2xl border-2 border-white/30 text-white hover:bg-white/10 backdrop-blur-sm transition-all duration-300 hover:scale-105"
+                    className="px-8 py-4 text-lg font-semibold rounded-2xl border-2 border-white/30 text-red-900 font-bold hover:bg-white/10 backdrop-blur-sm transition-all duration-300 hover:scale-105"
                     onClick={() => navigate('/login')}
                   >
                     Se connecter
