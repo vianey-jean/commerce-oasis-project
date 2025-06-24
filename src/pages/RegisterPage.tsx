@@ -1,526 +1,354 @@
 
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { useToast } from "@/hooks/use-toast";
-import PasswordInput from '@/components/PasswordInput';
-import PasswordStrengthChecker from '@/components/PasswordStrengthChecker';
-import Layout from '@/components/Layout';
-import { UserPlus, Mail, User, Phone, MapPin, Shield, Sparkles } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Navigate, Link, useNavigate } from 'react-router-dom';
+import { z } from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Eye, EyeOff } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { AuthService } from '@/services/AuthService';
+import { toast } from 'sonner';
+import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator';
 
-const RegisterPage: React.FC = () => {
+const formSchema = z.object({
+  nom: z.string().min(2, { message: "Le nom doit contenir au moins 2 caractères" }),
+  prenom: z.string().min(2, { message: "Le prénom doit contenir au moins 2 caractères" }),
+  email: z.string().email({ message: "Format d'email invalide" }),
+  password: z.string()
+    .min(8, { message: "Le mot de passe doit contenir au moins 8 caractères" })
+    .regex(/[A-Z]/, "Le mot de passe doit contenir au moins une majuscule")
+    .regex(/[a-z]/, "Le mot de passe doit contenir au moins une minuscule")
+    .regex(/[0-9]/, "Le mot de passe doit contenir au moins un chiffre")
+    .regex(/[!@#$%^&*(),.?":{}|<>]/, "Le mot de passe doit contenir au moins un caractère spécial"),
+  confirmPassword: z.string(),
+  genre: z.string(),
+  adresse: z.string().min(5, { message: "L'adresse doit contenir au moins 5 caractères" }),
+  phone: z.string().min(10, { message: "Le numéro de téléphone doit contenir au moins 10 caractères" }),
+  acceptTerms: z.boolean().refine(val => val === true, { message: "Vous devez accepter les conditions d'utilisation" })
+}).refine(data => data.password === data.confirmPassword, {
+  message: "Les mots de passe ne correspondent pas",
+  path: ["confirmPassword"],
+});
+
+type FormValues = z.infer<typeof formSchema>;
+
+const RegisterPage = () => {
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEmailChecking, setIsEmailChecking] = useState(false);
+  const [isEmailAvailable, setIsEmailAvailable] = useState(true);
+  const [isPasswordValid, setIsPasswordValid] = useState(false);
+  const currentUser = AuthService.getCurrentUser();
   const navigate = useNavigate();
-  const { register, checkEmail } = useAuth();
-  const { toast } = useToast();
-
-  const [formData, setFormData] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    gender: '',
-    address: '',
-    phone: '',
-    password: '',
-    confirmPassword: '',
-    acceptTerms: false,
+  
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      nom: "",
+      prenom: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      genre: "homme",
+      adresse: "",
+      phone: "",
+      acceptTerms: false
+    },
   });
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const [isEmailChecking, setIsEmailChecking] = useState(false);
-  const [isEmailValid, setIsEmailValid] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isPasswordValid, setIsPasswordValid] = useState(false);
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === 'checkbox' ? checked : value,
-    });
-
-    if (errors[name]) {
-      setErrors({
-        ...errors,
-        [name]: '',
-      });
-    }
-
-    if (name === 'email') {
-      setIsEmailValid(true);
-    }
-  };
-
-  const handleSelectChange = (value: string) => {
-    setFormData({
-      ...formData,
-      gender: value,
-    });
-
-    if (errors.gender) {
-      setErrors({
-        ...errors,
-        gender: '',
-      });
-    }
-  };
-
-  const validateEmail = async () => {
-    if (!formData.email) {
-      setIsEmailValid(true);
-      return;
-    }
-
-    if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      setErrors(prev => ({
-        ...prev,
-        email: 'Veuillez entrer un email valide',
-      }));
-      setIsEmailValid(false);
-      return;
-    }
-
-    setIsEmailChecking(true);
-    const emailExists = await checkEmail(formData.email);
-    setIsEmailChecking(false);
-
-    if (emailExists) {
-      setErrors(prev => ({
-        ...prev,
-        email: 'Cet email est déjà utilisé',
-      }));
-      setIsEmailValid(false);
-      toast({
-        title: "Email déjà utilisé",
-        description: "Veuillez utiliser une autre adresse email.",
-        variant: "destructive"
-      });
-    } else {
-      setIsEmailValid(true);
-      setErrors(prev => ({
-        ...prev,
-        email: '',
-      }));
-    }
-  };
-
+  // Email validation with debounce
   useEffect(() => {
-    const debounce = setTimeout(() => {
-      if (formData.email && formData.email.includes('@')) {
-        validateEmail();
+    const email = form.watch('email');
+    let debounceTimer: NodeJS.Timeout;
+
+    const checkEmail = async () => {
+      if (!email || !email.includes('@')) return;
+
+      setIsEmailChecking(true);
+      try {
+        const emailExists = await AuthService.checkEmail(email);
+        setIsEmailAvailable(!emailExists);
+        if (emailExists) {
+          form.setError('email', {
+            type: 'manual',
+            message: 'Cet email est déjà utilisé'
+          });
+          toast.error('Cet email est déjà utilisé');
+        } else {
+          form.clearErrors('email');
+        }
+      } catch (error) {
+        console.error('Erreur lors de la vérification de l\'email:', error);
+      } finally {
+        setIsEmailChecking(false);
       }
-    }, 500);
+    };
 
-    return () => clearTimeout(debounce);
-  }, [formData.email]);
+    if (email) {
+      debounceTimer = setTimeout(checkEmail, 500);
+    }
 
-  const validatePassword = () => {
-    const hasLowerCase = /[a-z]/.test(formData.password);
-    const hasUpperCase = /[A-Z]/.test(formData.password);
-    const hasNumber = /[0-9]/.test(formData.password);
-    const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(formData.password);
-    const hasMinLength = formData.password.length >= 8;
-
-    return hasLowerCase && hasUpperCase && hasNumber && hasSpecialChar && hasMinLength;
-  };
-
+    return () => clearTimeout(debounceTimer);
+  }, [form.watch('email')]);
+  
+  // Gestionnaire pour vérifier la validité du mot de passe
   const handlePasswordValidityChange = (isValid: boolean) => {
     setIsPasswordValid(isValid);
   };
+  
+  const onSubmit = async (values: FormValues) => {
+    if (!isEmailAvailable) {
+      toast.error('Cet email est déjà utilisé');
+      return;
+    }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    setErrors({});
     setIsSubmitting(true);
-
-    const newErrors: Record<string, string> = {};
-
-    if (!formData.firstName) newErrors.firstName = 'Le prénom est requis';
-    if (!formData.lastName) newErrors.lastName = 'Le nom est requis';
-    if (!formData.email) newErrors.email = "L'email est requis";
-    if (!formData.gender) newErrors.gender = 'Le genre est requis';
-    if (!formData.address) newErrors.address = "L'adresse est requise";
-    if (!formData.phone) newErrors.phone = 'Le téléphone est requis';
-    if (!formData.password) newErrors.password = 'Le mot de passe est requis';
-    if (!formData.confirmPassword) newErrors.confirmPassword = 'La confirmation du mot de passe est requise';
-    if (!formData.acceptTerms) newErrors.acceptTerms = 'Vous devez accepter les conditions';
-
-    if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Veuillez entrer un email valide';
-    }
-
-    if (formData.password && !validatePassword()) {
-      newErrors.password = 'Le mot de passe ne répond pas aux exigences de sécurité';
-    }
-
-    if (formData.password && formData.confirmPassword && formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Les mots de passe ne correspondent pas';
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
+    
+    try {
+      const user = {
+        nom: values.nom,
+        prenom: values.prenom,
+        email: values.email,
+        password: values.password,
+        genre: values.genre,
+        adresse: values.adresse,
+        phone: values.phone
+      };
+      
+      const result = await AuthService.register(user);
+      
+      if (result) {
+        toast.success(`Bienvenue ${values.prenom} ${values.nom} !`);
+        navigate('/');
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Une erreur s'est produite lors de l'inscription");
+    } finally {
       setIsSubmitting(false);
-      return;
     }
-
-    if (!isEmailValid) {
-      setIsSubmitting(false);
-      return;
-    }
-
-    const success = await register({
-      email: formData.email,
-      password: formData.password,
-      confirmPassword: formData.confirmPassword,
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      gender: formData.gender as 'male' | 'female' | 'other',
-      address: formData.address,
-      phone: formData.phone,
-      acceptTerms: formData.acceptTerms,
-    });
-
-    if (success) {
-      navigate('/dashboard');
-    }
-    setIsSubmitting(false);
   };
+  
+  if (currentUser) {
+    return <Navigate to="/" />;
+  }
 
-  const isFormValid =
-    formData.firstName &&
-    formData.lastName &&
-    formData.email &&
-    formData.gender &&
-    formData.address &&
-    formData.phone &&
-    formData.password &&
-    formData.confirmPassword &&
-    formData.acceptTerms &&
-    isEmailValid &&
-    isPasswordValid &&
-    !isEmailChecking &&
-    Object.keys(errors).filter(key => errors[key]).length === 0;
-
+  const isFormDisabled = !isEmailAvailable || isEmailChecking || isSubmitting || !isPasswordValid;
+  
   return (
-    <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-violet-50 via-purple-50 to-fuchsia-100 dark:from-gray-900 dark:via-purple-900/20 dark:to-slate-900 py-12 px-4">
-        {/* Background decorations */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-1/4 left-1/6 w-72 h-72 bg-purple-400/20 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-1/4 right-1/6 w-72 h-72 bg-pink-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-r from-violet-400/10 to-fuchsia-400/10 rounded-full blur-3xl"></div>
-        </div>
-
-        <div className="relative container mx-auto max-w-4xl">
-          <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl border-0 shadow-2xl">
-            <CardHeader className="text-center pb-8 pt-10">
-              <div className="flex justify-center mb-6">
-                <div className="w-20 h-20 bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <UserPlus className="h-10 w-10 text-white" />
-                </div>
-              </div>
-              <CardTitle className="text-3xl font-bold bg-gradient-to-r from-violet-600 to-fuchsia-600 bg-clip-text text-transparent">
-                Créer un compte
-              </CardTitle>
-              <CardDescription className="text-gray-600 dark:text-gray-300 text-lg mt-2">
-                Rejoignez notre communauté et découvrez toutes nos fonctionnalités
-              </CardDescription>
-            </CardHeader>
-
-            <form onSubmit={handleSubmit}>
-              <CardContent className="space-y-8 px-8">
-                {/* Personal Info Section */}
-                <div className="space-y-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <User className="h-5 w-5 text-purple-600" />
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Informations personnelles</h3>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                      <Label htmlFor="firstName" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        Prénom
-                      </Label>
-                      <Input
-                        id="firstName"
-                        name="firstName"
-                        placeholder="Jean"
-                        value={formData.firstName}
-                        onChange={handleChange}
-                        className={`h-12 bg-white/50 dark:bg-gray-700/50 border-2 rounded-xl transition-all duration-200 ${
-                          errors.firstName ? "border-red-500" : "border-purple-200 dark:border-purple-700 focus:border-purple-500"
-                        } focus:ring-4 focus:ring-purple-500/20`}
+    <div className="container mx-auto px-4 py-8">
+      <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
+        <h1 className="text-2xl font-bold mb-6 text-center">Inscription</h1>
+        
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="nom"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nom</FormLabel>
+                    <FormControl>
+                      <Input placeholder=" " {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="prenom"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Prénom</FormLabel>
+                    <FormControl>
+                      <Input placeholder=" " {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Input 
+                        type="email" 
+                        placeholder="" 
+                        {...field} 
+                        className={!isEmailAvailable ? "border-red-500" : ""}
                       />
-                      {errors.firstName && (
-                        <p className="text-sm text-red-500 flex items-center gap-2">
-                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                          {errors.firstName}
-                        </p>
+                      {isEmailChecking && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
+                        </div>
                       )}
                     </div>
-
-                    <div className="space-y-3">
-                      <Label htmlFor="lastName" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        Nom
-                      </Label>
-                      <Input
-                        id="lastName"
-                        name="lastName"
-                        placeholder="Dupont"
-                        value={formData.lastName}
-                        onChange={handleChange}
-                        className={`h-12 bg-white/50 dark:bg-gray-700/50 border-2 rounded-xl transition-all duration-200 ${
-                          errors.lastName ? "border-red-500" : "border-purple-200 dark:border-purple-700 focus:border-purple-500"
-                        } focus:ring-4 focus:ring-purple-500/20`}
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="genre"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Genre</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Sélectionnez votre genre" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="homme">Homme</SelectItem>
+                      <SelectItem value="femme">Femme</SelectItem>
+                      <SelectItem value="autre">Autre</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="adresse"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Adresse</FormLabel>
+                  <FormControl>
+                    <Input placeholder="123 Rue de Paris, 75001 Paris" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Téléphone</FormLabel>
+                  <FormControl>
+                    <Input placeholder="0612345678" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="password"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Mot de passe</FormLabel>
+                  <div className="relative">
+                    <FormControl>
+                      <Input 
+                        type={showPassword ? "text" : "password"} 
+                        {...field} 
                       />
-                      {errors.lastName && (
-                        <p className="text-sm text-red-500 flex items-center gap-2">
-                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                          {errors.lastName}
-                        </p>
-                      )}
+                    </FormControl>
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2"
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                  <PasswordStrengthIndicator 
+                    password={field.value} 
+                    onValidityChange={handlePasswordValidityChange}
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="confirmPassword"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Confirmer le mot de passe</FormLabel>
+                  <div className="relative">
+                    <FormControl>
+                      <Input 
+                        type={showConfirmPassword ? "text" : "password"} 
+                        {...field} 
+                      />
+                    </FormControl>
+                    <div 
+                      className="absolute right-3 top-1/2 -translate-y-1/2 cursor-pointer"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                     </div>
                   </div>
-
-                  <div className="space-y-3">
-                    <Label htmlFor="email" className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                      <Mail className="h-4 w-4" />
-                      Adresse email
-                    </Label>
-                    <Input
-                      id="email"
-                      name="email"
-                      type="email"
-                      placeholder="exemple@email.com"
-                      value={formData.email}
-                      onChange={handleChange}
-                      onBlur={validateEmail}
-                      disabled={isEmailChecking}
-                      className={`h-12 bg-white/50 dark:bg-gray-700/50 border-2 rounded-xl transition-all duration-200 ${
-                        errors.email ? "border-red-500" : "border-purple-200 dark:border-purple-700 focus:border-purple-500"
-                      } focus:ring-4 focus:ring-purple-500/20`}
-                    />
-                    {errors.email && (
-                      <p className="text-sm text-red-500 flex items-center gap-2">
-                        <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                        {errors.email}
-                      </p>
-                    )}
-                    {isEmailChecking && (
-                      <p className="text-sm text-purple-600 flex items-center gap-2">
-                        <div className="w-4 h-4 border-2 border-purple-600/30 border-t-purple-600 rounded-full animate-spin"></div>
-                        Vérification de l'email...
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                      <Label htmlFor="gender" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        Genre
-                      </Label>
-                      <Select
-                        value={formData.gender}
-                        onValueChange={handleSelectChange}
-                      >
-                        <SelectTrigger className={`h-12 bg-white/50 dark:bg-gray-700/50 border-2 rounded-xl transition-all duration-200 ${
-                          errors.gender ? "border-red-500" : "border-purple-200 dark:border-purple-700"
-                        }`}>
-                          <SelectValue placeholder="Sélectionnez votre genre" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="male">Homme</SelectItem>
-                          <SelectItem value="female">Femme</SelectItem>
-                          <SelectItem value="other">Autre</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {errors.gender && (
-                        <p className="text-sm text-red-500 flex items-center gap-2">
-                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                          {errors.gender}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-3">
-                      <Label htmlFor="phone" className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                        <Phone className="h-4 w-4" />
-                        Téléphone
-                      </Label>
-                      <Input
-                        id="phone"
-                        name="phone"
-                        placeholder="+33 6 12 34 56 78"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        className={`h-12 bg-white/50 dark:bg-gray-700/50 border-2 rounded-xl transition-all duration-200 ${
-                          errors.phone ? "border-red-500" : "border-purple-200 dark:border-purple-700 focus:border-purple-500"
-                        } focus:ring-4 focus:ring-purple-500/20`}
-                      />
-                      {errors.phone && (
-                        <p className="text-sm text-red-500 flex items-center gap-2">
-                          <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                          {errors.phone}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
-                    <Label htmlFor="address" className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                      <MapPin className="h-4 w-4" />
-                      Adresse
-                    </Label>
-                    <Input
-                      id="address"
-                      name="address"
-                      placeholder="123 Rue de Paris, 75001 Paris"
-                      value={formData.address}
-                      onChange={handleChange}
-                      className={`h-12 bg-white/50 dark:bg-gray-700/50 border-2 rounded-xl transition-all duration-200 ${
-                        errors.address ? "border-red-500" : "border-purple-200 dark:border-purple-700 focus:border-purple-500"
-                      } focus:ring-4 focus:ring-purple-500/20`}
-                    />
-                    {errors.address && (
-                      <p className="text-sm text-red-500 flex items-center gap-2">
-                        <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                        {errors.address}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                {/* Security Section */}
-                <div className="space-y-6">
-                  <div className="flex items-center gap-2 mb-4">
-                    <Shield className="h-5 w-5 text-purple-600" />
-                    <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200">Sécurité du compte</h3>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                      <Label htmlFor="password" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        Mot de passe
-                      </Label>
-                      <PasswordInput
-                        id="password"
-                        name="password"
-                        placeholder="••••••••"
-                        value={formData.password}
-                        onChange={handleChange}
-                        error={errors.password}
-                        className="h-12"
-                      />
-                      <PasswordStrengthChecker 
-                        password={formData.password} 
-                        onValidityChange={handlePasswordValidityChange}
-                      />
-                    </div>
-
-                    <div className="space-y-3">
-                      <Label htmlFor="confirmPassword" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        Confirmer le mot de passe
-                      </Label>
-                      <PasswordInput
-                        id="confirmPassword"
-                        name="confirmPassword"
-                        placeholder="••••••••"
-                        value={formData.confirmPassword}
-                        onChange={handleChange}
-                        error={errors.confirmPassword}
-                        className="h-12"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Terms and Conditions */}
-                <div className="space-y-4">
-                  <div className="flex items-start space-x-3 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl border border-purple-200 dark:border-purple-800">
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="acceptTerms"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md p-4 border">
+                  <FormControl>
                     <Checkbox
-                      id="acceptTerms"
-                      name="acceptTerms"
-                      checked={formData.acceptTerms}
-                      onCheckedChange={(checked) =>
-                        setFormData({
-                          ...formData,
-                          acceptTerms: checked as boolean,
-                        })
-                      }
-                      className="mt-1"
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
                     />
-                    <Label
-                      htmlFor="acceptTerms"
-                      className={`text-sm leading-relaxed cursor-pointer ${
-                        errors.acceptTerms ? "text-red-500" : "text-gray-700 dark:text-gray-300"
-                      }`}
-                    >
-                      J'accepte les{" "}
-                      <Link to="/terms" className="text-purple-600 hover:text-purple-700 underline">
-                        conditions générales d'utilisation
-                      </Link>{" "}
-                      et la{" "}
-                      <Link to="/privacy" className="text-purple-600 hover:text-purple-700 underline">
-                        politique de confidentialité
-                      </Link>
-                    </Label>
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>
+                      J'accepte les conditions d'utilisation et la politique de confidentialité
+                    </FormLabel>
+                    <FormMessage />
                   </div>
-                  {errors.acceptTerms && (
-                    <p className="text-sm text-red-500 flex items-center gap-2">
-                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                      {errors.acceptTerms}
-                    </p>
-                  )}
-                </div>
-              </CardContent>
-
-              <CardFooter className="flex flex-col space-y-6 px-8 pb-10">
-                <Button
-                  type="submit"
-                  className="w-full h-14 bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 hover:from-violet-700 hover:via-purple-700 hover:to-fuchsia-700 text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 flex items-center justify-center gap-3"
-                  disabled={!isFormValid || isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      Création en cours...
-                    </>
-                  ) : isEmailChecking ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      Vérification...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-5 w-5" />
-                      Créer mon compte
-                    </>
-                  )}
-                </Button>
-
-                <div className="text-center">
-                  <p className="text-gray-600 dark:text-gray-300">
-                    Déjà membre?{" "}
-                    <Link 
-                      to="/login" 
-                      className="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 font-semibold hover:underline transition-colors"
-                    >
-                      Se connecter
-                    </Link>
-                  </p>
-                </div>
-              </CardFooter>
-            </form>
-          </Card>
-        </div>
+                </FormItem>
+              )}
+            />
+            
+            <Button 
+              type="submit" 
+              disabled={isFormDisabled} 
+              className="w-full"
+            >
+              {isSubmitting ? "Inscription en cours..." : "S'inscrire"}
+            </Button>
+            
+            <div className="text-center mt-4">
+              <p className="text-sm text-gray-600">
+                Déjà inscrit ?{" "}
+                <Link to="/connexion" className="text-primary font-medium">
+                  Se connecter
+                </Link>
+              </p>
+            </div>
+          </form>
+        </Form>
       </div>
-    </Layout>
+    </div>
   );
 };
 

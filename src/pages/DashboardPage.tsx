@@ -1,169 +1,167 @@
 
-import React, { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import VentesProduits from '@/components/dashboard/VentesProduits';
-import PretFamilles from '@/components/dashboard/PretFamilles';
-import PretProduits from '@/components/dashboard/PretProduits';
-import DepenseDuMois from '@/components/dashboard/DepenseDuMois';
-import Layout from '@/components/Layout';
-import { cn } from '@/lib/utils';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { ShoppingCart, Users, Package, CreditCard, TrendingUp, Sparkles } from 'lucide-react';
+import { useState } from 'react';
+import WeekCalendar from '@/components/Weekcalendar';
+import AppointmentForm from '@/components/AppointmentForm';
+import AppointmentSelector from '@/components/AppointmentSelector';
+import AppointmentDetails from '@/components/AppointmentDetails';
+import { AppointmentService, Appointment } from '@/services/AppointmentService';
+import ActionButtons from '@/components/ActionButtons';
+import AppointmentModal from '@/components/AppointmentModal';
+import SearchAppointmentForm from '@/components/SearchAppointmentForm';
 
+/**
+ * Page du tableau de bord
+ * Centre de gestion des rendez-vous avec calendrier et actions CRUD
+ */
 const DashboardPage = () => {
-  const [activeTab, setActiveTab] = useState('ventes');
-  const isMobile = useIsMobile();
+  // États pour gérer les rendez-vous et les différentes modales
+  const [activeAppointment, setActiveAppointment] = useState<Appointment | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [showAppointmentDetails, setShowAppointmentDetails] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Fonction pour rafraîchir les données du calendrier
+  const refreshData = () => {
+    setRefreshTrigger(prev => prev + 1);
+  };
+
+  // Gestionnaires d'événements pour les différentes actions utilisateur
+  const handleOpenAdd = () => {
+    setActiveAppointment(null);
+    setIsAddModalOpen(true);
+  };
+
+  const handleOpenEdit = (appointment?: Appointment) => {
+    if (appointment) {
+      setActiveAppointment(appointment);
+      setIsEditModalOpen(false);
+      setShowAppointmentDetails(false);
+      setIsAddModalOpen(true);
+    } else {
+      setIsEditModalOpen(true);
+    }
+  };
+
+  const handleOpenDelete = () => {
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleOpenSearch = () => {
+    setIsSearchModalOpen(true);
+  };
+
+  const handleViewAppointment = (appointment: Appointment) => {
+    setActiveAppointment(appointment);
+    setShowAppointmentDetails(true);
+    setIsSearchModalOpen(false);
+  };
+
+  // Fonction appelée après une action réussie sur un rendez-vous
+  const handleFormSuccess = () => {
+    setIsAddModalOpen(false);
+    setIsEditModalOpen(false);
+    setIsDeleteModalOpen(false);
+    setIsSearchModalOpen(false);
+    setShowAppointmentDetails(false);
+    setActiveAppointment(null);
+    refreshData();
+  };
 
   return (
-    <Layout requireAuth>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-slate-900">
-        <div className="container mx-auto px-4 py-8">
-          {/* Hero Header */}
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center px-4 py-2 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-full text-purple-600 dark:text-purple-400 text-sm font-medium mb-6 border border-purple-200 dark:border-purple-800">
-              <TrendingUp className="h-4 w-4 mr-2" />
-              Tableau de bord en temps réel
-            </div>
-            
-            <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 bg-clip-text text-transparent mb-4">
-              Tableau de bord
-            </h1>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Gérez efficacement vos ventes, inventaires et finances en un seul endroit
-            </p>
-          </div>
-
-          <Tabs defaultValue="ventes" onValueChange={setActiveTab} className="space-y-8">
-            {/* Modern Tab Navigation */}
-            <div className={cn(
-              "relative bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-3xl shadow-2xl p-6 border border-white/20",
-              isMobile && "pt-8 pb-12"
-            )}>
-              {/* Background gradient */}
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-600/10 via-blue-600/10 to-indigo-600/10 rounded-3xl"></div>
-              
-              <TabsList className={cn(
-                "relative grid w-full h-auto p-2 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm rounded-2xl border border-white/20",
-                isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-4 gap-2'
-              )}>
-                <TabsTrigger 
-                  value="ventes" 
-                  className={cn(
-                    "font-bold text-sm uppercase flex items-center justify-center gap-3 py-4 px-6 rounded-xl transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105",
-                    activeTab === "ventes" 
-                      ? "text-white bg-gradient-to-r from-purple-600 to-blue-600 shadow-lg scale-105" 
-                      : "text-gray-600 dark:text-gray-300 hover:bg-white/70 dark:hover:bg-gray-700/70 hover:scale-102"
-                  )}
-                >
-                  <ShoppingCart className="h-5 w-5" />
-                  <span className={isMobile ? "text-xs" : "text-sm"}>Ventes Produits</span>
-                </TabsTrigger>
-                
-                <TabsTrigger 
-                  value="pret-familles" 
-                  className={cn(
-                    "font-bold text-sm uppercase flex items-center justify-center gap-3 py-4 px-6 rounded-xl transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-blue-600 data-[state=active]:to-indigo-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105",
-                    activeTab === "pret-familles" 
-                      ? "text-white bg-gradient-to-r from-blue-600 to-indigo-600 shadow-lg scale-105" 
-                      : "text-gray-600 dark:text-gray-300 hover:bg-white/70 dark:hover:bg-gray-700/70 hover:scale-102"
-                  )}
-                >
-                  <Users className="h-5 w-5" />
-                  <span className={isMobile ? "text-xs" : "text-sm"}>Prêt Familles</span>
-                </TabsTrigger>
-                
-                <TabsTrigger 
-                  value="pret-produits" 
-                  className={cn(
-                    "font-bold text-sm uppercase flex items-center justify-center gap-3 py-4 px-6 rounded-xl transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-indigo-600 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105",
-                    activeTab === "pret-produits" 
-                      ? "text-white bg-gradient-to-r from-indigo-600 to-purple-600 shadow-lg scale-105" 
-                      : "text-gray-600 dark:text-gray-300 hover:bg-white/70 dark:hover:bg-gray-700/70 hover:scale-102"
-                  )}
-                >
-                  <Package className="h-5 w-5" />
-                  <span className={isMobile ? "text-xs" : "text-sm"}>Prêt Produits</span>
-                </TabsTrigger>
-                
-                <TabsTrigger 
-                  value="depenses" 
-                  className={cn(
-                    "font-bold text-sm uppercase flex items-center justify-center gap-3 py-4 px-6 rounded-xl transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105",
-                    activeTab === "depenses" 
-                      ? "text-white bg-gradient-to-r from-purple-600 to-pink-600 shadow-lg scale-105" 
-                      : "text-gray-600 dark:text-gray-300 hover:bg-white/70 dark:hover:bg-gray-700/70 hover:scale-102"
-                  )}
-                >
-                  <CreditCard className="h-5 w-5" />
-                  <span className={isMobile ? "text-xs" : "text-sm"}>Dépenses du Mois</span>
-                </TabsTrigger>
-              </TabsList>
-            </div>
-            
-            {/* Content Area */}
-            <div className="relative bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
-              {/* Content background decoration */}
-              <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-bl from-purple-400/10 to-transparent rounded-full blur-3xl"></div>
-              <div className="absolute bottom-0 left-0 w-96 h-96 bg-gradient-to-tr from-blue-400/10 to-transparent rounded-full blur-3xl"></div>
-              
-              <div className="relative p-8">
-                <TabsContent value="ventes" className="mt-0 animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl flex items-center justify-center">
-                      <ShoppingCart className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Ventes & Produits</h2>
-                      <p className="text-gray-600 dark:text-gray-300">Gérez vos ventes et votre inventaire</p>
-                    </div>
-                  </div>
-                  <VentesProduits />
-                </TabsContent>
-                
-                <TabsContent value="pret-familles" className="mt-0 animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
-                      <Users className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Prêts aux Familles</h2>
-                      <p className="text-gray-600 dark:text-gray-300">Suivi des prêts et remboursements familiaux</p>
-                    </div>
-                  </div>
-                  <PretFamilles />
-                </TabsContent>
-                
-                <TabsContent value="pret-produits" className="mt-0 animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center">
-                      <Package className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Prêts de Produits</h2>
-                      <p className="text-gray-600 dark:text-gray-300">Gestion des produits prêtés</p>
-                    </div>
-                  </div>
-                  <PretProduits />
-                </TabsContent>
-                
-                <TabsContent value="depenses" className="mt-0 animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl flex items-center justify-center">
-                      <CreditCard className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Dépenses Mensuelles</h2>
-                      <p className="text-gray-600 dark:text-gray-300">Suivi et contrôle de vos dépenses</p>
-                    </div>
-                  </div>
-                  <DepenseDuMois />
-                </TabsContent>
-              </div>
-            </div>
-          </Tabs>
-        </div>
+    <div className="container mx-auto px-4 py-8">
+      {/* En-tête du tableau de bord */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">Tableau de bord</h1>
       </div>
-    </Layout>
+
+      {/* Boutons d'action pour gérer les rendez-vous */}
+      <ActionButtons 
+        onAdd={handleOpenAdd}
+        onEdit={() => handleOpenEdit()}
+        onDelete={handleOpenDelete}
+        onSearch={handleOpenSearch}
+      />
+
+      {/* Calendrier hebdomadaire */}
+      <div className="bg-white rounded-lg shadow-md p-6 card-3d">
+        <WeekCalendar 
+          key={`calendar-${refreshTrigger}`} 
+          onAppointmentClick={handleViewAppointment} 
+        />
+      </div>
+
+      {/* Modal pour ajouter/modifier un rendez-vous */}
+      <AppointmentModal 
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        title={activeAppointment ? "Modifier le rendez-vous" : "Ajouter un rendez-vous"}
+        mode={activeAppointment ? "edit" : "add"}
+        appointment={activeAppointment || undefined}
+        onSuccess={handleFormSuccess}
+      >
+        <AppointmentForm 
+          appointment={activeAppointment || undefined}
+          onSuccess={handleFormSuccess}
+          onCancel={() => setIsAddModalOpen(false)}
+        />
+      </AppointmentModal>
+
+      {/* Modal pour sélectionner un rendez-vous à modifier */}
+      <AppointmentModal 
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title="Sélectionner un rendez-vous à modifier"
+        mode="select"
+        onSuccess={handleFormSuccess}
+        onSelect={(appointment) => handleOpenEdit(appointment)}
+      >
+        <AppointmentSelector 
+          onSelect={(appointment) => handleOpenEdit(appointment)}
+          onCancel={() => setIsEditModalOpen(false)}
+          mode="edit"
+        />
+      </AppointmentModal>
+
+      {/* Modal pour sélectionner un rendez-vous à supprimer */}
+      <AppointmentModal 
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="Sélectionner un rendez-vous à supprimer"
+        mode="delete"
+        onSuccess={handleFormSuccess}
+      >
+        <AppointmentSelector 
+          onSelect={handleViewAppointment}
+          onCancel={() => setIsDeleteModalOpen(false)}
+          mode="delete"
+        />
+      </AppointmentModal>
+
+      {/* Modal pour rechercher un rendez-vous */}
+      <AppointmentModal 
+        isOpen={isSearchModalOpen}
+        onClose={() => setIsSearchModalOpen(false)}
+        title="Rechercher un rendez-vous"
+        mode="search"
+        onSuccess={handleFormSuccess}
+      >
+        <SearchAppointmentForm onSelect={handleViewAppointment} />
+      </AppointmentModal>
+
+      {/* Affichage des détails d'un rendez-vous */}
+      {activeAppointment && (
+        <AppointmentDetails
+          appointment={activeAppointment}
+          open={showAppointmentDetails}
+          onOpenChange={setShowAppointmentDetails}
+          onEdit={() => handleOpenEdit(activeAppointment)}
+          onDelete={handleFormSuccess}
+        />
+      )}
+    </div>
   );
 };
 

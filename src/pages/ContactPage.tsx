@@ -1,251 +1,223 @@
+// Importation des hooks et services nécessaires
+import { useState } from 'react'; // Hook pour gérer l'état local du composant
+import { useForm } from 'react-hook-form'; // Hook pour gérer les formulaires avec validation
+import { zodResolver } from '@hookform/resolvers/zod'; // Intégration de Zod avec react-hook-form pour la validation
+import * as z from 'zod'; // Zod est utilisé pour la validation du schéma de données
+import { Mail, Phone, MapPin } from 'lucide-react'; // Icones pour afficher les coordonnées
+import { Button } from '@/components/ui/button'; // Composant bouton personnalisé
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'; // Composants pour gérer les champs de formulaire
+import { Input } from '@/components/ui/input'; // Composant de champ de texte pour les entrées
+import { Textarea } from '@/components/ui/textarea'; // Composant de zone de texte pour les messages longs
+import { Card, CardContent } from '@/components/ui/card'; // Composants pour afficher un cadre autour du contenu
+import { ContactService, ContactForm } from '@/services/ContactService'; // Service pour envoyer les données du formulaire
 
-import React, { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { useToast } from '@/hooks/use-toast';
-import Layout from '@/components/Layout';
-import { Mail, Phone, MapPin, Send, Clock, MessageCircle } from 'lucide-react';
+// Définition du schéma de validation avec Zod
+const formSchema = z.object({
+  nom: z.string().min(2, {
+    message: "Le nom doit contenir au moins 2 caractères.",
+  }),
+  email: z.string().email({
+    message: "Veuillez entrer une adresse email valide.",
+  }),
+  sujet: z.string().min(5, {
+    message: "Le sujet doit contenir au moins 5 caractères.",
+  }),
+  message: z.string().min(10, {
+    message: "Le message doit contenir au moins 10 caractères.",
+  }),
+});
 
-const ContactPage: React.FC = () => {
-  const { toast } = useToast();
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    subject: '',
-    message: '',
-  });
+// Définition du composant de la page de contact
+const ContactPage = () => {
+  // État local pour gérer l'envoi du formulaire
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-  };
+  // Initialisation du formulaire avec react-hook-form et validation Zod
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      nom: "",
+      email: "",
+      sujet: "",
+      message: "",
+    },
+  });
   
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    
-    setTimeout(() => {
-      toast({
-        title: "Message envoyé",
-        description: "Nous vous répondrons dans les plus brefs délais.",
-        className: "notification-success",
-      });
-      
-      setFormData({
-        name: '',
-        email: '',
-        subject: '',
-        message: '',
-      });
-      
-      setIsSubmitting(false);
-    }, 1000);
+  // Fonction appelée lors de la soumission du formulaire
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
+    setIsSubmitting(true); // Indique que la soumission est en cours
+    try {
+      const success = ContactService.send(values as ContactForm); // Envoi des données via le service
+      if (success) {
+        form.reset(); // Réinitialisation du formulaire si l'envoi réussit
+      }
+    } finally {
+      setIsSubmitting(false); // Réinitialisation de l'état de soumission
+    }
   };
   
   return (
-    <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-slate-900">
-        {/* Hero Section */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-purple-600 via-blue-600 to-indigo-600 py-24">
-          <div className="absolute inset-0 bg-black/20"></div>
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute top-10 left-10 w-4 h-4 bg-white rounded-full animate-pulse"></div>
-            <div className="absolute top-20 right-20 w-2 h-2 bg-white rounded-full animate-ping"></div>
-            <div className="absolute bottom-20 left-1/4 w-3 h-3 bg-white rounded-full animate-bounce"></div>
+    <div className="container mx-auto px-4 py-8">
+      {/* Conteneur principal de la page */}
+      <div className="max-w-4xl mx-auto">
+        
+        {/* Section de présentation avec le titre et la description */}
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold mb-4 text-primary">Contactez-nous</h1>
+          <p className="text-xl text-gray-600">
+            Nous sommes à votre écoute pour toute question ou suggestion
+          </p>
+        </div>
+        
+        {/* Grid pour organiser les coordonnées et le formulaire en deux colonnes */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div>
+            <h2 className="text-2xl font-semibold mb-6">Nos coordonnées</h2>
+            
+            {/* Carte contenant les informations de contact */}
+            <Card className="mb-6">
+              <CardContent className="p-6">
+                <div className="space-y-4">
+                  {/* Informations email */}
+                  <div className="flex items-start">
+                    <Mail className="h-5 w-5 text-primary mr-3 mt-0.5" />
+                    <div>
+                      <h3 className="font-medium">Email</h3>
+                      <a href="mailto:contact@riziky-agendas.com" className="text-gray-600 hover:text-primary">
+                        contact@riziky-agendas.com
+                      </a>
+                    </div>
+                  </div>
+                  
+                  {/* Informations téléphone */}
+                  <div className="flex items-start">
+                    <Phone className="h-5 w-5 text-primary mr-3 mt-0.5" />
+                    <div>
+                      <h3 className="font-medium">Téléphone</h3>
+                      <a href="tel:+33612345678" className="text-gray-600 hover:text-primary">
+                        +33 6 12 34 56 78
+                      </a>
+                    </div>
+                  </div>
+                  
+                  {/* Informations adresse */}
+                  <div className="flex items-start">
+                    <MapPin className="h-5 w-5 text-primary mr-3 mt-0.5" />
+                    <div>
+                      <h3 className="font-medium">Adresse</h3>
+                      <address className="text-gray-600 not-italic">
+                        123 Avenue des Champs-Élysées<br />
+                        75008 Paris, France
+                      </address>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            
+            {/* Section pour la carte de localisation (actuellement fictive) */}
+            <div className="bg-gray-200 h-64 rounded-lg">
+              {/* Placeholder pour une carte intégrée */}
+              <div className="h-full flex items-center justify-center text-gray-500">
+                Carte de localisation
+              </div>
+            </div>
           </div>
           
-          <div className="relative container mx-auto px-4 text-center">
-            <div className="inline-flex items-center px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-white text-sm font-medium mb-6">
-              <MessageCircle className="h-4 w-4 mr-2" />
-              Nous sommes là pour vous aider
-            </div>
-            <h1 className="text-5xl md:text-6xl font-bold text-white mb-6 leading-tight">
-              Contactez-nous
-            </h1>
-            <p className="text-xl text-blue-100 max-w-2xl mx-auto leading-relaxed">
-              Votre avis compte. Partagez vos questions, suggestions ou demandes d'assistance.
-            </p>
-          </div>
-        </div>
-
-        <div className="container mx-auto px-4 py-16">
-          <div className="max-w-7xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-              {/* Contact Info Cards */}
-              <div className="lg:col-span-1 space-y-6">
-                <div className="group bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 border border-white/20 hover:scale-105">
-                  <div className="flex items-center mb-6">
-                    <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                      <MapPin className="h-8 w-8 text-white" />
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">Notre Bureau</h3>
-                      <p className="text-purple-600 dark:text-purple-400">Visitez-nous</p>
-                    </div>
-                  </div>
-                  <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                    123 Rue de Commerce<br />
-                    75001 Paris, France
-                  </p>
-                </div>
-
-                <div className="group bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 border border-white/20 hover:scale-105">
-                  <div className="flex items-center mb-6">
-                    <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                      <Mail className="h-8 w-8 text-white" />
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">Email</h3>
-                      <p className="text-blue-600 dark:text-blue-400">Écrivez-nous</p>
-                    </div>
-                  </div>
-                  <p className="text-gray-600 dark:text-gray-300">contact@gestion-vente.com</p>
-                </div>
-
-                <div className="group bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-2xl p-8 shadow-xl hover:shadow-2xl transition-all duration-300 border border-white/20 hover:scale-105">
-                  <div className="flex items-center mb-6">
-                    <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                      <Phone className="h-8 w-8 text-white" />
-                    </div>
-                    <div className="ml-4">
-                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">Téléphone</h3>
-                      <p className="text-green-600 dark:text-green-400">Appelez-nous</p>
-                    </div>
-                  </div>
-                  <p className="text-gray-600 dark:text-gray-300">+33 1 23 45 67 89</p>
-                </div>
-
-                {/* Horaires */}
-                <div className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-2xl p-8 text-white">
-                  <div className="flex items-center mb-6">
-                    <Clock className="h-8 w-8 mr-3" />
-                    <h3 className="text-xl font-bold">Horaires d'ouverture</h3>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium">Lundi - Vendredi</span>
-                      <span className="text-indigo-100">9h00 - 18h00</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium">Samedi</span>
-                      <span className="text-indigo-100">9h00 - 12h00</span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium">Dimanche</span>
-                      <span className="text-indigo-100">Fermé</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Contact Form */}
-              <div className="lg:col-span-2">
-                <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-3xl p-10 shadow-2xl border border-white/20">
-                  <div className="text-center mb-10">
-                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-                      Envoyez-nous un message
-                    </h2>
-                    <p className="text-gray-600 dark:text-gray-300 text-lg">
-                      Remplissez le formulaire et nous vous répondrons rapidement
-                    </p>
-                  </div>
-
-                  <form onSubmit={handleSubmit} className="space-y-8">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-3">
-                        <Label htmlFor="name" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                          Nom complet
-                        </Label>
-                        <Input
-                          id="name"
-                          name="name"
-                          placeholder="Votre nom"
-                          value={formData.name}
-                          onChange={handleChange}
-                          required
-                          className="h-14 bg-white/50 dark:bg-gray-700/50 border-2 border-purple-200 dark:border-purple-700 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 focus:ring-4 transition-all duration-200"
-                        />
-                      </div>
-
-                      <div className="space-y-3">
-                        <Label htmlFor="email" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                          Email
-                        </Label>
-                        <Input
-                          id="email"
-                          name="email"
-                          type="email"
-                          placeholder="votre@email.com"
-                          value={formData.email}
-                          onChange={handleChange}
-                          required
-                          className="h-14 bg-white/50 dark:bg-gray-700/50 border-2 border-purple-200 dark:border-purple-700 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 focus:ring-4 transition-all duration-200"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <Label htmlFor="subject" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        Sujet
-                      </Label>
-                      <Input
-                        id="subject"
-                        name="subject"
-                        placeholder="Sujet de votre message"
-                        value={formData.subject}
-                        onChange={handleChange}
-                        required
-                        className="h-14 bg-white/50 dark:bg-gray-700/50 border-2 border-purple-200 dark:border-purple-700 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 focus:ring-4 transition-all duration-200"
-                      />
-                    </div>
-
-                    <div className="space-y-3">
-                      <Label htmlFor="message" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        Message
-                      </Label>
-                      <Textarea
-                        id="message"
-                        name="message"
-                        placeholder="Votre message détaillé..."
-                        rows={6}
-                        value={formData.message}
-                        onChange={handleChange}
-                        required
-                        className="bg-white/50 dark:bg-gray-700/50 border-2 border-purple-200 dark:border-purple-700 rounded-xl focus:border-purple-500 focus:ring-purple-500/20 focus:ring-4 transition-all duration-200 resize-none"
-                      />
-                    </div>
-
-                    <Button
-                      type="submit"
-                      className="w-full h-16 bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 hover:from-purple-700 hover:via-pink-700 hover:to-red-700 text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 flex items-center justify-center gap-3"
-                      disabled={isSubmitting}
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                          Envoi en cours...
-                        </>
-                      ) : (
-                        <>
-                          <Send className="h-5 w-5" />
-                          Envoyer le message
-                        </>
+          {/* Formulaire de contact */}
+          <div>
+            <h2 className="text-2xl font-semibold mb-6">Formulaire de contact</h2>
+            
+            {/* Carte contenant le formulaire */}
+            <Card>
+              <CardContent className="p-6">
+                {/* Formulaire avec react-hook-form */}
+                <Form {...form}>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    
+                    {/* Champ pour le nom */}
+                    <FormField
+                      control={form.control}
+                      name="nom"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Nom</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Votre nom" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
                       )}
+                    />
+                    
+                    {/* Champ pour l'email */}
+                    <FormField
+                      control={form.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Email</FormLabel>
+                          <FormControl>
+                            <Input placeholder="votre@email.com" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    {/* Champ pour le sujet */}
+                    <FormField
+                      control={form.control}
+                      name="sujet"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Sujet</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Sujet de votre message" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    {/* Champ pour le message */}
+                    <FormField
+                      control={form.control}
+                      name="message"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Message</FormLabel>
+                          <FormControl>
+                            <Textarea 
+                              placeholder="Votre message..." 
+                              className="min-h-[120px]" 
+                              {...field} 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    {/* Bouton d'envoi */}
+                    <Button type="submit" className="w-full" disabled={isSubmitting}>
+                      {isSubmitting ? "Envoi en cours..." : "Envoyer"}
                     </Button>
                   </form>
-                </div>
-              </div>
-            </div>
+                </Form>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
-    </Layout>
+    </div>
   );
 };
 

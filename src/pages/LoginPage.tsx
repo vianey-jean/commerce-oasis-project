@@ -1,234 +1,256 @@
-
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Eye, EyeOff, Info, Reply, LogIn, AlertCircle, KeyRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import PasswordInput from '@/components/PasswordInput';
-import PasswordStrengthChecker from '@/components/PasswordStrengthChecker';
-import Layout from '@/components/Layout';
-import { Lock, Mail, ArrowRight, Sparkles } from 'lucide-react';
-import axios from 'axios';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AuthService } from '@/services/AuthService';
+import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator';
+import { toast } from '@/components/ui/use-toast';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
-const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// Schéma de validation pour l'étape email
+const emailSchema = z.object({
+  email: z.string().email({
+    message: "Veuillez entrer une adresse email valide.",
+  }),
+});
 
-const LoginPage: React.FC = () => {
-  const navigate = useNavigate();
-  const { login, checkEmail } = useAuth();
-  
-  const [email, setEmail] = useState('');
+// Schéma de validation pour l'étape mot de passe
+const passwordSchema = z.object({
+  email: z.string().email(),
+  password: z.string()
+    .min(8, "Le mot de passe doit contenir au moins 8 caractères")
+    .regex(/[A-Z]/, "Doit contenir au moins une majuscule")
+    .regex(/[a-z]/, "Doit contenir au moins une minuscule")
+    .regex(/[0-9]/, "Doit contenir au moins un chiffre")
+    .regex(/[^A-Za-z0-9]/, "Doit contenir au moins un caractère spécial"),
+});
+
+const LoginPage = () => {
+  const [showPassword, setShowPassword] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [step, setStep] = useState<'email' | 'password'>('email');
+  const [emailValue, setEmailValue] = useState('');
   const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
-  const [showPasswordField, setShowPasswordField] = useState(false);
-  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
-  const [emailExists, setEmailExists] = useState(false);
-  const [userName, setUserName] = useState('');
+  const [emailNotFound, setEmailNotFound] = useState(false);
+  const [loginError, setLoginError] = useState<string | null>(null);
   const [isPasswordValid, setIsPasswordValid] = useState(false);
-  
-  const handleEmailCheck = async () => {
-    if (!email) {
-      setErrors({ ...errors, email: 'Veuillez entrer votre email' });
-      return;
-    }
-    
-    if (!/\S+@\S+\.\S+/.test(email)) {
-      setErrors({ ...errors, email: 'Veuillez entrer un email valide' });
-      return;
-    }
-    
-    setIsCheckingEmail(true);
-    try {
-      const response = await axios.post(`${AUTH_BASE_URL}/api/auth/check-email`, { email });
 
-      setIsCheckingEmail(false);
-      
-      if (response.data.exists) {
-        setEmailExists(true);
-        setShowPasswordField(true);
-        setUserName(`${response.data.user.firstName} ${response.data.user.lastName}`);
+  const navigate = useNavigate();
+
+  const emailForm = useForm<z.infer<typeof emailSchema>>({
+    resolver: zodResolver(emailSchema),
+    defaultValues: {
+      email: "",
+    },
+  });
+
+  const passwordForm = useForm<z.infer<typeof passwordSchema>>({
+    resolver: zodResolver(passwordSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+    mode: "onChange"
+  });
+
+  const onSubmitEmail = async (values: z.infer<typeof emailSchema>) => {
+    setIsSubmitting(true);
+    setEmailNotFound(false);
+    try {
+      const exists = await AuthService.checkEmail(values.email);
+      if (exists) {
+        setEmailValue(values.email);
+        setStep('password');
+        passwordForm.setValue('email', values.email);
       } else {
-        setEmailExists(false);
-        setShowPasswordField(false);
-        setErrors({ ...errors, email: 'Ce profil n\'existe pas' });
+        setEmailNotFound(true);
+        emailForm.setError('email', {
+          message: "Ce profil n'existe pas."
+        });
       }
-    } catch (error) {
-      setIsCheckingEmail(false);
-      setEmailExists(false);
-      setShowPasswordField(false);
-      setErrors({ ...errors, email: 'Une erreur s\'est produite' });
+    } finally {
+      setIsSubmitting(false);
     }
   };
-  
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    setErrors({});
-    
-    if (!email) {
-      setErrors(prev => ({ ...prev, email: 'Veuillez entrer votre email' }));
-      return;
+
+  useEffect(() => {
+    if (step === 'password') {
+      passwordForm.setValue('password', '');
+      setPassword('');
+      setLoginError(null);
+      setIsPasswordValid(false);
     }
-    
-    if (showPasswordField && !password) {
-      setErrors(prev => ({ ...prev, password: 'Veuillez entrer votre mot de passe' }));
-      return;
-    }
-    
-    if (!showPasswordField) {
-      await handleEmailCheck();
-      return;
-    }
-    
-    const success = await login({ email, password });
-    if (success) {
-      navigate('/dashboard');
-    }
-  };
-  
+  }, [step, passwordForm]);
+
   const handlePasswordValidityChange = (isValid: boolean) => {
     setIsPasswordValid(isValid);
   };
-  
-  return (
-    <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-purple-900/20 dark:to-slate-900 flex items-center justify-center p-4">
-        {/* Background decorations */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-400/20 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-pink-400/10 to-violet-400/10 rounded-full blur-3xl"></div>
-        </div>
 
-        <div className="relative w-full max-w-md">
-          <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl border-0 shadow-2xl">
-            <CardHeader className="text-center pb-8 pt-10">
-              <div className="flex justify-center mb-6">
-                <div className="w-20 h-20 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <Lock className="h-10 w-10 text-white" />
-                </div>
-              </div>
-              <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
-                Connexion
-              </CardTitle>
-              <CardDescription className="text-gray-600 dark:text-gray-300 text-lg mt-2">
-                Accédez à votre espace personnel
-              </CardDescription>
-            </CardHeader>
-            
-            <form onSubmit={handleSubmit}>
-              <CardContent className="space-y-6 px-8">
-                <div className="space-y-3">
-                  <Label htmlFor="email" className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                    <Mail className="h-4 w-4" />
-                    Adresse email
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="exemple@email.com"
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      setShowPasswordField(false);
-                      setEmailExists(false);
-                      if (errors.email) {
-                        setErrors({ ...errors, email: undefined });
-                      }
-                    }}
-                    onBlur={handleEmailCheck}
-                    disabled={isCheckingEmail || showPasswordField}
-                    className={`h-14 bg-white/50 dark:bg-gray-700/50 border-2 rounded-xl transition-all duration-200 ${
-                      errors.email 
-                        ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" 
-                        : "border-purple-200 dark:border-purple-700 focus:border-purple-500 focus:ring-purple-500/20"
-                    } focus:ring-4`}
+  const onSubmitPassword = async (values: z.infer<typeof passwordSchema>) => {
+    setIsSubmitting(true);
+    setLoginError(null);
+    try {
+      const success = await AuthService.login(values.email, values.password);
+      if (success) {
+        navigate('/dashboard', { replace: true });
+      } else {
+        setLoginError("Mot de passe incorrect");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newPassword = e.target.value;
+    setPassword(newPassword);
+    passwordForm.setValue('password', newPassword, { shouldValidate: true });
+  };
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <div className="max-w-md mx-auto">
+        <Card>
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl">Connexion</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {step === 'email' ? (
+              <Form {...emailForm}>
+                <form onSubmit={emailForm.handleSubmit(onSubmitEmail)} className="space-y-6">
+                  <FormField
+                    control={emailForm.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="votre@email.com" 
+                            autoComplete="off"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                        {emailNotFound && (
+                          <div className="mt-2 text-sm text-red-600 flex items-center space-x-2">
+                            <Link to="/inscription" className="text-blue-600 underline">
+                              S'inscrire
+                            </Link>
+                          </div>
+                        )}
+                      </FormItem>
+                    )}
                   />
-                  {errors.email && (
-                    <div className="flex items-center gap-2 text-red-500 text-sm animate-in fade-in-50">
-                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                      {errors.email}
-                    </div>
-                  )}
-                  {emailExists && (
-                    <div className="flex items-center gap-2 text-green-600 text-sm animate-in fade-in-50">
-                      <Sparkles className="h-4 w-4" />
-                      Bienvenue {userName}
-                    </div>
-                  )}
-                </div>
-                
-                {showPasswordField && (
-                  <div className="space-y-3 animate-in fade-in-50 slide-in-from-top-4 duration-300">
-                    <Label htmlFor="password" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                      Mot de passe
-                    </Label>
-                    <PasswordInput
-                      id="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      error={errors.password}
-                      className="h-14"
-                    />
-                    <PasswordStrengthChecker 
-                      password={password} 
-                      onValidityChange={handlePasswordValidityChange}
-                    />
-                    <div className="text-sm text-right">
-                      <Link 
-                        to="/reset-password" 
-                        className="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 font-medium hover:underline transition-colors"
-                      >
-                        Mot de passe oublié?
-                      </Link>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-              
-              <CardFooter className="flex flex-col space-y-6 px-8 pb-10">
-                <Button
-                  type="submit"
-                  className="w-full h-14 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-700 hover:via-pink-700 hover:to-blue-700 text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 flex items-center justify-center gap-3"
-                  disabled={isCheckingEmail || (showPasswordField && !isPasswordValid)}
-                >
-                  {isCheckingEmail ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      Vérification...
-                    </>
-                  ) : showPasswordField ? (
-                    <>
-                      <Lock className="h-5 w-5" />
-                      Se connecter
-                    </>
-                  ) : (
-                    <>
-                      <ArrowRight className="h-5 w-5" />
-                      Continuer
-                    </>
-                  )}
-                </Button>
-                
-                <div className="text-center">
-                  <p className="text-gray-600 dark:text-gray-300">
-                    Nouveau sur notre plateforme?{" "}
-                    <Link 
-                      to="/register" 
-                      className="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 font-semibold hover:underline transition-colors"
+                  <Button type="submit" className="w-full" disabled={isSubmitting}>
+                    <Info className="mr-1 h-4 w-4" />
+                    {isSubmitting ? "Vérification..." : "Continuer"}
+                  </Button>
+                </form>
+              </Form>
+            ) : (
+              <Form {...passwordForm}>
+                <form onSubmit={passwordForm.handleSubmit(onSubmitPassword)} className="space-y-6">
+                  <FormField
+                    control={passwordForm.control}
+                    name="password"
+                    render={() => (
+                      <FormItem>
+                        <FormLabel>Mot de passe pour {emailValue}</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input 
+                              type={showPassword ? "text" : "password"}
+                              placeholder="Votre mot de passe"
+                              autoComplete="new-password"
+                              value={password}
+                              onChange={handlePasswordChange}
+                            />
+                            <button
+                              type="button"
+                              className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                              onClick={togglePasswordVisibility}
+                            >
+                              {showPassword ? (
+                                <EyeOff className="h-4 w-4 text-gray-400" />
+                              ) : (
+                                <Eye className="h-4 w-4 text-gray-400" />
+                              )}
+                            </button>
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+
+                        {loginError && (
+                          <div className="space-y-2 mt-2">
+                            <Alert variant="destructive">
+                              <AlertCircle className="h-4 w-4" />
+                              <AlertDescription>
+                                {loginError}
+                              </AlertDescription>
+                            </Alert>
+                            <div className="text-sm text-center">
+                              <Link
+                                to="/mot-de-passe-oublie"
+                                className="text-blue-600 underline flex items-center justify-center gap-1"
+                              >
+                                <KeyRound className="w-4 h-4" />
+                                Mot de passe oublié ?
+                              </Link>
+                            </div>
+                          </div>
+                        )}
+
+                        <PasswordStrengthIndicator 
+                          password={password} 
+                          onValidityChange={handlePasswordValidityChange}
+                        />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="flex justify-between gap-4">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => setStep('email')} 
+                      className="w-1/2"
                     >
-                      Créer un compte
-                    </Link>
-                  </p>
-                </div>
-              </CardFooter>
-            </form>
-          </Card>
-        </div>
+                      <Reply className="mr-1 h-4 w-4" />
+                      Retour
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      className="w-1/2" 
+                      disabled={isSubmitting || !isPasswordValid}
+                    >
+                      <LogIn className="mr-1 h-4 w-4" />
+                      {isSubmitting ? "Connexion..." : "Se connecter"}
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            )}
+          </CardContent>
+        </Card>
       </div>
-    </Layout>
+    </div>
   );
 };
 
