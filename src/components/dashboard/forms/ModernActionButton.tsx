@@ -4,7 +4,7 @@ import { Button, ButtonProps } from '@/components/ui/button';
 import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface ModernActionButtonProps extends Omit<ButtonProps, 'size'> {
+interface ModernActionButtonProps extends Omit<ButtonProps, 'size' | 'variant'> {
   icon?: LucideIcon;
   gradient?: 'blue' | 'green' | 'red' | 'purple' | 'orange' | 'indigo' | 'pink' | 'teal';
   isLoading?: boolean;

@@ -200,7 +200,7 @@ const VentesProduits: React.FC = () => {
               onClick={handleOpenExportDialog}
               variant="outline"
               gradient="indigo"
-              size="md"
+              buttonSize="md"
             >
               Exporter
             </ModernActionButton>
@@ -213,7 +213,7 @@ const VentesProduits: React.FC = () => {
             icon={PlusCircle}
             onClick={() => setAddProductDialogOpen(true)}
             gradient="red"
-            size="md"
+            buttonSize="md"
           >
             Ajouter un produit
           </ModernActionButton>
@@ -222,7 +222,7 @@ const VentesProduits: React.FC = () => {
             icon={Edit}
             onClick={() => setEditProductDialogOpen(true)}
             gradient="blue"
-            size="md"
+            buttonSize="md"
           >
             Modifier un produit
           </ModernActionButton>
@@ -234,7 +234,7 @@ const VentesProduits: React.FC = () => {
               setAddSaleDialogOpen(true);
             }}
             gradient="green"
-            size="md"
+            buttonSize="md"
           >
             Ajouter une vente
           </ModernActionButton>
