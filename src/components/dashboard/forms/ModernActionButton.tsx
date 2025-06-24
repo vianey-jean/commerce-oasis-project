@@ -4,11 +4,11 @@ import { Button, ButtonProps } from '@/components/ui/button';
 import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface ModernActionButtonProps extends ButtonProps {
+interface ModernActionButtonProps extends Omit<ButtonProps, 'size'> {
   icon?: LucideIcon;
   gradient?: 'blue' | 'green' | 'red' | 'purple' | 'orange' | 'indigo' | 'pink' | 'teal';
   isLoading?: boolean;
-  size?: 'sm' | 'md' | 'lg';
+  buttonSize?: 'sm' | 'md' | 'lg';
   variant?: 'solid' | 'outline' | 'ghost';
 }
 
@@ -16,7 +16,7 @@ const ModernActionButton: React.FC<ModernActionButtonProps> = ({
   icon: Icon,
   gradient = 'blue',
   isLoading = false,
-  size = 'md',
+  buttonSize = 'md',
   variant = 'solid',
   children,
   className,
@@ -58,11 +58,12 @@ const ModernActionButton: React.FC<ModernActionButtonProps> = ({
 
   return (
     <Button
+      size={buttonSize === 'sm' ? 'sm' : buttonSize === 'lg' ? 'lg' : 'default'}
       className={cn(
         'relative overflow-hidden font-semibold transition-all duration-300 transform',
         'hover:shadow-xl hover:scale-105 active:scale-95',
         'before:absolute before:inset-0 before:bg-white/20 before:translate-x-[-100%] before:transition-transform before:duration-700 hover:before:translate-x-[100%]',
-        sizeClasses[size],
+        sizeClasses[buttonSize],
         variant === 'solid' ? `${gradientClasses[gradient]} text-white border-0 shadow-lg` :
         variant === 'outline' ? `${outlineClasses[gradient]} bg-transparent shadow-md` :
         'bg-transparent hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300',
@@ -75,7 +76,7 @@ const ModernActionButton: React.FC<ModernActionButtonProps> = ({
         {isLoading ? (
           <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
         ) : (
-          Icon && <Icon className={cn(iconSizes[size], "mr-2")} />
+          Icon && <Icon className={cn(iconSizes[buttonSize], "mr-2")} />
         )}
         {children}
       </div>
