@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import WeekCalendar from '@/components/Weekcalendar';
 import AppointmentForm from '@/components/AppointmentForm';
@@ -30,11 +31,14 @@ const DashboardPage = () => {
 
   // Gestionnaires d'événements pour les différentes actions utilisateur
   const handleOpenAdd = () => {
+    console.log('Opening add modal');
     setActiveAppointment(null);
+    setShowAppointmentDetails(false);
     setIsAddModalOpen(true);
   };
 
   const handleOpenEdit = (appointment?: Appointment) => {
+    console.log('Opening edit modal', appointment);
     if (appointment) {
       setActiveAppointment(appointment);
       setIsEditModalOpen(false);
@@ -46,14 +50,17 @@ const DashboardPage = () => {
   };
 
   const handleOpenDelete = () => {
+    console.log('Opening delete modal');
     setIsDeleteModalOpen(true);
   };
 
   const handleOpenSearch = () => {
+    console.log('Opening search modal');
     setIsSearchModalOpen(true);
   };
 
   const handleViewAppointment = (appointment: Appointment) => {
+    console.log('Viewing appointment', appointment);
     setActiveAppointment(appointment);
     setShowAppointmentDetails(true);
     setIsSearchModalOpen(false);
@@ -61,6 +68,7 @@ const DashboardPage = () => {
 
   // Fonction appelée après une action réussie sur un rendez-vous
   const handleFormSuccess = () => {
+    console.log('Form success, closing modals');
     setIsAddModalOpen(false);
     setIsEditModalOpen(false);
     setIsDeleteModalOpen(false);
@@ -68,6 +76,15 @@ const DashboardPage = () => {
     setShowAppointmentDetails(false);
     setActiveAppointment(null);
     refreshData();
+  };
+
+  const handleCloseModals = () => {
+    console.log('Closing all modals');
+    setIsAddModalOpen(false);
+    setIsEditModalOpen(false);
+    setIsDeleteModalOpen(false);
+    setIsSearchModalOpen(false);
+    setShowAppointmentDetails(false);
   };
 
   return (
@@ -95,16 +112,6 @@ const DashboardPage = () => {
           <p className="text-gray-600 max-w-md mx-auto">
             Gérez vos rendez-vous avec style et efficacité
           </p>
-          <div className="flex items-center justify-center gap-2 mt-4">
-            <div className="flex items-center gap-1">
-              <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-              <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-              <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-              <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-              <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-            </div>
-            <span className="text-sm text-gray-500">Interface premium</span>
-          </div>
         </div>
 
         {/* Boutons d'action modernisés */}
@@ -141,65 +148,73 @@ const DashboardPage = () => {
         </div>
 
         {/* Modal pour ajouter/modifier un rendez-vous */}
-        <AppointmentModal 
-          isOpen={isAddModalOpen}
-          onClose={() => setIsAddModalOpen(false)}
-          title={activeAppointment ? "Modifier le rendez-vous" : "Ajouter un rendez-vous"}
-          mode={activeAppointment ? "edit" : "add"}
-          appointment={activeAppointment || undefined}
-          onSuccess={handleFormSuccess}
-        >
-          <AppointmentForm 
+        {isAddModalOpen && (
+          <AppointmentModal 
+            isOpen={isAddModalOpen}
+            onClose={handleCloseModals}
+            title={activeAppointment ? "Modifier le rendez-vous" : "Ajouter un rendez-vous"}
+            mode={activeAppointment ? "edit" : "add"}
             appointment={activeAppointment || undefined}
             onSuccess={handleFormSuccess}
-            onCancel={() => setIsAddModalOpen(false)}
-          />
-        </AppointmentModal>
+          >
+            <AppointmentForm 
+              appointment={activeAppointment || undefined}
+              onSuccess={handleFormSuccess}
+              onCancel={handleCloseModals}
+            />
+          </AppointmentModal>
+        )}
 
         {/* Modal pour sélectionner un rendez-vous à modifier */}
-        <AppointmentModal 
-          isOpen={isEditModalOpen}
-          onClose={() => setIsEditModalOpen(false)}
-          title="Sélectionner un rendez-vous à modifier"
-          mode="select"
-          onSuccess={handleFormSuccess}
-          onSelect={(appointment) => handleOpenEdit(appointment)}
-        >
-          <AppointmentSelector 
+        {isEditModalOpen && (
+          <AppointmentModal 
+            isOpen={isEditModalOpen}
+            onClose={handleCloseModals}
+            title="Sélectionner un rendez-vous à modifier"
+            mode="select"
+            onSuccess={handleFormSuccess}
             onSelect={(appointment) => handleOpenEdit(appointment)}
-            onCancel={() => setIsEditModalOpen(false)}
-            mode="edit"
-          />
-        </AppointmentModal>
+          >
+            <AppointmentSelector 
+              onSelect={(appointment) => handleOpenEdit(appointment)}
+              onCancel={handleCloseModals}
+              mode="edit"
+            />
+          </AppointmentModal>
+        )}
 
         {/* Modal pour sélectionner un rendez-vous à supprimer */}
-        <AppointmentModal 
-          isOpen={isDeleteModalOpen}
-          onClose={() => setIsDeleteModalOpen(false)}
-          title="Sélectionner un rendez-vous à supprimer"
-          mode="delete"
-          onSuccess={handleFormSuccess}
-        >
-          <AppointmentSelector 
-            onSelect={handleViewAppointment}
-            onCancel={() => setIsDeleteModalOpen(false)}
+        {isDeleteModalOpen && (
+          <AppointmentModal 
+            isOpen={isDeleteModalOpen}
+            onClose={handleCloseModals}
+            title="Sélectionner un rendez-vous à supprimer"
             mode="delete"
-          />
-        </AppointmentModal>
+            onSuccess={handleFormSuccess}
+          >
+            <AppointmentSelector 
+              onSelect={handleViewAppointment}
+              onCancel={handleCloseModals}
+              mode="delete"
+            />
+          </AppointmentModal>
+        )}
 
         {/* Modal pour rechercher un rendez-vous */}
-        <AppointmentModal 
-          isOpen={isSearchModalOpen}
-          onClose={() => setIsSearchModalOpen(false)}
-          title="Rechercher un rendez-vous"
-          mode="search"
-          onSuccess={handleFormSuccess}
-        >
-          <SearchAppointmentForm onSelect={handleViewAppointment} />
-        </AppointmentModal>
+        {isSearchModalOpen && (
+          <AppointmentModal 
+            isOpen={isSearchModalOpen}
+            onClose={handleCloseModals}
+            title="Rechercher un rendez-vous"
+            mode="search"
+            onSuccess={handleFormSuccess}
+          >
+            <SearchAppointmentForm onSelect={handleViewAppointment} />
+          </AppointmentModal>
+        )}
 
         {/* Affichage des détails d'un rendez-vous */}
-        {activeAppointment && (
+        {activeAppointment && showAppointmentDetails && (
           <AppointmentDetails
             appointment={activeAppointment}
             open={showAppointmentDetails}
