@@ -1,3 +1,4 @@
+
 import { useEffect, useRef } from 'react';
 import { Appointment } from './AppointmentService';
 import { toast } from 'sonner';
@@ -85,22 +86,13 @@ export function useNotificationService(appointments: Appointment[]) {
         toast(
           `Vous avez un rendez-vous le ${format(appointmentDate, 'dd/MM/yyyy', { locale: fr })} à ${appointment.heure} au ${appointment.location}`,
           {
-            description: appointment.description, // Utiliser `description` ici pour accessibilité
+            description: appointment.description,
             duration: 5000,
-            style: {
-              backgroundColor: '#ffebee',
-              border: '1px solid #ef5350',
-              color: '#c62828'
-            },
             action: {
               label: "Ok",
               onClick: () => {
                 saveConfirmedNotification(appointment.id);
                 confirmedNotifications.current.add(appointment.id);
-              },
-              style: {
-                backgroundColor: '#000000',
-                color: '#ffffff'
               }
             }
           }

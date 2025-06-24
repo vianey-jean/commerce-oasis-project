@@ -1,8 +1,9 @@
+
 // Importation de la bibliothèque Axios pour effectuer des requêtes HTTP
 import axios from 'axios';
 
 // Définition de l'URL de base de l'API
-const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+const AUTH_BASE_URL = (import.meta as any).env.VITE_API_BASE_URL;
 
 // Création d'une instance Axios avec une configuration par défaut
 const api = axios.create({
@@ -21,7 +22,7 @@ api.interceptors.request.use(
       // Conversion des données JSON en objet JavaScript
       const userData = JSON.parse(user);
 
-      // Ajout de l'identifiant utilisateur dans les en-têtes de la requête (ex: pour l’authentification)
+      // Ajout de l'identifiant utilisateur dans les en-têtes de la requête (ex: pour l'authentification)
       config.headers['user-id'] = userData.id;
     }
 
@@ -29,7 +30,7 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
-    // En cas d’erreur lors de la configuration de la requête, elle est rejetée
+    // En cas d'erreur lors de la configuration de la requête, elle est rejetée
     return Promise.reject(error);
   }
 );

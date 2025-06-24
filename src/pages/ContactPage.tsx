@@ -29,7 +29,7 @@ const ContactPage = () => {
     setIsSubmitting(true);
 
     try {
-      await ContactService.sendMessage(formData);
+      await ContactService.send(formData);
       toast.success('Message envoyé avec succès!', {
         style: {
           background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
