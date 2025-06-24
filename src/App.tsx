@@ -1,4 +1,3 @@
-
 // Importation du composant Toaster (notifications UI)
 import { Toaster } from "@/components/ui/toaster";
 // Importation d'un second système de notifications (nommé ici "Sonner")
@@ -25,7 +24,7 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
 import DashboardPage from "./pages/DashboardPage";
-import NotFoundPage from "./pages/NotFoundPage";
+import NotFoundPage from "./pages/NotFound";
 
 // Création d'un client React Query pour gérer les requêtes réseau, le cache, etc.
 const queryClient = new QueryClient();
