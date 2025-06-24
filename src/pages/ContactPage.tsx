@@ -1,219 +1,233 @@
-// Importation des hooks et services nécessaires
-import { useState } from 'react'; // Hook pour gérer l'état local du composant
-import { useForm } from 'react-hook-form'; // Hook pour gérer les formulaires avec validation
-import { zodResolver } from '@hookform/resolvers/zod'; // Intégration de Zod avec react-hook-form pour la validation
-import * as z from 'zod'; // Zod est utilisé pour la validation du schéma de données
-import { Mail, Phone, MapPin } from 'lucide-react'; // Icones pour afficher les coordonnées
-import { Button } from '@/components/ui/button'; // Composant bouton personnalisé
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'; // Composants pour gérer les champs de formulaire
-import { Input } from '@/components/ui/input'; // Composant de champ de texte pour les entrées
-import { Textarea } from '@/components/ui/textarea'; // Composant de zone de texte pour les messages longs
-import { Card, CardContent } from '@/components/ui/card'; // Composants pour afficher un cadre autour du contenu
-import { ContactService, ContactForm } from '@/services/ContactService'; // Service pour envoyer les données du formulaire
 
-// Définition du schéma de validation avec Zod
-const formSchema = z.object({
-  nom: z.string().min(2, {
-    message: "Le nom doit contenir au moins 2 caractères.",
-  }),
-  email: z.string().email({
-    message: "Veuillez entrer une adresse email valide.",
-  }),
-  sujet: z.string().min(5, {
-    message: "Le sujet doit contenir au moins 5 caractères.",
-  }),
-  message: z.string().min(10, {
-    message: "Le message doit contenir au moins 10 caractères.",
-  }),
-});
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Mail, Phone, MapPin, Send, MessageCircle, Clock } from 'lucide-react';
+import { ContactService } from '@/services/ContactService';
+import { toast } from 'sonner';
 
-// Définition du composant de la page de contact
 const ContactPage = () => {
-  // État local pour gérer l'envoi du formulaire
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // Initialisation du formulaire avec react-hook-form et validation Zod
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      nom: "",
-      email: "",
-      sujet: "",
-      message: "",
-    },
+  const [formData, setFormData] = useState({
+    nom: '',
+    email: '',
+    sujet: '',
+    message: ''
   });
-  
-  // Fonction appelée lors de la soumission du formulaire
-  const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    setIsSubmitting(true); // Indique que la soumission est en cours
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
     try {
-      const success = ContactService.send(values as ContactForm); // Envoi des données via le service
-      if (success) {
-        form.reset(); // Réinitialisation du formulaire si l'envoi réussit
-      }
+      await ContactService.sendMessage(formData);
+      toast.success('Message envoyé avec succès!', {
+        style: {
+          background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+          color: 'white',
+          border: 'none',
+          borderRadius: '12px',
+        }
+      });
+      setFormData({ nom: '', email: '', sujet: '', message: '' });
+    } catch (error) {
+      toast.error('Erreur lors de l\'envoi du message');
     } finally {
-      setIsSubmitting(false); // Réinitialisation de l'état de soumission
+      setIsSubmitting(false);
     }
   };
-  
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Conteneur principal de la page */}
-      <div className="max-w-4xl mx-auto">
-        
-        {/* Section de présentation avec le titre et la description */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold mb-4 text-primary">Contactez-nous</h1>
-          <p className="text-xl text-gray-600">
-            Nous sommes à votre écoute pour toute question ou suggestion
-          </p>
-        </div>
-        
-        {/* Grid pour organiser les coordonnées et le formulaire en deux colonnes */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <div>
-            <h2 className="text-2xl font-semibold mb-6">Nos coordonnées</h2>
-            
-            {/* Carte contenant les informations de contact */}
-            <Card className="mb-6">
-              <CardContent className="p-6">
-                <div className="space-y-4">
-                  {/* Informations email */}
-                  <div className="flex items-start">
-                    <Mail className="h-5 w-5 text-primary mr-3 mt-0.5" />
-                    <div>
-                      <h3 className="font-medium">Email</h3>
-                      <a href="mailto:contact@riziky-agendas.com" className="text-gray-600 hover:text-primary">
-                        contact@riziky-agendas.com
-                      </a>
-                    </div>
-                  </div>
-                  
-                  {/* Informations téléphone */}
-                  <div className="flex items-start">
-                    <Phone className="h-5 w-5 text-primary mr-3 mt-0.5" />
-                    <div>
-                      <h3 className="font-medium">Téléphone</h3>
-                      <a href="tel:+33612345678" className="text-gray-600 hover:text-primary">
-                        +33 6 12 34 56 78
-                      </a>
-                    </div>
-                  </div>
-                  
-                  {/* Informations adresse */}
-                  <div className="flex items-start">
-                    <MapPin className="h-5 w-5 text-primary mr-3 mt-0.5" />
-                    <div>
-                      <h3 className="font-medium">Adresse</h3>
-                      <address className="text-gray-600 not-italic">
-                        123 Avenue des Champs-Élysées<br />
-                        75008 Paris, France
-                      </address>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            
-            {/* Section pour la carte de localisation (actuellement fictive) */}
-            <div className="bg-gray-200 h-64 rounded-lg">
-              {/* Placeholder pour une carte intégrée */}
-              <div className="h-full flex items-center justify-center text-gray-500">
-                Carte de localisation
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-teal-50 via-cyan-50 to-blue-100">
+      {/* Éléments décoratifs */}
+      <div className="absolute inset-0 overflow-hidden -z-10">
+        <div className="absolute top-20 left-20 w-72 h-72 bg-teal-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse"></div>
+        <div className="absolute top-40 right-20 w-72 h-72 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse delay-1000"></div>
+        <div className="absolute bottom-20 left-1/2 w-72 h-72 bg-cyan-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse delay-2000"></div>
+      </div>
+
+      <div className="container mx-auto px-4 py-12 relative">
+        <div className="max-w-6xl mx-auto">
+          {/* En-tête */}
+          <div className="text-center mb-16 animate-fade-in">
+            <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-teal-100 to-cyan-100 rounded-full text-sm font-medium text-teal-800 mb-6 shadow-lg">
+              <MessageCircle className="w-4 h-4 mr-2" />
+              Nous sommes là pour vous
             </div>
-          </div>
-          
-          {/* Formulaire de contact */}
-          <div>
-            <h2 className="text-2xl font-semibold mb-6">Formulaire de contact</h2>
             
-            {/* Carte contenant le formulaire */}
-            <Card>
-              <CardContent className="p-6">
-                {/* Formulaire avec react-hook-form */}
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                    
-                    {/* Champ pour le nom */}
-                    <FormField
-                      control={form.control}
-                      name="nom"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nom</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Votre nom" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    {/* Champ pour l'email */}
-                    <FormField
-                      control={form.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input placeholder="votre@email.com" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    {/* Champ pour le sujet */}
-                    <FormField
-                      control={form.control}
+            <h1 className="text-5xl font-bold mb-6 bg-gradient-to-r from-teal-600 via-cyan-600 to-blue-600 bg-clip-text text-transparent">
+              Contactez-nous
+            </h1>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+              Une question, une suggestion ou besoin d'aide ? Notre équipe est à votre écoute
+            </p>
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-12">
+            {/* Formulaire de contact */}
+            <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-2xl hover:shadow-3xl transition-all duration-300">
+              <CardHeader className="bg-gradient-to-r from-teal-600 to-cyan-600 text-white rounded-t-lg">
+                <CardTitle className="text-2xl flex items-center gap-3">
+                  <Send className="w-6 h-6" />
+                  Envoyez-nous un message
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-8">
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">Nom complet *</label>
+                      <Input
+                        name="nom"
+                        value={formData.nom}
+                        onChange={handleInputChange}
+                        required
+                        className="bg-gray-50 border-gray-200 focus:border-teal-500 focus:ring-teal-500 rounded-lg"
+                        placeholder="Votre nom"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-medium text-gray-700">Email *</label>
+                      <Input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        required
+                        className="bg-gray-50 border-gray-200 focus:border-teal-500 focus:ring-teal-500 rounded-lg"
+                        placeholder="votre@email.com"
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Sujet *</label>
+                    <Input
                       name="sujet"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Sujet</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Sujet de votre message" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                      value={formData.sujet}
+                      onChange={handleInputChange}
+                      required
+                      className="bg-gray-50 border-gray-200 focus:border-teal-500 focus:ring-teal-500 rounded-lg"
+                      placeholder="Objet de votre message"
                     />
-                    
-                    {/* Champ pour le message */}
-                    <FormField
-                      control={form.control}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700">Message *</label>
+                    <Textarea
                       name="message"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Message</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder="Votre message..." 
-                              className="min-h-[120px]" 
-                              {...field} 
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
+                      value={formData.message}
+                      onChange={handleInputChange}
+                      required
+                      rows={6}
+                      className="bg-gray-50 border-gray-200 focus:border-teal-500 focus:ring-teal-500 rounded-lg resize-none"
+                      placeholder="Décrivez votre demande en détail..."
                     />
-                    
-                    {/* Bouton d'envoi */}
-                    <Button type="submit" className="w-full" disabled={isSubmitting}>
-                      {isSubmitting ? "Envoi en cours..." : "Envoyer"}
-                    </Button>
-                  </form>
-                </Form>
+                  </div>
+                  
+                  <Button 
+                    type="submit" 
+                    disabled={isSubmitting}
+                    className="w-full bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+                  >
+                    {isSubmitting ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Envoi en cours...
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <Send className="w-4 h-4" />
+                        Envoyer le message
+                      </div>
+                    )}
+                  </Button>
+                </form>
               </CardContent>
             </Card>
+
+            {/* Informations de contact */}
+            <div className="space-y-8">
+              {/* Coordonnées */}
+              <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
+                <CardHeader>
+                  <CardTitle className="text-xl text-blue-800 flex items-center gap-3">
+                    <Phone className="w-5 h-5" />
+                    Nos coordonnées
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 bg-gradient-to-r from-red-400 to-red-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Mail className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-800 mb-1">Email</h4>
+                      <a href="mailto:vianey.jean@ymail.com" className="text-red-600 hover:text-red-700 transition-colors">
+                        vianey.jean@ymail.com
+                      </a>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 bg-gradient-to-r from-green-400 to-green-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <Phone className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-800 mb-1">Téléphone</h4>
+                      <a href="tel:+262692842370" className="text-green-600 hover:text-green-700 transition-colors">
+                        + (262) 06 92842370
+                      </a>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 bg-gradient-to-r from-purple-400 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <MapPin className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h4 className="font-semibold text-gray-800 mb-1">Localisation</h4>
+                      <p className="text-gray-600">La Réunion, France</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Horaires */}
+              <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-0 shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
+                <CardHeader>
+                  <CardTitle className="text-xl text-green-800 flex items-center gap-3">
+                    <Clock className="w-5 h-5" />
+                    Horaires de support
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center py-2 border-b border-green-100">
+                      <span className="font-medium text-gray-700">Lundi - Vendredi</span>
+                      <span className="text-green-600 font-semibold">8h00 - 18h00</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-green-100">
+                      <span className="font-medium text-gray-700">Samedi</span>
+                      <span className="text-green-600 font-semibold">9h00 - 12h00</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2">
+                      <span className="font-medium text-gray-700">Dimanche</span>
+                      <span className="text-gray-400">Fermé</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         </div>
       </div>
