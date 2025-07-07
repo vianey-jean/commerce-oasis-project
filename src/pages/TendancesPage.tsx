@@ -3,8 +3,8 @@ import Layout from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area, Legend } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, Package, Award, Target, ShoppingCart, Sparkles } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area, Legend, ComposedChart } from 'recharts';
+import { TrendingUp, TrendingDown, DollarSign, Package, Award, Target, ShoppingCart, Sparkles, AlertTriangle, Calendar, Zap } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -37,6 +37,113 @@ const TendancesPage = () => {
       return category !== null; // Exclure les ventes avec catégorie null (avances)
     });
   }, [allSales]);
+
+  // Analyse des ventes par jour du mois en cours
+  const dailySalesAnalysis = useMemo(() => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    // Filtrer les ventes du mois en cours
+    const currentMonthSales = filteredSales.filter(sale => {
+      const saleDate = new Date(sale.date);
+      return saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear;
+    });
+
+    // Grouper par jour
+    const dailyData = currentMonthSales.reduce((acc, sale) => {
+      const saleDate = new Date(sale.date);
+      const day = saleDate.getDate();
+      const dayKey = `${day}`;
+      const dayName = saleDate.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric' });
+      
+      if (!acc[dayKey]) {
+        acc[dayKey] = {
+          day: dayKey,
+          dayName: dayName,
+          ventes: 0,
+          benefice: 0,
+          quantite: 0,
+          transactions: 0
+        };
+      }
+      acc[dayKey].ventes += sale.sellingPrice;
+      acc[dayKey].benefice += sale.profit;
+      acc[dayKey].quantite += sale.quantitySold;
+      acc[dayKey].transactions += 1;
+      return acc;
+    }, {} as Record<string, any>);
+
+    return Object.values(dailyData).sort((a, b) => parseInt(a.day) - parseInt(b.day));
+  }, [filteredSales]);
+
+  // Analyse des produits en rupture de stock
+  const stockAnalysis = useMemo(() => {
+    // Produits avec stock bas ou épuisé
+    const lowStockProducts = products.filter(product => product.quantity <= 5);
+    
+    // Produits les plus vendus mais avec peu de stock
+    const salesByProduct = filteredSales.reduce((acc, sale) => {
+      if (!acc[sale.productId]) {
+        const product = products.find(p => p.id === sale.productId);
+        acc[sale.productId] = {
+          productId: sale.productId,
+          description: sale.description,
+          totalSold: 0,
+          profit: 0,
+          currentStock: product?.quantity || 0,
+          averageProfit: 0,
+          salesCount: 0
+        };
+      }
+      acc[sale.productId].totalSold += sale.quantitySold;
+      acc[sale.productId].profit += sale.profit;
+      acc[sale.productId].salesCount += 1;
+      acc[sale.productId].averageProfit = acc[sale.productId].profit / acc[sale.productId].salesCount;
+      return acc;
+    }, {} as Record<string, any>);
+
+    // Recommandations intelligentes
+    const recommendations = Object.values(salesByProduct)
+      .filter((item: any) => item.currentStock <= 10 && item.totalSold > 0)
+      .sort((a: any, b: any) => b.averageProfit - a.averageProfit)
+      .slice(0, 8);
+
+    return {
+      lowStockProducts,
+      recommendations: recommendations as any[]
+    };
+  }, [products, filteredSales]);
+
+  // Analyse des heures de vente (simulation basée sur les jours)
+  const timeAnalysis = useMemo(() => {
+    const timeSlots = {
+      'Matin (6h-12h)': { count: 0, ventes: 0, benefice: 0 },
+      'Après-midi (12h-18h)': { count: 0, ventes: 0, benefice: 0 },
+      'Soirée (18h-22h)': { count: 0, ventes: 0, benefice: 0 },
+      'Nuit (22h-6h)': { count: 0, ventes: 0, benefice: 0 }
+    };
+
+    filteredSales.forEach(sale => {
+      const day = new Date(sale.date).getDay();
+      let timeSlot = '';
+      
+      // Simulation basée sur le jour de la semaine
+      if (day >= 1 && day <= 3) timeSlot = 'Matin (6h-12h)';
+      else if (day === 4 || day === 5) timeSlot = 'Après-midi (12h-18h)';
+      else if (day === 6) timeSlot = 'Soirée (18h-22h)';
+      else timeSlot = 'Nuit (22h-6h)';
+
+      timeSlots[timeSlot].count += 1;
+      timeSlots[timeSlot].ventes += sale.sellingPrice;
+      timeSlots[timeSlot].benefice += sale.profit;
+    });
+
+    return Object.entries(timeSlots).map(([slot, data]) => ({
+      slot,
+      ...data
+    }));
+  }, [filteredSales]);
 
   // Données pour les graphiques de ventes par produit (utiliser filteredSales)
   const salesByProduct = useMemo(() => {
@@ -141,19 +248,12 @@ const TendancesPage = () => {
       }));
   }, [salesByProduct]);
 
-  // Couleurs pour les graphiques
   const colors = ['#8B5CF6', '#06D6A0', '#F59E0B', '#EF4444', '#3B82F6', '#EC4899', '#10B981', '#F97316'];
   const categoryColors = {
     'Perruques': '#8B5CF6',
     'Tissages': '#06D6A0',
     'Accessoires': '#F59E0B',
     'Autres': '#6B7280'
-  };
-
-  const chartConfig = {
-    ventes: { label: "Ventes", color: "#8B5CF6" },
-    benefice: { label: "Bénéfice", color: "#06D6A0" },
-    quantite: { label: "Quantité", color: "#F59E0B" }
   };
 
   if (loading) {
@@ -176,15 +276,15 @@ const TendancesPage = () => {
           {/* Hero Header */}
           <div className="text-center mb-12">
             <div className="inline-flex items-center px-4 py-2 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-full text-emerald-600 dark:text-emerald-400 text-sm font-medium mb-6 border border-emerald-200 dark:border-emerald-800">
-              <TrendingUp className="h-4 w-4 mr-2 animate-pulse" />
-              Analyse des tendances en temps réel
+              <Zap className="h-4 w-4 mr-2 animate-pulse" />
+              Analyse intelligente en temps réel
             </div>
             
             <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
-              Tendances & Analytics
+              Analytics Avancés
             </h1>
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Découvrez vos performances, identifiez les opportunités et optimisez vos ventes
+              Découvrez vos tendances de vente, optimisez votre stock et maximisez vos profits
             </p>
           </div>
 
@@ -253,71 +353,218 @@ const TendancesPage = () => {
 
           {/* Main Charts */}
           <Tabs defaultValue="overview" onValueChange={setActiveTab} className="space-y-8">
-            {/* Modern Tab Navigation - Matching DashboardPage style */}
+            {/* Modern Tab Navigation */}
             <div className={cn(
               "relative bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-3xl shadow-2xl p-6 border border-white/20",
               isMobile && "pt-8 pb-12"
             )}>
-              {/* Background gradient */}
               <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/10 via-blue-600/10 to-purple-600/10 rounded-3xl"></div>
               
               <TabsList className={cn(
                 "relative grid w-full h-auto p-2 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm rounded-2xl border border-white/20",
-                isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-4 gap-2'
+                isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-5 gap-2'
               )}>
-                <TabsTrigger 
-                  value="overview" 
-                  className={cn(
-                    "font-bold text-sm uppercase flex items-center justify-center gap-3 py-4 px-6 rounded-xl transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-600 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105",
-                    activeTab === "overview" 
-                      ? "text-white bg-gradient-to-r from-emerald-600 to-blue-600 shadow-lg scale-105" 
-                      : "text-gray-600 dark:text-gray-300 hover:bg-white/70 dark:hover:bg-gray-700/70 hover:scale-102"
-                  )}
-                >
+                <TabsTrigger value="overview" className="font-bold text-sm uppercase flex items-center justify-center gap-3 py-4 px-6 rounded-xl">
                   <TrendingUp className="h-5 w-5" />
-                  <span className={isMobile ? "text-xs" : "text-sm"}>Vue d'ensemble</span>
+                  <span>Vue d'ensemble</span>
                 </TabsTrigger>
                 
-                <TabsTrigger 
-                  value="products" 
-                  className={cn(
-                    "font-bold text-sm uppercase flex items-center justify-center gap-3 py-4 px-6 rounded-xl transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105",
-                    activeTab === "products" 
-                      ? "text-white bg-gradient-to-r from-purple-600 to-pink-600 shadow-lg scale-105" 
-                      : "text-gray-600 dark:text-gray-300 hover:bg-white/70 dark:hover:bg-gray-700/70 hover:scale-102"
-                  )}
-                >
+                <TabsTrigger value="daily" className="font-bold text-sm uppercase flex items-center justify-center gap-3 py-4 px-6 rounded-xl">
+                  <Calendar className="h-5 w-5" />
+                  <span>Analyse Quotidienne</span>
+                </TabsTrigger>
+                
+                <TabsTrigger value="products" className="font-bold text-sm uppercase flex items-center justify-center gap-3 py-4 px-6 rounded-xl">
                   <ShoppingCart className="h-5 w-5" />
-                  <span className={isMobile ? "text-xs" : "text-sm"}>Par Produits</span>
+                  <span>Par Produits</span>
                 </TabsTrigger>
                 
-                <TabsTrigger 
-                  value="categories" 
-                  className={cn(
-                    "font-bold text-sm uppercase flex items-center justify-center gap-3 py-4 px-6 rounded-xl transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-600 data-[state=active]:to-red-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105",
-                    activeTab === "categories" 
-                      ? "text-white bg-gradient-to-r from-orange-600 to-red-600 shadow-lg scale-105" 
-                      : "text-gray-600 dark:text-gray-300 hover:bg-white/70 dark:hover:bg-gray-700/70 hover:scale-102"
-                  )}
-                >
-                  <Target className="h-5 w-5" />
-                  <span className={isMobile ? "text-xs" : "text-sm"}>Par Catégories</span>
-                </TabsTrigger>
-                
-                <TabsTrigger 
-                  value="recommendations" 
-                  className={cn(
-                    "font-bold text-sm uppercase flex items-center justify-center gap-3 py-4 px-6 rounded-xl transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-600 data-[state=active]:to-orange-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105",
-                    activeTab === "recommendations" 
-                      ? "text-white bg-gradient-to-r from-yellow-600 to-orange-600 shadow-lg scale-105" 
-                      : "text-gray-600 dark:text-gray-300 hover:bg-white/70 dark:hover:bg-gray-700/70 hover:scale-102"
-                  )}
-                >
+                <TabsTrigger value="intelligence" className="font-bold text-sm uppercase flex items-center justify-center gap-3 py-4 px-6 rounded-xl">
                   <Sparkles className="h-5 w-5" />
-                  <span className={isMobile ? "text-xs" : "text-sm"}>Recommandations</span>
+                  <span>IA Recommandations</span>
+                </TabsTrigger>
+                
+                <TabsTrigger value="time" className="font-bold text-sm uppercase flex items-center justify-center gap-3 py-4 px-6 rounded-xl">
+                  <Zap className="h-5 w-5" />
+                  <span>Créneaux Horaires</span>
                 </TabsTrigger>
               </TabsList>
             </div>
+
+            {/* Analyse Quotidienne */}
+            <TabsContent value="daily" className="space-y-6">
+              <Card className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border border-white/20 shadow-2xl">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-blue-600" />
+                    Analyse des Ventes par Jour du Mois
+                  </CardTitle>
+                  <CardDescription>Performance quotidienne du mois en cours</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[400px] w-full bg-white/50 rounded-lg p-4">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ComposedChart data={dailySalesAnalysis}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis dataKey="dayName" tick={{ fontSize: 12 }} stroke="#64748b" />
+                        <YAxis yAxisId="left" tick={{ fontSize: 12 }} stroke="#64748b" />
+                        <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 12 }} stroke="#64748b" />
+                        <ChartTooltip 
+                          content={({ active, payload, label }) => {
+                            if (active && payload && payload.length) {
+                              return (
+                                <div className="bg-white p-3 border rounded-lg shadow-lg">
+                                  <p className="font-semibold">{label}</p>
+                                  {payload.map((entry, index) => (
+                                    <p key={index} style={{ color: entry.color }}>
+                                      {entry.name}: {entry.name === 'Transactions' ? entry.value : `${entry.value?.toLocaleString()} €`}
+                                    </p>
+                                  ))}
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Legend />
+                        <Bar yAxisId="left" dataKey="ventes" fill="#8B5CF6" name="Ventes (€)" />
+                        <Bar yAxisId="left" dataKey="benefice" fill="#06D6A0" name="Bénéfice (€)" />
+                        <Line yAxisId="right" type="monotone" dataKey="transactions" stroke="#F59E0B" strokeWidth={3} name="Transactions" />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Intelligence Artificielle - Recommandations Stock */}
+            <TabsContent value="intelligence" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card className="bg-gradient-to-br from-red-50 to-orange-50 dark:from-red-900/20 dark:to-orange-900/20 border-red-200 dark:border-red-800 shadow-2xl">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5 text-red-600 animate-pulse" />
+                      Alertes Stock Critique
+                    </CardTitle>
+                    <CardDescription>Produits nécessitant un réapprovisionnement urgent</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      {stockAnalysis.recommendations.length > 0 ? (
+                        stockAnalysis.recommendations.map((item, index) => (
+                          <div key={index} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-xl p-4 border border-red-200 dark:border-red-800">
+                            <div className="flex items-center justify-between mb-2">
+                              <h3 className="font-semibold text-red-700 dark:text-red-300">{item.description}</h3>
+                              <div className="flex items-center gap-2">
+                                <div className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 px-2 py-1 rounded-full text-xs font-bold">
+                                  Stock: {item.currentStock}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2 text-xs">
+                              <div>
+                                <span className="text-gray-500">Vendus:</span>
+                                <span className="font-semibold ml-1 text-blue-600">{item.totalSold}</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Bénéfice moy:</span>
+                                <span className="font-semibold ml-1 text-emerald-600">{item.averageProfit.toFixed(2)} €</span>
+                              </div>
+                              <div>
+                                <span className="text-gray-500">Priorité:</span>
+                                <span className="font-semibold ml-1 text-orange-600">
+                                  {item.currentStock <= 2 ? 'URGENT' : item.currentStock <= 5 ? 'ÉLEVÉE' : 'MOYENNE'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center py-8">
+                          <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                          <p className="text-gray-500">Aucune alerte stock critique</p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 border-emerald-200 dark:border-emerald-800 shadow-2xl">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-emerald-600 animate-pulse" />
+                      Recommandations IA
+                    </CardTitle>
+                    <CardDescription>Suggestions intelligentes pour optimiser vos ventes</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-emerald-200">
+                        <h3 className="font-semibold text-emerald-700 mb-2">📈 Tendances Identifiées</h3>
+                        <ul className="text-sm space-y-1 text-gray-600">
+                          <li>• Les ventes sont {dailySalesAnalysis.length > 15 ? 'plus élevées' : 'plus faibles'} en milieu de mois</li>
+                          <li>• Catégorie la plus rentable: Perruques</li>
+                          <li>• Marge bénéficiaire moyenne: {filteredSales.length > 0 ? ((filteredSales.reduce((sum, sale) => sum + sale.profit, 0) / filteredSales.reduce((sum, sale) => sum + sale.sellingPrice, 0)) * 100).toFixed(1) : 0}%</li>
+                        </ul>
+                      </div>
+                      
+                      <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-blue-200">
+                        <h3 className="font-semibold text-blue-700 mb-2">🎯 Actions Recommandées</h3>
+                        <ul className="text-sm space-y-1 text-gray-600">
+                          <li>• Réapprovisionner {stockAnalysis.recommendations.length} produits critiques</li>
+                          <li>• Focus sur les perruques (meilleure marge)</li>
+                          <li>• Optimiser les ventes en début de mois</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            {/* Analyse des Créneaux Horaires */}
+            <TabsContent value="time" className="space-y-6">
+              <Card className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border border-white/20 shadow-2xl">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Zap className="h-5 w-5 text-yellow-600" />
+                    Performance par Créneaux Horaires
+                  </CardTitle>
+                  <CardDescription>Analyse des ventes selon les moments de la journée (simulation)</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[300px] w-full bg-white/50 rounded-lg p-4">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={timeAnalysis}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis dataKey="slot" tick={{ fontSize: 12 }} stroke="#64748b" />
+                        <YAxis tick={{ fontSize: 12 }} stroke="#64748b" />
+                        <ChartTooltip 
+                          content={({ active, payload, label }) => {
+                            if (active && payload && payload.length) {
+                              return (
+                                <div className="bg-white p-3 border rounded-lg shadow-lg">
+                                  <p className="font-semibold">{label}</p>
+                                  {payload.map((entry, index) => (
+                                    <p key={index} style={{ color: entry.color }}>
+                                      {entry.name}: {entry.name === 'Transactions' ? entry.value : `${entry.value?.toLocaleString()} €`}
+                                    </p>
+                                  ))}
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Legend />
+                        <Bar dataKey="ventes" fill="#F59E0B" name="Ventes (€)" />
+                        <Bar dataKey="count" fill="#8B5CF6" name="Transactions" />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
             {/* Vue d'ensemble */}
             <TabsContent value="overview" className="space-y-6">

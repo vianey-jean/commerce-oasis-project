@@ -1,5 +1,4 @@
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { TableBody, TableCell, TableFooter, TableRow } from '@/components/ui/table';
 import { ModernTable, ModernTableHeader, ModernTableRow, ModernTableHead, ModernTableCell } from '@/components/dashboard/forms/ModernTable';
 import { Sale } from '@/types';
@@ -13,16 +12,36 @@ interface SalesTableProps {
 
 /**
  * Tableau des ventes modernisé avec synchronisation temps réel
- * Affiche uniquement les ventes du mois en cours avec mise à jour instantanée
+ * Affiche uniquement les ventes du mois en cours avec filtrage strict
  */
 const SalesTable: React.FC<SalesTableProps> = ({ sales: initialSales, onRowClick }) => {
-  const [sales, setSales] = useState<Sale[]>(initialSales);
+  const [sales, setSales] = useState<Sale[]>([]);
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [isRealtimeActive, setIsRealtimeActive] = useState(false);
 
+  // Fonction pour filtrer les ventes du mois en cours
+  const filterCurrentMonthSales = (salesData: Sale[]) => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    return salesData.filter(sale => {
+      const saleDate = new Date(sale.date);
+      return saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear;
+    });
+  };
+
+  // Filtrer les ventes initiales pour le mois en cours
+  const currentMonthSales = useMemo(() => {
+    return filterCurrentMonthSales(initialSales);
+  }, [initialSales]);
+
   // Synchronisation temps réel pour les ventes du mois en cours
   useEffect(() => {
-    console.log('🔄 Initialisation de la synchronisation temps réel pour SalesTable');
+    console.log('🔄 Initialisation SalesTable - Filtrage mois en cours');
+    
+    // Initialiser avec les ventes du mois en cours seulement
+    setSales(currentMonthSales);
     
     // Connexion au service temps réel
     realtimeService.connect();
@@ -30,8 +49,10 @@ const SalesTable: React.FC<SalesTableProps> = ({ sales: initialSales, onRowClick
     // Écouter les changements de données
     const unsubscribeData = realtimeService.addDataListener((data) => {
       if (data.sales) {
-        console.log('📊 Mise à jour des ventes reçue:', data.sales.length, 'ventes');
-        setSales(data.sales);
+        // Double filtrage : côté serveur ET côté client pour être sûr
+        const filteredSales = filterCurrentMonthSales(data.sales);
+        console.log('📊 Ventes mois en cours filtrées:', filteredSales.length, 'sur', data.sales.length);
+        setSales(filteredSales);
         setLastUpdate(new Date());
       }
     });
@@ -42,7 +63,11 @@ const SalesTable: React.FC<SalesTableProps> = ({ sales: initialSales, onRowClick
         console.log('✅ Connexion temps réel établie pour SalesTable');
         setIsRealtimeActive(true);
       } else if (event.type === 'data-changed' && event.data?.type === 'sales') {
-        console.log('⚡ Changement de ventes détecté - Mise à jour instantanée');
+        console.log('⚡ Changement de ventes détecté - Filtrage mois en cours');
+        if (event.data.data) {
+          const filteredSales = filterCurrentMonthSales(event.data.data);
+          setSales(filteredSales);
+        }
         setLastUpdate(new Date());
       }
     });
@@ -54,11 +79,12 @@ const SalesTable: React.FC<SalesTableProps> = ({ sales: initialSales, onRowClick
       unsubscribeData();
       unsubscribeSync();
     };
-  }, []);
+  }, [currentMonthSales]);
 
   // Mettre à jour les ventes quand les props changent
   useEffect(() => {
-    setSales(initialSales);
+    const filtered = filterCurrentMonthSales(initialSales);
+    setSales(filtered);
   }, [initialSales]);
 
   // Formater une date au format local
@@ -89,13 +115,18 @@ const SalesTable: React.FC<SalesTableProps> = ({ sales: initialSales, onRowClick
     return isAdvanceProduct(sale.description) ? 0 : sale.quantitySold;
   };
   
-  // Calculer les totaux
+  // Calculer les totaux pour le mois en cours uniquement
   const totalSellingPrice = sales.reduce((sum, sale) => sum + sale.sellingPrice, 0);
   const totalQuantitySold = sales.reduce((sum, sale) => {
     return sum + (isAdvanceProduct(sale.description) ? 0 : sale.quantitySold);
   }, 0);
   const totalPurchasePrice = sales.reduce((sum, sale) => sum + (sale.purchasePrice * sale.quantitySold), 0);
   const totalProfit = sales.reduce((sum, sale) => sum + sale.profit, 0);
+
+  const getCurrentMonthName = () => {
+    const now = new Date();
+    return now.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  };
   
   return (
     <div className="bg-gradient-to-br from-white/95 to-gray-50/95 dark:from-gray-900/95 dark:to-gray-800/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
@@ -106,8 +137,8 @@ const SalesTable: React.FC<SalesTableProps> = ({ sales: initialSales, onRowClick
             <Award className="h-6 w-6 text-white" />
           </div>
           <div className="flex-1">
-            <h3 className="text-xl font-bold text-white">Ventes du Mois - Temps Réel</h3>
-            <p className="text-white/80 text-sm">Synchronisation instantanée des données</p>
+            <h3 className="text-xl font-bold text-white">Ventes de {getCurrentMonthName()} - Temps Réel</h3>
+            <p className="text-white/80 text-sm">Synchronisation instantanée • Filtrage mois en cours</p>
           </div>
           <div className="flex items-center gap-2">
             {/* Indicateur de synchronisation temps réel */}
@@ -134,7 +165,7 @@ const SalesTable: React.FC<SalesTableProps> = ({ sales: initialSales, onRowClick
         
         {/* Informations de dernière mise à jour */}
         <div className="mt-2 text-xs text-white/60">
-          Dernière mise à jour: {lastUpdate.toLocaleTimeString('fr-FR')}
+          Dernière mise à jour: {lastUpdate.toLocaleTimeString('fr-FR')} • {sales.length} ventes ce mois
         </div>
       </div>
 

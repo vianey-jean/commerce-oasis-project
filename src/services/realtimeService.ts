@@ -1,4 +1,3 @@
-
 import { api } from '@/service/api';
 
 export interface SyncData {
@@ -21,9 +20,9 @@ class RealtimeService {
   private syncListeners: Set<(event: SyncEvent) => void> = new Set();
   private lastSyncTime: Date = new Date();
   private isConnected: boolean = false;
-  private reconnectInterval: number = 2000; // Réduction à 2 secondes
+  private reconnectInterval: number = 1000; // Réduction à 1 seconde
   private reconnectAttempts: number = 0;
-  private maxReconnectAttempts: number = 10; // Augmentation du nombre de tentatives
+  private maxReconnectAttempts: number = 15; // Augmentation du nombre de tentatives
   private heartbeatInterval: NodeJS.Timeout | null = null;
   private pollingInterval: NodeJS.Timeout | null = null;
 
@@ -45,7 +44,19 @@ class RealtimeService {
     });
   }
 
-  // Connexion au serveur SSE optimisée pour réactivité
+  // Filtrer les ventes pour le mois en cours
+  private filterCurrentMonthSales(sales: any[]) {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    
+    return sales.filter(sale => {
+      const saleDate = new Date(sale.date);
+      return saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear;
+    });
+  }
+
+  // Connexion au serveur SSE optimisée avec gestion CORS améliorée
   connect(token?: string) {
     if (this.eventSource) {
       this.eventSource.close();
@@ -59,8 +70,10 @@ class RealtimeService {
       
       console.log('URL SSE:', url);
       
-      // Configuration EventSource optimisée
-      this.eventSource = new EventSource(url);
+      // Configuration EventSource optimisée avec gestion d'erreur CORS
+      this.eventSource = new EventSource(url, {
+        withCredentials: false // Désactiver les credentials pour éviter les problèmes CORS
+      });
 
       this.eventSource.onopen = () => {
         console.log('✅ Connexion SSE établie - Mode réactif activé');
@@ -94,12 +107,12 @@ class RealtimeService {
           this.eventSource = null;
         }
         
-        // Reconnexion plus rapide
+        // Reconnexion plus rapide avec fallback vers polling
         if (this.reconnectAttempts < this.maxReconnectAttempts) {
-          const delay = Math.min(this.reconnectInterval * Math.pow(1.5, this.reconnectAttempts), 10000);
+          const delay = Math.min(this.reconnectInterval * Math.pow(1.2, this.reconnectAttempts), 5000);
           setTimeout(() => {
             this.reconnectAttempts++;
-            console.log(`🔄 Reconnexion SSE rapide ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
+            console.log(`🔄 Reconnexion SSE ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
             this.connect();
           }, delay);
         } else {
@@ -128,11 +141,11 @@ class RealtimeService {
     }
   }
 
-  // Polling haute fréquence pour les ventes du mois en cours
+  // Polling haute fréquence pour les ventes du mois en cours uniquement
   private fallbackToPolling() {
     if (this.pollingInterval) return;
     
-    console.log('🔄 Mode polling haute fréquence activé');
+    console.log('🔄 Mode polling haute fréquence activé - Mois en cours seulement');
     this.pollingInterval = setInterval(async () => {
       try {
         // Récupérer seulement les ventes du mois en cours
@@ -143,12 +156,14 @@ class RealtimeService {
         const response = await api.get(`/sales/by-month?month=${currentMonth}&year=${currentYear}`);
         
         if (response.data) {
-          this.processSyncData('sales', response.data);
+          // Double filtrage pour être sûr
+          const filteredSales = this.filterCurrentMonthSales(response.data);
+          this.processSyncData('sales', filteredSales);
         }
       } catch (error) {
         console.error('Erreur polling haute fréquence:', error);
       }
-    }, 500); // Polling toutes les 500ms pour une réactivité maximale
+    }, 300); // Polling toutes les 300ms pour une réactivité maximale
   }
 
   // Arrêter le polling
@@ -200,9 +215,9 @@ class RealtimeService {
     this.notifySyncListeners(event);
   }
 
-  // Traiter les données de synchronisation
+  // Traiter les données de synchronisation avec filtrage mois en cours
   private processSyncData(dataType: string, receivedData: any) {
-    console.log(`📊 Traitement des données ${dataType} (réactif):`, receivedData);
+    console.log(`📊 Traitement des données ${dataType} (filtrage mois en cours):`, receivedData);
     
     let syncData: Partial<SyncData> = {};
 
@@ -212,9 +227,10 @@ class RealtimeService {
         break;
       
       case 'sales':
-        // Les données de ventes sont déjà filtrées par le serveur pour le mois en cours
-        syncData = { sales: receivedData };
-        console.log(`✅ Ventes du mois en cours synchronisées: ${receivedData.length} ventes`);
+        // Filtrage strict des ventes du mois en cours
+        const currentMonthSales = this.filterCurrentMonthSales(receivedData);
+        syncData = { sales: currentMonthSales };
+        console.log(`✅ Ventes mois en cours synchronisées: ${currentMonthSales.length} ventes (${receivedData.length} total)`);
         break;
       
       case 'pretfamilles':
