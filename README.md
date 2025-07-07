@@ -1,10 +1,4 @@
-# Welcome to your project
-Projet Full Stack, back-end par nodejs et en ligne, Front-end en React.
-Prise de rende-vous 
 
-## How can I edit this code?
-
-There are several ways of editing your application.
 
 
 Follow these steps:
@@ -29,6 +23,16 @@ npm run dev
 - Click the "Edit" button (pencil icon) at the top right of the file view.
 - Make your changes and commit the changes.
 
+**Use GitHub Codespaces**
+
+- Navigate to the main page of your repository.
+- Click on the "Code" button (green button) near the top right.
+- Select the "Codespaces" tab.
+- Click on "New codespace" to launch a new Codespace environment.
+- Edit files directly within the Codespace and commit and push your changes once you're done.
+
+## What technologies are used for this project?
+
 This project is built with .
 
 - Vite
@@ -37,4 +41,11 @@ This project is built with .
 - shadcn-ui
 - Tailwind CSS
 
-# Riziky-agendas-front
+## How can I deploy this project?
+
+
+## I want to use a custom domain - is that possible?
+
+We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains]# Riziky-gestion Ventes
+# gestion-ventes
+# gestion-ventes
