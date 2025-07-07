@@ -1,474 +1,661 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import Layout from '@/components/Layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Progress } from '@/components/ui/progress';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Calendar, 
-  DollarSign, 
-  Package, 
-  AlertTriangle,
-  Clock,
-  Target,
-  BarChart3,
-  Sparkles
-} from 'lucide-react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
-  LineChart, 
-  Line, 
-  PieChart, 
-  Pie, 
-  Cell 
-} from 'recharts';
-import { useRealtimeSync } from '@/hooks/use-realtime-sync';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, AreaChart, Area, Legend } from 'recharts';
+import { TrendingUp, TrendingDown, DollarSign, Package, Award, Target, ShoppingCart, Sparkles } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 const TendancesPage = () => {
-  const { sales, products, allSales } = useApp();
-  const { forceSync } = useRealtimeSync();
-  const [selectedTab, setSelectedTab] = useState('daily');
+  const { allSales, products, loading } = useApp();
+  const [selectedPeriod, setSelectedPeriod] = useState('all');
+  const [activeTab, setActiveTab] = useState('overview');
+  const isMobile = useIsMobile();
 
-  // Date actuelle
-  const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
+  // Fonction pour déterminer la catégorie d'un produit (exclure les avances)
+  const getProductCategory = (description: string) => {
+    const desc = description.toLowerCase();
+    if (desc.includes('avance')) {
+      return null; // Exclure les avances
+    } else if (desc.includes('tissage')) {
+      return 'Tissages';
+    } else if (desc.includes('perruque')) {
+      return 'Perruques';
+    } else if (desc.includes('colle') || desc.includes('disolvant')) {
+      return 'Accessoires';
+    }
+    return 'Autres';
+  };
 
-  // Filtrer les ventes pour le mois en cours
-  const currentMonthSales = useMemo(() => {
-    return sales.filter(sale => {
-      const saleDate = new Date(sale.date);
-      return saleDate.getMonth() === currentMonth && saleDate.getFullYear() === currentYear;
+  // Filtrer les ventes pour exclure les avances
+  const filteredSales = useMemo(() => {
+    return allSales.filter(sale => {
+      const category = getProductCategory(sale.description);
+      return category !== null; // Exclure les ventes avec catégorie null (avances)
     });
-  }, [sales, currentMonth, currentYear]);
+  }, [allSales]);
 
-  // Calcul du revenu total du mois
-  const totalRevenue = useMemo(() => {
-    return currentMonthSales.reduce((sum, sale) => sum + sale.sellingPrice, 0);
-  }, [currentMonthSales]);
-
-  // Calcul du profit total du mois
-  const totalProfit = useMemo(() => {
-    return currentMonthSales.reduce((sum, sale) => sum + sale.profit, 0);
-  }, [currentMonthSales]);
-
-  // Calcul des nouvelles ventes
-  const newSalesCount = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return currentMonthSales.filter(sale => new Date(sale.date) >= today).length;
-  }, [currentMonthSales]);
-
-  // Stock critique
-  const criticalStockProducts = useMemo(() => {
-    return products.filter(product => product.quantity <= 5);
-  }, [products]);
-
-  // AI Recommandations - Top 12 produits les plus profitables
-  const buyingRecommendations = useMemo(() => {
-    if (!allSales.length || !products.length) return [];
-
-    // Grouper les ventes par produit
-    const productSales = allSales.reduce((acc, sale) => {
-      const key = sale.productId;
-      if (!acc[key]) {
-        acc[key] = {
-          productId: sale.productId,
-          description: sale.description,
-          sales: [],
-          totalProfit: 0,
-          totalRevenue: 0,
-          totalCost: 0,
+  // Données pour les graphiques de ventes par produit (utiliser filteredSales)
+  const salesByProduct = useMemo(() => {
+    const productSales = filteredSales.reduce((acc, sale) => {
+      const productName = sale.description.length > 50 ? 
+        sale.description.substring(0, 47) + '...' : 
+        sale.description;
+      
+      if (!acc[productName]) {
+        acc[productName] = {
+          name: productName,
+          fullName: sale.description,
+          ventes: 0,
+          benefice: 0,
+          quantite: 0,
+          prixAchat: 0,
+          category: getProductCategory(sale.description),
           count: 0
         };
       }
-      
-      acc[key].sales.push(sale);
-      acc[key].totalProfit += sale.profit;
-      acc[key].totalRevenue += sale.sellingPrice;
-      acc[key].totalCost += sale.purchasePrice * (sale.quantitySold || 1);
-      acc[key].count += 1;
-      
+      acc[productName].ventes += sale.sellingPrice;
+      acc[productName].benefice += sale.profit;
+      acc[productName].quantite += sale.quantitySold;
+      acc[productName].prixAchat += sale.purchasePrice;
+      acc[productName].count += 1;
       return acc;
     }, {} as Record<string, any>);
 
-    // Calculer le ROI et créer les recommandations
-    const recommendations = Object.values(productSales)
-      .map((item: any) => {
-        const avgProfit = item.totalProfit / item.count;
-        const avgCost = item.totalCost / item.count;
-        const roi = avgCost > 0 ? Math.round((avgProfit / avgCost) * 100) : 0;
-        
-        // Catégoriser les produits
-        let category = 'Autre';
-        const desc = item.description.toLowerCase();
-        if (desc.includes('perruque')) category = 'Perruques';
-        else if (desc.includes('tissage')) category = 'Tissages';
-        else if (desc.includes('avance')) category = 'Avances';
-        else if (desc.includes('colle') || desc.includes('disolvant')) category = 'Accessoires';
+    return Object.values(productSales)
+      .sort((a, b) => b.benefice - a.benefice)
+      .slice(0, 15); // Top 15 produits
+  }, [filteredSales]);
 
-        return {
-          name: item.description.length > 45 ? 
-                item.description.substring(0, 45) + '...' : 
-                item.description,
-          fullName: item.description,
-          roi: roi,
-          benefice: item.totalProfit,
-          avgProfit: avgProfit.toFixed(2),
-          prixAchat: item.totalCost,
-          count: item.count,
-          category: category,
-          totalRevenue: item.totalRevenue
+  // Données pour les graphiques par catégorie (utiliser filteredSales)
+  const salesByCategory = useMemo(() => {
+    const categorySales = filteredSales.reduce((acc, sale) => {
+      const category = getProductCategory(sale.description);
+      if (category && !acc[category]) {
+        acc[category] = {
+          category,
+          ventes: 0,
+          benefice: 0,
+          quantite: 0,
+          count: 0
         };
-      })
-      .filter(item => item.roi > 0 && item.count >= 1) // Minimum 1 vente et ROI positif
-      .sort((a, b) => {
-        // Trier par ROI d'abord, puis par bénéfice total
-        if (b.roi !== a.roi) return b.roi - a.roi;
-        return b.benefice - a.benefice;
-      })
-      .slice(0, 12); // Top 12
+      }
+      if (category) {
+        acc[category].ventes += sale.sellingPrice;
+        acc[category].benefice += sale.profit;
+        acc[category].quantite += sale.quantitySold;
+        acc[category].count += 1;
+      }
+      return acc;
+    }, {} as Record<string, any>);
 
-    return recommendations;
-  }, [allSales, products]);
+    return Object.values(categorySales);
+  }, [filteredSales]);
 
-  // Performance globale (chiffre d'affaires et profit)
-  const performanceData = useMemo(() => {
-    const initialDate = new Date(Math.min(...sales.map(sale => new Date(sale.date).getTime())));
-    const months = [];
-    let currentDate = new Date(initialDate);
+  // Données temporelles (par mois) (utiliser filteredSales)
+  const salesOverTime = useMemo(() => {
+    const monthlySales = filteredSales.reduce((acc, sale) => {
+      const date = new Date(sale.date);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const monthName = date.toLocaleDateString('fr-FR', { year: 'numeric', month: 'short' });
+      
+      if (!acc[monthKey]) {
+        acc[monthKey] = {
+          mois: monthKey,
+          monthName: monthName,
+          ventes: 0,
+          benefice: 0,
+          quantite: 0
+        };
+      }
+      acc[monthKey].ventes += sale.sellingPrice;
+      acc[monthKey].benefice += sale.profit;
+      acc[monthKey].quantite += sale.quantitySold;
+      return acc;
+    }, {} as Record<string, any>);
 
-    while (currentDate <= now) {
-      months.push({
-        month: currentDate.getMonth(),
-        year: currentDate.getFullYear()
-      });
-      currentDate.setMonth(currentDate.getMonth() + 1);
-    }
+    return Object.values(monthlySales).sort((a, b) => a.mois.localeCompare(b.mois));
+  }, [filteredSales]);
 
-    return months.map(({ month, year }) => {
-      const monthName = new Date(year, month, 1).toLocaleString('default', { month: 'short' });
-      const monthSales = sales.filter(sale => {
-        const saleDate = new Date(sale.date);
-        return saleDate.getMonth() === month && saleDate.getFullYear() === year;
-      });
+  // Produits les plus rentables
+  const topProfitableProducts = useMemo(() => {
+    return salesByProduct
+      .filter(product => product.benefice > 0)
+      .sort((a, b) => b.benefice - a.benefice)
+      .slice(0, 10);
+  }, [salesByProduct]);
 
-      const monthlyRevenue = monthSales.reduce((sum, sale) => sum + sale.sellingPrice, 0);
-      const monthlyProfit = monthSales.reduce((sum, sale) => sum + sale.profit, 0);
+  // Recommandations d'achat basées sur le ROI (montrer 12 produits)
+  const buyingRecommendations = useMemo(() => {
+    return salesByProduct
+      .filter(product => product.benefice > 30 && product.prixAchat > 0)
+      .sort((a, b) => (b.benefice / b.prixAchat) - (a.benefice / a.prixAchat))
+      .slice(0, 12) // Changé de 8 à 12
+      .map(product => ({
+        ...product,
+        roi: ((product.benefice / product.prixAchat) * 100).toFixed(1),
+        avgProfit: (product.benefice / product.count).toFixed(2)
+      }));
+  }, [salesByProduct]);
 
-      return {
-        name: `${monthName} ${year}`,
-        revenue: monthlyRevenue,
-        profit: monthlyProfit
-      };
-    });
-  }, [sales]);
+  // Couleurs pour les graphiques
+  const colors = ['#8B5CF6', '#06D6A0', '#F59E0B', '#EF4444', '#3B82F6', '#EC4899', '#10B981', '#F97316'];
+  const categoryColors = {
+    'Perruques': '#8B5CF6',
+    'Tissages': '#06D6A0',
+    'Accessoires': '#F59E0B',
+    'Autres': '#6B7280'
+  };
 
-  // Meilleurs créneaux de vente
-  const topSellingTimes = useMemo(() => {
-    const hourlySales = Array(24).fill(0);
-    currentMonthSales.forEach(sale => {
-      const saleDate = new Date(sale.date);
-      const hour = saleDate.getHours();
-      hourlySales[hour] += sale.sellingPrice;
-    });
+  const chartConfig = {
+    ventes: { label: "Ventes", color: "#8B5CF6" },
+    benefice: { label: "Bénéfice", color: "#06D6A0" },
+    quantite: { label: "Quantité", color: "#F59E0B" }
+  };
 
-    return hourlySales.map((revenue, hour) => ({
-      hour: `${hour}:00`,
-      revenue: revenue
-    }));
-  }, [currentMonthSales]);
+  if (loading) {
+    return (
+      <Layout requireAuth>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-slate-900 flex items-center justify-center">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600 dark:text-gray-300">Chargement des tendances...</p>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Tendances & Analyses</h1>
-          <p className="text-muted-foreground">
-            Analyse détaillée de vos performances commerciales
-          </p>
-        </div>
-      </div>
+    <Layout requireAuth>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-slate-900">
+        <div className="container mx-auto px-4 py-8">
+          {/* Hero Header */}
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center px-4 py-2 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-full text-emerald-600 dark:text-emerald-400 text-sm font-medium mb-6 border border-emerald-200 dark:border-emerald-800">
+              <TrendingUp className="h-4 w-4 mr-2 animate-pulse" />
+              Analyse des tendances en temps réel
+            </div>
+            
+            <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-emerald-600 via-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
+              Tendances & Analytics
+            </h1>
+            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+              Découvrez vos performances, identifiez les opportunités et optimisez vos ventes
+            </p>
+          </div>
 
-      <Tabs value={selectedTab} onValueChange={setSelectedTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="daily">Analyse Quotidienne</TabsTrigger>
-          <TabsTrigger value="stock">Stock Critique</TabsTrigger>
-          <TabsTrigger value="recommendations">IA Recommandations</TabsTrigger>
-          <TabsTrigger value="performance">Performance</TabsTrigger>
-          <TabsTrigger value="time">Créneaux</TabsTrigger>
-        </TabsList>
-
-        {/* Analyse Quotidienne */}
-        <TabsContent value="daily" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 shadow-md">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold">Revenu Total</CardTitle>
-                <CardDescription>Revenu du mois actuel</CardDescription>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-none shadow-xl">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Ventes Totales</CardTitle>
+                <DollarSign className="h-4 w-4" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{totalRevenue.toFixed(2)} €</div>
-                <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-                  <TrendingUp className="h-4 w-4 text-green-500" />
-                  <span>+{totalRevenue}% depuis le mois dernier</span>
+                <div className="text-2xl font-bold">
+                  {filteredSales.reduce((sum, sale) => sum + sale.sellingPrice, 0).toLocaleString()} €
                 </div>
+                <p className="text-xs text-purple-100">
+                  +{filteredSales.length} transactions historiques
+                </p>
               </CardContent>
             </Card>
 
-            <Card className="bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 shadow-md">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold">Profit Total</CardTitle>
-                <CardDescription>Profit du mois actuel</CardDescription>
+            <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-none shadow-xl">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Bénéfices</CardTitle>
+                <TrendingUp className="h-4 w-4" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{totalProfit.toFixed(2)} €</div>
-                <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-                  <TrendingUp className="h-4 w-4 text-green-500" />
-                  <span>+{totalProfit}% depuis le mois dernier</span>
+                <div className="text-2xl font-bold">
+                  {filteredSales.reduce((sum, sale) => sum + sale.profit, 0).toLocaleString()} €
                 </div>
+                <p className="text-xs text-emerald-100">
+                  Marge moyenne: {filteredSales.length > 0 ? ((filteredSales.reduce((sum, sale) => sum + sale.profit, 0) / filteredSales.reduce((sum, sale) => sum + sale.sellingPrice, 0)) * 100).toFixed(1) : 0}%
+                </p>
               </CardContent>
             </Card>
 
-            <Card className="bg-orange-50 dark:bg-orange-900/20 border-orange-200 dark:border-orange-800 shadow-md">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold">Nouvelles Ventes</CardTitle>
-                <CardDescription>Ventes aujourd'hui</CardDescription>
+            <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white border-none shadow-xl">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Produits Vendus</CardTitle>
+                <Package className="h-4 w-4" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{newSalesCount}</div>
-                <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-                  <TrendingUp className="h-4 w-4 text-green-500" />
-                  <span>+{newSalesCount} depuis hier</span>
+                <div className="text-2xl font-bold">
+                  {filteredSales.reduce((sum, sale) => sum + sale.quantitySold, 0)}
                 </div>
+                <p className="text-xs text-orange-100">
+                  {salesByProduct.length} produits différents
+                </p>
               </CardContent>
             </Card>
 
-            <Card className="bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 shadow-md">
-              <CardHeader>
-                <CardTitle className="text-lg font-semibold">Taux de conversion</CardTitle>
-                <CardDescription>Pourcentage de visiteurs convertis en clients</CardDescription>
+            <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-none shadow-xl">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Meilleur ROI</CardTitle>
+                <Award className="h-4 w-4" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">7.5%</div>
-                <div className="flex items-center space-x-1 text-sm text-muted-foreground">
-                  <TrendingDown className="h-4 w-4 text-red-500" />
-                  <span>-2% depuis le mois dernier</span>
+                <div className="text-2xl font-bold">
+                  {buyingRecommendations.length > 0 ? buyingRecommendations[0].roi : '0'}%
                 </div>
+                <p className="text-xs text-blue-100">
+                  {buyingRecommendations.length > 0 ? buyingRecommendations[0].name.slice(0, 20) + '...' : 'Aucune donnée'}
+                </p>
               </CardContent>
             </Card>
           </div>
 
-          <Card className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-gray-200 dark:border-gray-800 shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-xl font-semibold">Ventes du mois</CardTitle>
-              <CardDescription>Répartition des ventes par jour</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={currentMonthSales.map(sale => ({
-                  name: new Date(sale.date).toLocaleDateString(),
-                  revenue: sale.sellingPrice,
-                  profit: sale.profit
-                }))}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="revenue" fill="#8884d8" name="Revenu" />
-                  <Bar dataKey="profit" fill="#82ca9d" name="Profit" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Stock Critique */}
-        <TabsContent value="stock" className="space-y-6">
-          <Card className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-gray-200 dark:border-gray-800 shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <AlertTriangle className="h-5 w-5 text-red-500" />
-                Stock Critique
-              </CardTitle>
-              <CardDescription>Produits avec un stock faible</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {criticalStockProducts.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                    <thead className="bg-gray-50 dark:bg-gray-800">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                          Produit
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                          Quantité
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                          Prix d'achat
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                      {criticalStockProducts.map(product => (
-                        <tr key={product.id}>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                            {product.description}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                            {product.quantity}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                            {product.purchasePrice} €
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">
-                            <Button size="sm">Réapprovisionner</Button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500 dark:text-gray-400">
-                    Aucun produit en stock critique pour le moment.
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* IA Recommandations - Top 12 produits */}
-        <TabsContent value="recommendations" className="space-y-6">
-          <Card className="bg-gradient-to-br from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 border-emerald-200 dark:border-emerald-800 shadow-2xl">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles className="h-5 w-5 text-emerald-600 animate-pulse" />
-                Recommandations d'Achat Intelligentes (Top 12)
-              </CardTitle>
-              <CardDescription>Produits à privilégier pour maximiser vos bénéfices (basé sur le ROI historique)</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {buyingRecommendations.map((product, index) => (
-                  <div key={index} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-xl p-4 border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <div className={cn(
-                          "w-3 h-3 rounded-full",
-                          index === 0 ? "bg-yellow-400" : index === 1 ? "bg-gray-400" : index === 2 ? "bg-orange-400" : "bg-emerald-400"
-                        )}></div>
-                        <h3 className="font-semibold text-sm text-gray-900 dark:text-white">#{index + 1}</h3>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-lg font-bold text-emerald-600">+{product.roi}%</div>
-                        <div className="text-xs text-gray-500">ROI</div>
-                      </div>
-                    </div>
-                    <p className="text-sm text-gray-700 dark:text-gray-300 mb-3 line-clamp-2" title={product.fullName}>
-                      {product.name}
-                    </p>
-                    <div className="space-y-1 text-xs">
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Bénéfice total:</span>
-                        <span className="font-semibold text-emerald-600">{product.benefice.toFixed(2)} €</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Bénéfice moyen:</span>
-                        <span className="font-semibold text-emerald-500">{product.avgProfit} €</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Prix d'achat:</span>
-                        <span className="font-semibold">{(product.prixAchat / product.count).toFixed(2)} €</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Vendus:</span>
-                        <span className="font-semibold text-blue-600">{product.count}x</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-gray-500">Catégorie:</span>
-                        <span className="font-semibold text-purple-600">{product.category}</span>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+          {/* Main Charts */}
+          <Tabs defaultValue="overview" onValueChange={setActiveTab} className="space-y-8">
+            {/* Modern Tab Navigation - Matching DashboardPage style */}
+            <div className={cn(
+              "relative bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-3xl shadow-2xl p-6 border border-white/20",
+              isMobile && "pt-8 pb-12"
+            )}>
+              {/* Background gradient */}
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-600/10 via-blue-600/10 to-purple-600/10 rounded-3xl"></div>
               
-              {buyingRecommendations.length === 0 && (
-                <div className="text-center py-12">
-                  <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500 dark:text-gray-400">
-                    Pas encore assez de données pour générer des recommandations.
-                    <br />
-                    Continuez à enregistrer vos ventes !
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+              <TabsList className={cn(
+                "relative grid w-full h-auto p-2 bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm rounded-2xl border border-white/20",
+                isMobile ? 'grid-cols-1 gap-3' : 'grid-cols-4 gap-2'
+              )}>
+                <TabsTrigger 
+                  value="overview" 
+                  className={cn(
+                    "font-bold text-sm uppercase flex items-center justify-center gap-3 py-4 px-6 rounded-xl transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-600 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105",
+                    activeTab === "overview" 
+                      ? "text-white bg-gradient-to-r from-emerald-600 to-blue-600 shadow-lg scale-105" 
+                      : "text-gray-600 dark:text-gray-300 hover:bg-white/70 dark:hover:bg-gray-700/70 hover:scale-102"
+                  )}
+                >
+                  <TrendingUp className="h-5 w-5" />
+                  <span className={isMobile ? "text-xs" : "text-sm"}>Vue d'ensemble</span>
+                </TabsTrigger>
+                
+                <TabsTrigger 
+                  value="products" 
+                  className={cn(
+                    "font-bold text-sm uppercase flex items-center justify-center gap-3 py-4 px-6 rounded-xl transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-purple-600 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105",
+                    activeTab === "products" 
+                      ? "text-white bg-gradient-to-r from-purple-600 to-pink-600 shadow-lg scale-105" 
+                      : "text-gray-600 dark:text-gray-300 hover:bg-white/70 dark:hover:bg-gray-700/70 hover:scale-102"
+                  )}
+                >
+                  <ShoppingCart className="h-5 w-5" />
+                  <span className={isMobile ? "text-xs" : "text-sm"}>Par Produits</span>
+                </TabsTrigger>
+                
+                <TabsTrigger 
+                  value="categories" 
+                  className={cn(
+                    "font-bold text-sm uppercase flex items-center justify-center gap-3 py-4 px-6 rounded-xl transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-orange-600 data-[state=active]:to-red-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105",
+                    activeTab === "categories" 
+                      ? "text-white bg-gradient-to-r from-orange-600 to-red-600 shadow-lg scale-105" 
+                      : "text-gray-600 dark:text-gray-300 hover:bg-white/70 dark:hover:bg-gray-700/70 hover:scale-102"
+                  )}
+                >
+                  <Target className="h-5 w-5" />
+                  <span className={isMobile ? "text-xs" : "text-sm"}>Par Catégories</span>
+                </TabsTrigger>
+                
+                <TabsTrigger 
+                  value="recommendations" 
+                  className={cn(
+                    "font-bold text-sm uppercase flex items-center justify-center gap-3 py-4 px-6 rounded-xl transition-all duration-300 data-[state=active]:bg-gradient-to-r data-[state=active]:from-yellow-600 data-[state=active]:to-orange-600 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:scale-105",
+                    activeTab === "recommendations" 
+                      ? "text-white bg-gradient-to-r from-yellow-600 to-orange-600 shadow-lg scale-105" 
+                      : "text-gray-600 dark:text-gray-300 hover:bg-white/70 dark:hover:bg-gray-700/70 hover:scale-102"
+                  )}
+                >
+                  <Sparkles className="h-5 w-5" />
+                  <span className={isMobile ? "text-xs" : "text-sm"}>Recommandations</span>
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
-        {/* Performance */}
-        <TabsContent value="performance" className="space-y-6">
-          <Card className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-gray-200 dark:border-gray-800 shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-xl font-semibold">Performance Globale</CardTitle>
-              <CardDescription>Chiffre d'affaires et profit par mois</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
-                <LineChart data={performanceData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="revenue" stroke="#8884d8" name="Revenu" />
-                  <Line type="monotone" dataKey="profit" stroke="#82ca9d" name="Profit" />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            {/* Vue d'ensemble */}
+            <TabsContent value="overview" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border border-white/20 shadow-2xl">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <TrendingUp className="h-5 w-5 text-emerald-600" />
+                      Évolution des Ventes
+                    </CardTitle>
+                    <CardDescription>Progression mensuelle des ventes et bénéfices</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[300px] w-full bg-white/50 rounded-lg p-4">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={salesOverTime}>
+                          <defs>
+                            <linearGradient id="colorVentes" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.8}/>
+                              <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0.1}/>
+                            </linearGradient>
+                            <linearGradient id="colorBenefice" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#06D6A0" stopOpacity={0.8}/>
+                              <stop offset="95%" stopColor="#06D6A0" stopOpacity={0.1}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                          <XAxis dataKey="monthName" tick={{ fontSize: 12 }} stroke="#64748b" />
+                          <YAxis tick={{ fontSize: 12 }} stroke="#64748b" />
+                          <ChartTooltip 
+                            content={({ active, payload, label }) => {
+                              if (active && payload && payload.length) {
+                                return (
+                                  <div className="bg-white p-3 border rounded-lg shadow-lg">
+                                    <p className="font-semibold">{label}</p>
+                                    {payload.map((entry, index) => (
+                                      <p key={index} style={{ color: entry.color }}>
+                                        {entry.name}: {entry.value?.toLocaleString()} €
+                                      </p>
+                                    ))}
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          <Legend />
+                          <Area type="monotone" dataKey="ventes" stroke="#8B5CF6" fillOpacity={1} fill="url(#colorVentes)" strokeWidth={3} name="Ventes (€)" />
+                          <Area type="monotone" dataKey="benefice" stroke="#06D6A0" fillOpacity={1} fill="url(#colorBenefice)" strokeWidth={3} name="Bénéfice (€)" />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
 
-        {/* Meilleurs créneaux de vente */}
-        <TabsContent value="time" className="space-y-6">
-          <Card className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-gray-200 dark:border-gray-800 shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-xl font-semibold">Meilleurs Créneaux de Vente</CardTitle>
-              <CardDescription>Heures avec le plus de ventes</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={topSellingTimes}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="hour" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="revenue" fill="#f39c12" name="Revenu" />
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+                <Card className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border border-white/20 shadow-2xl">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Package className="h-5 w-5 text-blue-600" />
+                      Top 10 Produits les Plus Rentables
+                    </CardTitle>
+                    <CardDescription>Classement par bénéfice généré</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[400px] w-full bg-white/50 rounded-lg p-4">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={topProfitableProducts.slice(0, 10)} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                          <XAxis 
+                            dataKey="name" 
+                            angle={-45} 
+                            textAnchor="end" 
+                            height={100} 
+                            tick={{ fontSize: 10 }} 
+                            stroke="#64748b"
+                            interval={0}
+                          />
+                          <YAxis 
+                            tick={{ fontSize: 12 }} 
+                            stroke="#64748b"
+                            label={{ value: 'Bénéfice (€)', angle: -90, position: 'insideLeft' }}
+                          />
+                          <ChartTooltip 
+                            content={({ active, payload, label }) => {
+                              if (active && payload && payload.length) {
+                                const data = payload[0].payload;
+                                return (
+                                  <div className="bg-white dark:bg-gray-800 p-4 border rounded-lg shadow-xl border-gray-200 dark:border-gray-600">
+                                    <p className="font-semibold text-sm mb-2 text-gray-900 dark:text-gray-100">{data.fullName || label}</p>
+                                    <div className="space-y-1">
+                                      <p className="text-emerald-600 dark:text-emerald-400 flex items-center">
+                                        <span className="w-3 h-3 bg-emerald-500 rounded-full mr-2"></span>
+                                        Bénéfice: <span className="font-bold ml-1">{payload[0].value?.toLocaleString()} €</span>
+                                      </p>
+                                      <p className="text-blue-600 dark:text-blue-400 text-xs">
+                                        Quantité vendue: {data.quantite}
+                                      </p>
+                                      <p className="text-purple-600 dark:text-purple-400 text-xs">
+                                        Ventes totales: {data.ventes?.toLocaleString()} €
+                                      </p>
+                                    </div>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          <Legend />
+                          <Bar 
+                            dataKey="benefice" 
+                            fill="url(#beneficeGradient)" 
+                            radius={[4, 4, 0, 0]} 
+                            name="Bénéfice (€)"
+                            stroke="#06D6A0"
+                            strokeWidth={1}
+                          />
+                          <defs>
+                            <linearGradient id="beneficeGradient" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#06D6A0" stopOpacity={0.9}/>
+                              <stop offset="95%" stopColor="#06D6A0" stopOpacity={0.6}/>
+                            </linearGradient>
+                          </defs>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            {/* Par Produits */}
+            <TabsContent value="products" className="space-y-6">
+              <Card className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border border-white/20 shadow-2xl">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ShoppingCart className="h-5 w-5 text-purple-600" />
+                    Performance par Produit
+                  </CardTitle>
+                  <CardDescription>Analyse détaillée des ventes, bénéfices et prix d'achat</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[400px] w-full bg-white/50 rounded-lg p-4">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={salesByProduct.slice(0, 12)}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} tick={{ fontSize: 10 }} stroke="#64748b" />
+                        <YAxis tick={{ fontSize: 12 }} stroke="#64748b" />
+                        <ChartTooltip 
+                          content={({ active, payload, label }) => {
+                            if (active && payload && payload.length) {
+                              return (
+                                <div className="bg-white p-3 border rounded-lg shadow-lg">
+                                  <p className="font-semibold text-sm">{label}</p>
+                                  {payload.map((entry, index) => (
+                                    <p key={index} style={{ color: entry.color }}>
+                                      {entry.name}: {entry.value?.toLocaleString()} €
+                                    </p>
+                                  ))}
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Legend />
+                        <Bar dataKey="ventes" fill="#8B5CF6" name="Ventes (€)" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="benefice" fill="#06D6A0" name="Bénéfice (€)" radius={[4, 4, 0, 0]} />
+                        <Bar dataKey="prixAchat" fill="#F59E0B" name="Prix d'achat (€)" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Par Catégories */}
+            <TabsContent value="categories" className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border border-white/20 shadow-2xl">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Target className="h-5 w-5 text-orange-600" />
+                      Répartition des Ventes par Catégorie
+                    </CardTitle>
+                    <CardDescription>Distribution des ventes par type de produit</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[300px] w-full bg-white/50 rounded-lg p-4">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                          <Pie
+                            data={salesByCategory}
+                            cx="50%"
+                            cy="50%"
+                            innerRadius={60}
+                            outerRadius={120}
+                            paddingAngle={5}
+                            dataKey="ventes"
+                          >
+                            {salesByCategory.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={categoryColors[entry.category] || colors[index % colors.length]} />
+                            ))}
+                          </Pie>
+                          <ChartTooltip 
+                            content={({ active, payload, label }) => {
+                              if (active && payload && payload.length) {
+                                return (
+                                  <div className="bg-white p-3 border rounded-lg shadow-lg">
+                                    <p className="font-semibold">{payload[0].payload.category}</p>
+                                    <p style={{ color: payload[0].color }}>
+                                      Ventes: {payload[0].value?.toLocaleString()} €
+                                    </p>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          <Legend />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl border border-white/20 shadow-2xl">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Award className="h-5 w-5 text-emerald-600" />
+                      Bénéfices par Catégorie
+                    </CardTitle>
+                    <CardDescription>Rentabilité par type de produit</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-[300px] w-full bg-white/50 rounded-lg p-4">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={salesByCategory}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                          <XAxis dataKey="category" tick={{ fontSize: 12 }} stroke="#64748b" />
+                          <YAxis tick={{ fontSize: 12 }} stroke="#64748b" />
+                          <ChartTooltip 
+                            content={({ active, payload, label }) => {
+                              if (active && payload && payload.length) {
+                                return (
+                                  <div className="bg-white p-3 border rounded-lg shadow-lg">
+                                    <p className="font-semibold">{label}</p>
+                                    <p style={{ color: payload[0].color }}>
+                                      Bénéfice: {payload[0].value?.toLocaleString()} €
+                                    </p>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          <Legend />
+                          <Bar dataKey="benefice" fill="#06D6A0" radius={[4, 4, 0, 0]} name="Bénéfice (€)" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+
+            {/* Recommandations - Affichage de 12 produits */}
+            <TabsContent value="recommendations" className="space-y-6">
+              <Card className="bg-gradient-to-br from-emerald-50 to-blue-50 dark:from-emerald-900/20 dark:to-blue-900/20 border-emerald-200 dark:border-emerald-800 shadow-2xl">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Sparkles className="h-5 w-5 text-emerald-600 animate-pulse" />
+                    Recommandations d'Achat Intelligentes (Top 12)
+                  </CardTitle>
+                  <CardDescription>Produits à privilégier pour maximiser vos bénéfices (basé sur le ROI historique)</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {buyingRecommendations.map((product, index) => (
+                      <div key={index} className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm rounded-xl p-4 border border-white/20 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className={cn(
+                              "w-3 h-3 rounded-full",
+                              index === 0 ? "bg-yellow-400" : index === 1 ? "bg-gray-400" : index === 2 ? "bg-orange-400" : "bg-emerald-400"
+                            )}></div>
+                            <h3 className="font-semibold text-sm text-gray-900 dark:text-white">#{index + 1}</h3>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-lg font-bold text-emerald-600">+{product.roi}%</div>
+                            <div className="text-xs text-gray-500">ROI</div>
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-700 dark:text-gray-300 mb-3 line-clamp-2" title={product.fullName}>
+                          {product.name}
+                        </p>
+                        <div className="space-y-1 text-xs">
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Bénéfice total:</span>
+                            <span className="font-semibold text-emerald-600">{product.benefice.toFixed(2)} €</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Bénéfice moyen:</span>
+                            <span className="font-semibold text-emerald-500">{product.avgProfit} €</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Prix d'achat:</span>
+                            <span className="font-semibold">{(product.prixAchat / product.count).toFixed(2)} €</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Vendus:</span>
+                            <span className="font-semibold text-blue-600">{product.count}x</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-500">Catégorie:</span>
+                            <span className="font-semibold text-purple-600">{product.category}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {buyingRecommendations.length === 0 && (
+                    <div className="text-center py-12">
+                      <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-gray-500 dark:text-gray-400">
+                        Pas encore assez de données pour générer des recommandations.
+                        <br />
+                        Continuez à enregistrer vos ventes !
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+      </div>
+    </Layout>
   );
 };
 
