@@ -31,10 +31,12 @@ import {
   Cell 
 } from 'recharts';
 import { useRealtimeSync } from '@/hooks/use-realtime-sync';
+import { useApp } from '@/contexts/AppContext';
 import { cn } from '@/lib/utils';
 
 const TendancesPage = () => {
-  const { sales, products } = useRealtimeSync();
+  const { sales, products, allSales } = useApp();
+  const { forceSync } = useRealtimeSync();
   const [selectedTab, setSelectedTab] = useState('daily');
 
   // Date actuelle
@@ -74,10 +76,10 @@ const TendancesPage = () => {
 
   // AI Recommandations - Top 12 produits les plus profitables
   const buyingRecommendations = useMemo(() => {
-    if (!sales.length || !products.length) return [];
+    if (!allSales.length || !products.length) return [];
 
     // Grouper les ventes par produit
-    const productSales = sales.reduce((acc, sale) => {
+    const productSales = allSales.reduce((acc, sale) => {
       const key = sale.productId;
       if (!acc[key]) {
         acc[key] = {
@@ -138,7 +140,7 @@ const TendancesPage = () => {
       .slice(0, 12); // Top 12
 
     return recommendations;
-  }, [sales, products]);
+  }, [allSales, products]);
 
   // Performance globale (chiffre d'affaires et profit)
   const performanceData = useMemo(() => {
