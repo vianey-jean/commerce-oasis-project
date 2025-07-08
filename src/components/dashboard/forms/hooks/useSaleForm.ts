@@ -74,12 +74,6 @@ export const useSaleForm = (editSale: Sale | undefined, products: Product[], isO
 
   const handleProductSelect = (product: Product) => {
     console.log('🎯 Produit sélectionné dans useSaleForm:', product);
-    console.log('🎯 Données complètes du produit:', {
-      id: product.id,
-      description: product.description,
-      purchasePrice: product.purchasePrice,
-      quantity: product.quantity
-    });
     
     setSelectedProduct(product);
     
@@ -99,6 +93,7 @@ export const useSaleForm = (editSale: Sale | undefined, products: Product[], isO
       quantity: isAdvance ? '0' : '1'
     });
     
+    // Mettre à jour le formulaire avec toutes les données du produit
     setFormData(prev => {
       const purchasePriceUnit = product.purchasePrice.toString();
       const sellingPriceUnit = suggestedSellingPrice;
@@ -116,15 +111,6 @@ export const useSaleForm = (editSale: Sale | undefined, products: Product[], isO
         profit = V - A;
       }
       
-      console.log('💰 Calcul final du profit:', { 
-        isAdvance, 
-        purchasePriceUnit, 
-        sellingPriceUnit, 
-        quantity, 
-        profit: profit.toFixed(2),
-        productPurchasePrice: product.purchasePrice
-      });
-      
       const newFormData = {
         ...prev,
         description: product.description,
@@ -135,7 +121,7 @@ export const useSaleForm = (editSale: Sale | undefined, products: Product[], isO
         profit: profit.toFixed(2),
       };
       
-      console.log('📝 FormData mis à jour:', newFormData);
+      console.log('📝 FormData mis à jour avec toutes les valeurs:', newFormData);
       return newFormData;
     });
   };
