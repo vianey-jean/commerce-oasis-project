@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useToast } from '@/hooks/use-toast';
 import StatCard from '@/components/dashboard/StatCard';
 import useCurrencyFormatter from '@/hooks/use-currency-formatter';
+import ProfitCalculator from './ProfitCalculator';
 
 /**
  * Noms des mois en français pour l'affichage
@@ -120,6 +120,9 @@ const VentesProduits: React.FC = () => {
 
   return (
     <div className="space-y-8 p-6 bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 min-h-screen">
+      {/* Calculateur de Bénéfices */}
+      <ProfitCalculator compact={true} />
+      
       {/* Statistiques modernisées avec des cartes élégantes */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <ModernContainer gradient="green" className="transform hover:scale-105 transition-all duration-300">

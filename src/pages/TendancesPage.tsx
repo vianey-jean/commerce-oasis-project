@@ -8,6 +8,8 @@ import { TrendingUp, TrendingDown, DollarSign, Package, Award, Target, ShoppingC
 import { useApp } from '@/contexts/AppContext';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import ProfitCalculator from '@/components/dashboard/ProfitCalculator';
+import ProfitAnalytics from '@/components/dashboard/ProfitAnalytics';
 
 const TendancesPage = () => {
   const { allSales, products, loading } = useApp();
@@ -240,6 +242,16 @@ const TendancesPage = () => {
             </p>
           </div>
 
+          {/* Calculateur de Bénéfices - Composant Principal */}
+          <div className="mb-8">
+            <ProfitCalculator className="max-w-6xl mx-auto" />
+          </div>
+
+          {/* Analytics de Rentabilité */}
+          <div className="mb-8">
+            <ProfitAnalytics className="max-w-6xl mx-auto" />
+          </div>
+
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-none shadow-xl">
@@ -305,7 +317,7 @@ const TendancesPage = () => {
 
           {/* Main Charts */}
           <Tabs defaultValue="overview" onValueChange={setActiveTab} className="space-y-8">
-            {/* Modern Tab Navigation - Matching DashboardPage style */}
+            {/* Modern Tab Navigation */}
             <div className={cn(
               "relative bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl rounded-3xl shadow-2xl p-6 border border-white/20",
               isMobile && "pt-8 pb-12"
