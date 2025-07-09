@@ -75,6 +75,24 @@ const PretProduits: React.FC = () => {
     return date < aujourdhui;
   };
 
+  // Fonction pour déterminer la classe CSS de la date de paiement
+  const getDatePaiementClass = (pret: PretProduit) => {
+    if (!pret.datePaiement) return "font-medium text-green-600";
+    
+    const isDepassee = isDatePaiementDepassee(pret.datePaiement);
+    
+    if (pret.estPaye) {
+      // Si le prêt est payé, toujours en vert
+      return "font-medium text-green-600";
+    } else if (isDepassee) {
+      // Si le prêt n'est pas payé et la date est dépassée, rouge et clignotant
+      return "font-medium text-red-600 animate-pulse font-bold";
+    } else {
+      // Si le prêt n'est pas payé et la date n'est pas dépassée, vert
+      return "font-medium text-green-600";
+    }
+  };
+
   // Charger les données depuis l'API
   const fetchPrets = async () => {
     try {
@@ -586,10 +604,7 @@ const PretProduits: React.FC = () => {
                           onClick={() => selectPretForEdit(pret)}
                         >
                           <TableCell className="font-medium">{format(new Date(pret.date), 'dd/MM/yyyy')}</TableCell>
-                          <TableCell className={cn(
-                            "font-medium",
-                            pret.datePaiement && !pret.estPaye && isDatePaiementDepassee(pret.datePaiement) && "text-red-600 animate-pulse font-bold"
-                          )}>
+                          <TableCell className={getDatePaiementClass(pret)}>
                             {pret.datePaiement ? format(new Date(pret.datePaiement), 'dd/MM/yyyy') : '-'}
                           </TableCell>
                           <TableCell className="font-medium text-gray-900 dark:text-gray-100">{pret.description}</TableCell>
