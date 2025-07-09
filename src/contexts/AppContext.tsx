@@ -1,7 +1,7 @@
 // We need to add typings to handle boolean returns from the API
 import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { Product, Sale } from '@/types';
+import { Product, Sale, Pret, PretProduit } from '@/types';
 import { productService, salesService } from '@/service/api';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -12,11 +12,17 @@ interface AppContextType {
   setSales: React.Dispatch<React.SetStateAction<Sale[]>>;
   allSales: Sale[]; // Toutes les ventes historiques pour les tendances
   setAllSales: React.Dispatch<React.SetStateAction<Sale[]>>;
+  prets: Pret[];
+  setPrets: React.Dispatch<React.SetStateAction<Pret[]>>;
+  pretProduits: PretProduit[];
+  setPretProduits: React.Dispatch<React.SetStateAction<PretProduit[]>>;
   loading: boolean;
   error: string | null;
   fetchProducts: () => Promise<void>;
   fetchSales: (month?: number, year?: number) => Promise<void>;
   fetchAllSales: () => Promise<void>; // Nouvelle fonction pour récupérer toutes les ventes
+  fetchPrets: () => Promise<void>;
+  fetchPretProduits: () => Promise<void>;
   addProduct: (product: Omit<Product, 'id'>) => Promise<Product | null>;
   updateProduct: (product: Product) => Promise<Product | null>;
   addSale: (sale: Omit<Sale, 'id'>) => Promise<Sale | null>;
@@ -51,6 +57,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
   const [allSales, setAllSales] = useState<Sale[]>([]); // Nouvelles données pour toutes les ventes
+  const [prets, setPrets] = useState<Pret[]>([]);
+  const [pretProduits, setPretProduits] = useState<PretProduit[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -180,6 +188,73 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [toast, isAuthenticated, authLoading]);
 
+  // Fonction pour récupérer les prêts
+  const fetchPrets = useCallback(async () => {
+    if (!isAuthenticated || authLoading) {
+      console.log('User not authenticated, skipping prets fetch');
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    try {
+      // Pour l'instant, on crée des données fictives
+      const mockPrets: Pret[] = pretProduits.map(pp => ({
+        id: pp.id,
+        productDescription: pp.description,
+        clientName: pp.nom || 'Client inconnu',
+        quantity: 1,
+        loanDate: pp.date,
+        returnDate: pp.datePaiement || pp.date,
+        isReturned: pp.estPaye
+      }));
+      
+      setPrets(mockPrets);
+      console.log(`Fetched ${mockPrets.length} prets`);
+    } catch (err: any) {
+      console.error('Error fetching prets:', err);
+      setError(err.message || 'Failed to fetch prets');
+      toast({
+        title: "Erreur de chargement",
+        description: "Impossible de charger les prêts.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast, isAuthenticated, authLoading, pretProduits]);
+
+  // Fonction pour récupérer les prêts produits
+  const fetchPretProduits = useCallback(async () => {
+    if (!isAuthenticated || authLoading) {
+      console.log('User not authenticated, skipping pret produits fetch');
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    try {
+      // Simuler un appel API - à remplacer par le vrai service
+      const response = await fetch('/api/pretproduits');
+      if (!response.ok) {
+        throw new Error('Failed to fetch pret produits');
+      }
+      const fetchedPretProduits = await response.json();
+      setPretProduits(fetchedPretProduits);
+      console.log(`Fetched ${fetchedPretProduits.length} pret produits`);
+    } catch (err: any) {
+      console.error('Error fetching pret produits:', err);
+      setError(err.message || 'Failed to fetch pret produits');
+      toast({
+        title: "Erreur de chargement",
+        description: "Impossible de charger les prêts produits.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast, isAuthenticated, authLoading]);
+
   // Fonction de rafraîchissement pour la synchronisation temps réel
   const refreshData = useCallback(async () => {
     if (!isAuthenticated || authLoading) return;
@@ -188,12 +263,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       await Promise.all([
         fetchProducts(),
         fetchSales(),
-        fetchAllSales() // Rafraîchir aussi toutes les données historiques
+        fetchAllSales(), // Rafraîchir aussi toutes les données historiques
+        fetchPretProduits(),
+        fetchPrets()
       ]);
     } catch (error) {
       console.error('Erreur lors du rafraîchissement des données:', error);
     }
-  }, [fetchProducts, fetchSales, fetchAllSales, isAuthenticated, authLoading]);
+  }, [fetchProducts, fetchSales, fetchAllSales, fetchPretProduits, fetchPrets, isAuthenticated, authLoading]);
 
   // Charger les données seulement pour le mois en cours + toutes les données historiques
   useEffect(() => {
@@ -202,13 +279,23 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       fetchProducts();
       fetchSales();
       fetchAllSales(); // Charger aussi toutes les données historiques
+      fetchPretProduits();
     } else {
       console.log('User not authenticated or auth loading, clearing data');
       setProducts([]);
       setSales([]);
       setAllSales([]);
+      setPrets([]);
+      setPretProduits([]);
     }
-  }, [isAuthenticated, authLoading, currentDate, fetchProducts, fetchSales, fetchAllSales]);
+  }, [isAuthenticated, authLoading, currentDate, fetchProducts, fetchSales, fetchAllSales, fetchPretProduits]);
+
+  // Mettre à jour les prêts quand les prêts produits changent
+  useEffect(() => {
+    if (pretProduits.length > 0) {
+      fetchPrets();
+    }
+  }, [pretProduits, fetchPrets]);
 
   // Add searchProducts function that is being used
   const searchProducts = async (query: string): Promise<Product[]> => {
@@ -377,11 +464,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         setSales,
         allSales, // Nouvelles données pour les tendances
         setAllSales,
+        prets,
+        setPrets,
+        pretProduits,
+        setPretProduits,
         loading,
         error,
         fetchProducts,
         fetchSales,
         fetchAllSales, // Nouvelle fonction
+        fetchPrets,
+        fetchPretProduits,
         addProduct,
         updateProduct,
         addSale,

@@ -1,12 +1,14 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableFooter, TableHeader, TableRow } from "@/components/ui/table"
-import { Package, FileText, PlusCircle, Edit, ShoppingCart, Loader2, AlertTriangle, UserPlus, UserMinus } from 'lucide-react';
+import { Package, FileText, PlusCircle, Edit, ShoppingCart, Loader2, AlertTriangle, UserPlus, UserMinus, Calendar as CalendarIcon } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { Pret, Product } from '@/types';
+import { Pret, Product, PretProduit } from '@/types';
 import ModernContainer from '@/components/dashboard/forms/ModernContainer';
 import ModernActionButton from '@/components/dashboard/forms/ModernActionButton';
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -21,7 +23,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
-import { CalendarIcon } from "@radix-ui/react-icons"
 import { DateRange } from "react-day-picker"
 import { addDays } from 'date-fns';
 import { DateRangePicker } from '@/components/ui/date-range-picker';
@@ -29,7 +30,7 @@ import PretRetardNotification from './PretRetardNotification';
 import ProfitCalculator from './ProfitCalculator';
 
 const PretProduits: React.FC = () => {
-  const { prets, products, isLoading, fetchPrets, fetchProducts } = useApp();
+  const { prets, pretProduits, products, isLoading, fetchPrets, fetchProducts, fetchPretProduits } = useApp();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
 
@@ -51,6 +52,7 @@ const PretProduits: React.FC = () => {
       try {
         await Promise.all([
           fetchProducts(),
+          fetchPretProduits(),
           fetchPrets(),
         ]);
       } catch (error) {
@@ -64,7 +66,7 @@ const PretProduits: React.FC = () => {
     };
 
     loadData();
-  }, [fetchProducts, fetchPrets, toast, isAuthenticated, authLoading]);
+  }, [fetchProducts, fetchPrets, fetchPretProduits, toast, isAuthenticated, authLoading]);
 
   if (!isAuthenticated) {
     return (
@@ -81,9 +83,30 @@ const PretProduits: React.FC = () => {
     setAddPretDialogOpen(true);
   };
 
+  // Fonction pour déterminer le style de la date de paiement
+  const getPaymentDateStyle = (pretProduit: PretProduit) => {
+    if (!pretProduit.datePaiement) return "text-gray-500";
+    
+    const datePaiement = new Date(pretProduit.datePaiement);
+    const aujourdhui = new Date();
+    aujourdhui.setHours(0, 0, 0, 0);
+    datePaiement.setHours(0, 0, 0, 0);
+    
+    if (pretProduit.estPaye) {
+      // Si payé, toujours vert
+      return "text-green-600 font-medium";
+    } else if (datePaiement < aujourdhui) {
+      // Si en cours et en retard, rouge et clignotant
+      return "text-red-600 font-bold animate-pulse";
+    } else {
+      // Si en cours et à temps, vert
+      return "text-green-600 font-medium";
+    }
+  };
+
   return (
     <div className="space-y-8 p-6 bg-gradient-to-br from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 min-h-screen">
-      <PretRetardNotification />
+      <PretRetardNotification prets={pretProduits} />
       
       {/* Composant Calculateur de Bénéfices */}
       <ProfitCalculator compact={true} />
@@ -97,7 +120,7 @@ const PretProduits: React.FC = () => {
             </div>
             <div>
               <p className="text-sm font-medium text-green-600 dark:text-green-400">Total des prêts</p>
-              <p className="text-3xl font-bold text-green-700 dark:text-green-300">{prets.length}</p>
+              <p className="text-3xl font-bold text-green-700 dark:text-green-300">{pretProduits.length}</p>
             </div>
           </div>
         </ModernContainer>
@@ -108,8 +131,8 @@ const PretProduits: React.FC = () => {
               <UserMinus className="h-8 w-8" />
             </div>
             <div>
-              <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Produits prêtés</p>
-              <p className="text-3xl font-bold text-blue-700 dark:text-blue-300">{prets.reduce((sum, pret) => sum + pret.quantity, 0)}</p>
+              <p className="text-sm font-medium text-blue-600 dark:text-blue-400">Prêts en cours</p>
+              <p className="text-3xl font-bold text-blue-700 dark:text-blue-300">{pretProduits.filter(p => !p.estPaye).length}</p>
             </div>
           </div>
         </ModernContainer>
@@ -120,8 +143,8 @@ const PretProduits: React.FC = () => {
               <Package className="h-8 w-8" />
             </div>
             <div>
-              <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Produits disponibles</p>
-              <p className="text-3xl font-bold text-purple-700 dark:text-purple-300">{products.filter(p => p.quantity > 0).length}</p>
+              <p className="text-sm font-medium text-purple-600 dark:text-purple-400">Prêts payés</p>
+              <p className="text-3xl font-bold text-purple-700 dark:text-purple-300">{pretProduits.filter(p => p.estPaye).length}</p>
             </div>
           </div>
         </ModernContainer>
@@ -132,8 +155,17 @@ const PretProduits: React.FC = () => {
               <AlertTriangle className="h-8 w-8" />
             </div>
             <div>
-              <p className="text-sm font-medium text-orange-600 dark:text-orange-400">Produits en retard</p>
-              <p className="text-3xl font-bold text-orange-700 dark:text-orange-300">{prets.filter(pret => new Date(pret.returnDate) < new Date()).length}</p>
+              <p className="text-sm font-medium text-orange-600 dark:text-orange-400">Prêts en retard</p>
+              <p className="text-3xl font-bold text-orange-700 dark:text-orange-300">
+                {pretProduits.filter(pret => {
+                  if (pret.estPaye || !pret.datePaiement) return false;
+                  const datePaiement = new Date(pret.datePaiement);
+                  const aujourdhui = new Date();
+                  aujourdhui.setHours(0, 0, 0, 0);
+                  datePaiement.setHours(0, 0, 0, 0);
+                  return datePaiement < aujourdhui;
+                }).length}
+              </p>
             </div>
           </div>
         </ModernContainer>
@@ -148,7 +180,7 @@ const PretProduits: React.FC = () => {
           <div className="flex items-center space-x-4">
             <div className="text-right">
               <p className="text-sm text-gray-500">Total des prêts</p>
-              <p className="text-lg font-bold text-app-red">{prets.length}</p>
+              <p className="text-lg font-bold text-app-red">{pretProduits.length}</p>
             </div>
             <ModernActionButton
               icon={FileText}
@@ -185,7 +217,7 @@ const PretProduits: React.FC = () => {
           <Popover>
             <PopoverTrigger asChild>
               <ModernActionButton
-                icon={Calendar}
+                icon={CalendarIcon}
                 gradient="green"
                 buttonSize="md"
               >
@@ -215,20 +247,32 @@ const PretProduits: React.FC = () => {
                 <TableRow>
                   <TableHead className="w-[100px]">Date de prêt</TableHead>
                   <TableHead>Produit</TableHead>
-                  <TableHead>Quantité</TableHead>
                   <TableHead>Client</TableHead>
-                  <TableHead>Date de retour</TableHead>
+                  <TableHead>Prix de vente</TableHead>
+                  <TableHead>Avance reçue</TableHead>
+                  <TableHead>Reste</TableHead>
+                  <TableHead>Date de paiement</TableHead>
+                  <TableHead>Statut</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {prets.map((pret) => (
-                  <TableRow key={pret.id} onClick={() => handleRowClick(pret)}>
-                    <TableCell className="font-medium">{format(new Date(pret.loanDate), 'dd/MM/yyyy', { locale: fr })}</TableCell>
-                    <TableCell>{pret.productDescription}</TableCell>
-                    <TableCell>{pret.quantity}</TableCell>
-                    <TableCell>{pret.clientName}</TableCell>
-                    <TableCell>{format(new Date(pret.returnDate), 'dd/MM/yyyy', { locale: fr })}</TableCell>
+                {pretProduits.map((pretProduit) => (
+                  <TableRow key={pretProduit.id}>
+                    <TableCell className="font-medium">{format(new Date(pretProduit.date), 'dd/MM/yyyy', { locale: fr })}</TableCell>
+                    <TableCell>{pretProduit.description}</TableCell>
+                    <TableCell>{pretProduit.nom || 'Client inconnu'}</TableCell>
+                    <TableCell>{pretProduit.prixVente}€</TableCell>
+                    <TableCell>{pretProduit.avanceRecue}€</TableCell>
+                    <TableCell>{pretProduit.reste}€</TableCell>
+                    <TableCell className={getPaymentDateStyle(pretProduit)}>
+                      {pretProduit.datePaiement ? format(new Date(pretProduit.datePaiement), 'dd/MM/yyyy', { locale: fr }) : 'Non définie'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={pretProduit.estPaye ? "default" : "destructive"}>
+                        {pretProduit.estPaye ? "Payé" : "En cours"}
+                      </Badge>
+                    </TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="sm">
                         <Edit className="h-4 w-4" />

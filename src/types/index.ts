@@ -54,6 +54,17 @@ export interface PretProduit {
   productId?: string;
 }
 
+// Nouveau type Pret pour la compatibilité
+export interface Pret {
+  id: string;
+  productDescription: string;
+  clientName: string;
+  quantity: number;
+  loanDate: string;
+  returnDate: string;
+  isReturned: boolean;
+}
+
 export interface DepenseFixe {
   free: number;
   internetZeop: number;
