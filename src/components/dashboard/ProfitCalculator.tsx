@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -95,9 +94,19 @@ const ProfitCalculator: React.FC<ProfitCalculatorProps> = ({
       const response = await axios.get('/api/benefices', {
         headers: { Authorization: `Bearer ${token}` }
       });
-      setBeneficesList(response.data || []);
+      
+      // Ensure response.data is an array
+      const data = Array.isArray(response.data) ? response.data : [];
+      setBeneficesList(data);
+      console.log('✅ Données de bénéfices chargées:', data);
     } catch (error) {
-      console.error('Erreur lors du chargement des bénéfices:', error);
+      console.error('❌ Erreur lors du chargement des bénéfices:', error);
+      setBeneficesList([]); // Set empty array on error
+      toast({
+        title: "Erreur",
+        description: "Impossible de charger les données de bénéfices.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -612,7 +621,7 @@ const ProfitCalculator: React.FC<ProfitCalculatorProps> = ({
         
         {showTable && (
           <CardContent className="p-0">
-            {beneficesList.length > 0 ? (
+            {Array.isArray(beneficesList) && beneficesList.length > 0 ? (
               <ModernTable>
                 <ModernTableHeader>
                   <ModernTableRow>

@@ -19,6 +19,7 @@ app.use('/api/pretfamilles', require('./routes/pretfamilles'));
 app.use('/api/pretproduits', require('./routes/pretproduits'));
 app.use('/api/depenses', require('./routes/depenses'));
 app.use('/api/benefices', require('./routes/benefices'));
+app.use('/api/sync', require('./routes/sync'));
 
 // Static files
 app.use(express.static(path.join(__dirname, '../dist')));
