@@ -59,10 +59,10 @@ const ProfitCalculator: React.FC<ProfitCalculatorProps> = ({
   const [values, setValues] = useState<ProfitCalculation>({
     prixAchat: initialValues.prixAchat || 0,
     taxeDouane: initialValues.taxeDouane || 0,
-    tva: initialValues.tva || 20, // TVA par défaut 20%
+    tva: initialValues.tva || 20,
     autresFrais: initialValues.autresFrais || 0,
     coutTotal: 0,
-    margeDesire: initialValues.margeDesire || 30, // Marge par défaut 30%
+    margeDesire: initialValues.margeDesire || 30,
     prixVenteRecommande: 0,
     beneficeNet: 0,
     tauxMarge: 0
@@ -81,7 +81,12 @@ const ProfitCalculator: React.FC<ProfitCalculatorProps> = ({
     console.log('🎯 Produit sélectionné pour calcul bénéfice:', product);
     setSelectedProduct(product);
     setProductDescription(product.description);
-    updateValue('prixAchat', product.purchasePrice);
+    
+    // Mettre à jour le prix d'achat
+    setValues(prev => ({
+      ...prev,
+      prixAchat: product.purchasePrice || 0
+    }));
     
     // Charger les données de bénéfice existantes pour ce produit
     loadExistingBeneficeData(product.id);
@@ -95,13 +100,12 @@ const ProfitCalculator: React.FC<ProfitCalculatorProps> = ({
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      // Ensure response.data is an array
       const data = Array.isArray(response.data) ? response.data : [];
       setBeneficesList(data);
       console.log('✅ Données de bénéfices chargées:', data);
     } catch (error) {
       console.error('❌ Erreur lors du chargement des bénéfices:', error);
-      setBeneficesList([]); // Set empty array on error
+      setBeneficesList([]);
       toast({
         title: "Erreur",
         description: "Impossible de charger les données de bénéfices.",
@@ -121,15 +125,15 @@ const ProfitCalculator: React.FC<ProfitCalculatorProps> = ({
       if (response.data) {
         const beneficeData = response.data;
         setValues({
-          prixAchat: beneficeData.prixAchat,
-          taxeDouane: beneficeData.taxeDouane,
-          tva: beneficeData.tva,
-          autresFrais: beneficeData.autresFrais,
-          coutTotal: beneficeData.coutTotal,
-          margeDesire: beneficeData.margeDesire,
-          prixVenteRecommande: beneficeData.prixVenteRecommande,
-          beneficeNet: beneficeData.beneficeNet,
-          tauxMarge: beneficeData.tauxMarge
+          prixAchat: beneficeData.prixAchat || 0,
+          taxeDouane: beneficeData.taxeDouane || 0,
+          tva: beneficeData.tva || 20,
+          autresFrais: beneficeData.autresFrais || 0,
+          coutTotal: beneficeData.coutTotal || 0,
+          margeDesire: beneficeData.margeDesire || 30,
+          prixVenteRecommande: beneficeData.prixVenteRecommande || 0,
+          beneficeNet: beneficeData.beneficeNet || 0,
+          tauxMarge: beneficeData.tauxMarge || 0
         });
         
         toast({
@@ -138,16 +142,15 @@ const ProfitCalculator: React.FC<ProfitCalculatorProps> = ({
         });
       }
     } catch (error) {
-      // Pas de données existantes, c'est normal
       console.log('Aucune donnée de bénéfice existante pour ce produit');
     }
   };
 
-  // Calcul automatique
+  // Calcul automatique des bénéfices
   useEffect(() => {
     if (values.prixAchat > 0) {
-      const coutTotal = values.prixAchat + values.taxeDouane + values.autresFrais;
-      const coutAvecTva = coutTotal * (1 + values.tva / 100);
+      const coutSansTva = values.prixAchat + values.taxeDouane + values.autresFrais;
+      const coutAvecTva = coutSansTva * (1 + values.tva / 100);
       const prixVenteRecommande = coutAvecTva * (1 + values.margeDesire / 100);
       
       const beneficeNet = prixVenteRecommande - coutAvecTva;
@@ -164,11 +167,11 @@ const ProfitCalculator: React.FC<ProfitCalculatorProps> = ({
       setValues(newCalculation);
       onCalculationChange?.(newCalculation);
     }
-  }, [values.prixAchat, values.taxeDouane, values.tva, values.autresFrais, values.margeDesire]);
+  }, [values.prixAchat, values.taxeDouane, values.tva, values.autresFrais, values.margeDesire, onCalculationChange]);
 
   // Calcul avec prix de vente personnalisé
   const calculateWithCustomPrice = () => {
-    if (prixVenteCustom > 0) {
+    if (prixVenteCustom > 0 && values.coutTotal > 0) {
       const beneficeNet = prixVenteCustom - values.coutTotal;
       const tauxMarge = values.coutTotal > 0 ? (beneficeNet / values.coutTotal) * 100 : 0;
       
@@ -185,7 +188,8 @@ const ProfitCalculator: React.FC<ProfitCalculatorProps> = ({
   };
 
   const updateValue = (field: keyof ProfitCalculation, value: number) => {
-    setValues(prev => ({ ...prev, [field]: value }));
+    const numValue = isNaN(value) ? 0 : value;
+    setValues(prev => ({ ...prev, [field]: numValue }));
   };
 
   // Sauvegarder les calculs
@@ -205,7 +209,15 @@ const ProfitCalculator: React.FC<ProfitCalculatorProps> = ({
       const beneficeData: BeneficeData = {
         productId: selectedProduct.id,
         productDescription: productDescription || selectedProduct.description,
-        ...values
+        prixAchat: values.prixAchat || 0,
+        taxeDouane: values.taxeDouane || 0,
+        tva: values.tva || 20,
+        autresFrais: values.autresFrais || 0,
+        coutTotal: values.coutTotal || 0,
+        margeDesire: values.margeDesire || 30,
+        prixVenteRecommande: values.prixVenteRecommande || 0,
+        beneficeNet: values.beneficeNet || 0,
+        tauxMarge: values.tauxMarge || 0
       };
 
       const token = localStorage.getItem('token');
@@ -218,9 +230,7 @@ const ProfitCalculator: React.FC<ProfitCalculatorProps> = ({
         description: "Calcul de bénéfice sauvegardé avec succès!",
       });
 
-      // Recharger la liste
       await loadBeneficesData();
-
       console.log('✅ Calcul de bénéfice sauvegardé:', response.data);
     } catch (error) {
       console.error('❌ Erreur lors de la sauvegarde:', error);
@@ -258,7 +268,7 @@ const ProfitCalculator: React.FC<ProfitCalculatorProps> = ({
     }
   };
 
-  const isRentable = (values.tauxMarge || 0) >= 20; // Seuil de rentabilité à 20%
+  const isRentable = (values.tauxMarge || 0) >= 20;
 
   if (compact) {
     return (
@@ -398,7 +408,7 @@ const ProfitCalculator: React.FC<ProfitCalculatorProps> = ({
                       <Input
                         id="prixAchat"
                         type="number"
-                        value={values.prixAchat}
+                        value={values.prixAchat || ''}
                         onChange={(e) => updateValue('prixAchat', Number(e.target.value))}
                         placeholder="0.00"
                         className="mt-2 border-emerald-300 focus:border-emerald-500"
@@ -410,7 +420,7 @@ const ProfitCalculator: React.FC<ProfitCalculatorProps> = ({
                       <Input
                         id="taxeDouane"
                         type="number"
-                        value={values.taxeDouane}
+                        value={values.taxeDouane || ''}
                         onChange={(e) => updateValue('taxeDouane', Number(e.target.value))}
                         placeholder="0.00"
                         className="mt-2 border-blue-300 focus:border-blue-500"
@@ -422,7 +432,7 @@ const ProfitCalculator: React.FC<ProfitCalculatorProps> = ({
                       <Input
                         id="tva"
                         type="number"
-                        value={values.tva}
+                        value={values.tva || ''}
                         onChange={(e) => updateValue('tva', Number(e.target.value))}
                         placeholder="20"
                         className="mt-2 border-purple-300 focus:border-purple-500"
@@ -434,7 +444,7 @@ const ProfitCalculator: React.FC<ProfitCalculatorProps> = ({
                       <Input
                         id="autresFrais"
                         type="number"
-                        value={values.autresFrais}
+                        value={values.autresFrais || ''}
                         onChange={(e) => updateValue('autresFrais', Number(e.target.value))}
                         placeholder="0.00"
                         className="mt-2 border-orange-300 focus:border-orange-500"
@@ -459,7 +469,7 @@ const ProfitCalculator: React.FC<ProfitCalculatorProps> = ({
                     <Input
                       id="margeDesire"
                       type="number"
-                      value={values.margeDesire}
+                      value={values.margeDesire || ''}
                       onChange={(e) => updateValue('margeDesire', Number(e.target.value))}
                       placeholder="30"
                       className="mt-2 border-purple-300 focus:border-purple-500"
@@ -473,7 +483,7 @@ const ProfitCalculator: React.FC<ProfitCalculatorProps> = ({
                           <Calculator className="h-4 w-4 text-blue-600" />
                           Coût total (TTC):
                         </span>
-                        <span className="font-bold text-lg text-blue-600">{formatEuro(values.coutTotal)}</span>
+                        <span className="font-bold text-lg text-blue-600">{formatEuro(values.coutTotal || 0)}</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
@@ -481,7 +491,7 @@ const ProfitCalculator: React.FC<ProfitCalculatorProps> = ({
                           Prix de vente recommandé:
                         </span>
                         <span className="font-bold text-emerald-600 text-2xl">
-                          {formatEuro(values.prixVenteRecommande)}
+                          {formatEuro(values.prixVenteRecommande || 0)}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
@@ -490,7 +500,7 @@ const ProfitCalculator: React.FC<ProfitCalculatorProps> = ({
                           Bénéfice net:
                         </span>
                         <span className={cn("font-bold text-2xl", isRentable ? "text-emerald-600" : "text-red-600")}>
-                          {formatEuro(values.beneficeNet)}
+                          {formatEuro(values.beneficeNet || 0)}
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
