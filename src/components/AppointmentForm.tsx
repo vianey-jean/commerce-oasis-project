@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, Crown, Star, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -201,63 +201,137 @@ const AppointmentForm = ({ appointment, onSuccess, onCancel, disableDate = false
   };
   
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="titre"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Titre</FormLabel>
-              <FormControl>
-                <Input placeholder="Rendez-vous avec ...." {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="luxury-card rounded-2xl p-6">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <FormField
             control={form.control}
-            name="date"
+            name="titre"
             render={({ field }) => (
-              <FormItem className="flex flex-col">
-                <FormLabel>Date</FormLabel>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <FormControl>
-                      <Button
-                        variant={"outline"}
-                        disabled={disableDate}
-                        className={`pl-3 text-left font-normal ${!field.value ? "text-muted-foreground" : ""} ${disableDate ? "opacity-50 cursor-not-allowed" : ""}`}
-                      >
-                        {field.value ? (
-                          format(field.value, "EEEE d MMMM yyyy", { locale: fr })
-                        ) : (
-                          <span>Sélectionner une date</span>
-                        )}
-                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                      </Button>
-                    </FormControl>
-                  </PopoverTrigger>
-                  {!disableDate && (
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                        initialFocus
-                      />
-                    </PopoverContent>
+              <FormItem>
+                <FormLabel className="text-base font-bold text-primary flex items-center gap-2">
+                  <Crown className="w-4 h-4" />
+                  Titre du rendez-vous
+                </FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="Rendez-vous avec..." 
+                    className="premium-input rounded-xl border-2 border-primary/20 focus:border-primary/60 h-12 text-base font-medium"
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="date"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel className="text-base font-bold text-primary flex items-center gap-2">
+                    <CalendarIcon className="w-4 h-4" />
+                    Date
+                  </FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant={"outline"}
+                          disabled={disableDate}
+                          className={`pl-4 text-left font-medium h-12 rounded-xl border-2 border-primary/20 hover:border-primary/40 ${!field.value ? "text-muted-foreground" : ""} ${disableDate ? "opacity-60 cursor-not-allowed luxury-card" : "premium-input"}`}
+                        >
+                          {field.value ? (
+                            format(field.value, "EEEE d MMMM yyyy", { locale: fr })
+                          ) : (
+                            <span>Sélectionner une date</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-5 w-5 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    {!disableDate && (
+                      <PopoverContent className="w-auto p-0 calendar-luxury border-0 premium-shadow-lg" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={field.onChange}
+                          disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                          initialFocus
+                          className="rounded-2xl"
+                        />
+                      </PopoverContent>
+                    )}
+                  </Popover>
+                  {disableDate && (
+                    <div className="flex items-center gap-2 text-sm text-primary bg-primary/10 rounded-lg p-2">
+                      <Star className="w-4 h-4" />
+                      <span>Date fixée suite au déplacement du rendez-vous</span>
+                    </div>
                   )}
-                </Popover>
-                {disableDate && (
-                  <p className="text-xs text-muted-foreground">
-                    Date fixée suite au déplacement du rendez-vous
-                  </p>
-                )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="heure"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-base font-bold text-primary flex items-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    Heure
+                  </FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <select
+                        className="w-full px-4 py-3 border-2 border-primary/20 rounded-xl premium-input focus:border-primary/60 h-12 text-base font-medium"
+                        value={field.value}
+                        onChange={field.onChange}
+                        disabled={!isAvailable || availableHours.length === 0}
+                      >
+                        {availableHours.length === 0 ? (
+                          <option value="">Aucun horaire disponible</option>
+                        ) : (
+                          availableHours.map(hour => (
+                            <option key={hour} value={hour}>
+                              {hour}
+                            </option>
+                          ))
+                        )}
+                      </select>
+                      <Clock className="absolute right-4 top-1/2 transform -translate-y-1/2 h-5 w-5 opacity-50 text-primary" />
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          
+          <FormField
+            control={form.control}
+            name="duree"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-base font-bold text-primary flex items-center gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  Durée (minutes)
+                </FormLabel>
+                <FormControl>
+                  <Input 
+                    type="number" 
+                    min={15} 
+                    max={180} 
+                    step={15}
+                    className="premium-input rounded-xl border-2 border-primary/20 focus:border-primary/60 h-12 text-base font-medium"
+                    {...field} 
+                    onChange={e => field.onChange(parseInt(e.target.value))}
+                  />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
@@ -265,115 +339,83 @@ const AppointmentForm = ({ appointment, onSuccess, onCancel, disableDate = false
           
           <FormField
             control={form.control}
-            name="heure"
+            name="location"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Heure</FormLabel>
+                <FormLabel className="text-base font-bold text-primary flex items-center gap-2">
+                  <Star className="w-4 h-4" />
+                  Lieu
+                </FormLabel>
                 <FormControl>
-                  <div className="relative">
-                    <select
-                      className="w-full px-3 py-2 border border-input rounded-md"
-                      value={field.value}
-                      onChange={field.onChange}
-                      disabled={!isAvailable || availableHours.length === 0}
-                    >
-                      {availableHours.length === 0 ? (
-                        <option value="">Aucun horaire disponible</option>
-                      ) : (
-                        availableHours.map(hour => (
-                          <option key={hour} value={hour}>
-                            {hour}
-                          </option>
-                        ))
-                      )}
-                    </select>
-                    <Clock className="absolute right-3 top-1/2 transform -translate-y-1/2 h-4 w-4 opacity-50" />
-                  </div>
+                  <Input 
+                    placeholder="Adresse du rendez-vous"
+                    className="premium-input rounded-xl border-2 border-primary/20 focus:border-primary/60 h-12 text-base font-medium"
+                    {...field} 
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-        </div>
-        
-        <FormField
-          control={form.control}
-          name="duree"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Durée (minutes)</FormLabel>
-              <FormControl>
-                <Input 
-                  type="number" 
-                  min={15} 
-                  max={180} 
-                  step={15} 
-                  {...field} 
-                  onChange={e => field.onChange(parseInt(e.target.value))}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
+          
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-base font-bold text-primary flex items-center gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  Description
+                </FormLabel>
+                <FormControl>
+                  <Textarea 
+                    placeholder="Détails du rendez-vous..."
+                    className="premium-input rounded-xl border-2 border-primary/20 focus:border-primary/60 min-h-[120px] text-base font-medium resize-none"
+                    {...field} 
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          {!isAvailable && availableHours.length === 0 && (
+            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 text-yellow-800 p-4 rounded-xl border-2 border-yellow-200 premium-shadow">
+              <div className="flex items-center gap-3">
+                <Star className="w-5 h-5 text-yellow-600" />
+                <span className="font-bold">Aucun horaire n'est disponible pour cette date. Veuillez sélectionner une autre date.</span>
+              </div>
+            </div>
           )}
-        />
-        
-        <FormField
-          control={form.control}
-          name="location"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Lieu</FormLabel>
-              <FormControl>
-                <Input placeholder="Adresse" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Description</FormLabel>
-              <FormControl>
-                <Textarea 
-                  placeholder="Détails du rendez-vous..."
-                  className="min-h-[100px]"
-                  {...field} 
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
-        {!isAvailable && availableHours.length === 0 && (
-          <div className="bg-yellow-100 text-yellow-800 p-3 rounded-md">
-            Aucun horaire n'est disponible pour cette date. Veuillez sélectionner une autre date.
+          
+          <div className="flex justify-end space-x-4 pt-6">
+            <Button 
+              type="button" 
+              variant="outline" 
+              onClick={onCancel}
+              className="px-8 py-3 border-2 border-primary/30 luxury-card hover:border-primary/50 font-semibold rounded-2xl premium-hover"
+            >
+              <Reply className="mr-2 h-4 w-4" />
+              Annuler
+            </Button>
+            <Button 
+              type="submit" 
+              disabled={isSubmitting || (!isAvailable && availableHours.length === 0)}
+              className="px-8 py-3 btn-premium premium-shadow-lg font-semibold rounded-2xl premium-hover"
+            > 
+              <Edit className="h-4 w-4 mr-2" />
+              {isSubmitting 
+                ? "Enregistrement..." 
+                : isEditing 
+                  ? "Modifier le rendez-vous" 
+                  : "Ajouter le rendez-vous"
+              }
+              <Sparkles className="w-4 h-4 ml-2" />
+            </Button>
           </div>
-        )}
-        
-        <div className="flex justify-end space-x-2 pt-4">
-          <Button type="button" variant="outline" onClick={onCancel}>
-          <Reply className="mr-1 h-4 w-4" />
-            Annuler
-          </Button>
-          <Button 
-            type="submit" 
-            disabled={isSubmitting || (!isAvailable && availableHours.length === 0)}
-          > <Edit className="h-4 w-4 mr-2" />
-            {isSubmitting 
-              ? "Enregistrement..." 
-              : isEditing 
-                ? "Modifier le rendez-vous" 
-                : "Ajouter le rendez-vous"
-            }
-          </Button>
-        </div>
-      </form>
-    </Form>
+        </form>
+      </Form>
+    </div>
   );
 };
 

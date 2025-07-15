@@ -3,7 +3,7 @@ import { format, isToday } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Appointment } from '@/services/AppointmentService';
 import CalendarAppointment from './CalendarAppointment';
-import { Calendar, Plus } from 'lucide-react';
+import { Calendar, Plus, Crown, Star, Sparkles } from 'lucide-react';
 
 /**
  * Props pour un jour du calendrier
@@ -72,22 +72,24 @@ const CalendarDay = ({ day, appointments, onAppointmentClick, onDrop, onDragStar
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`p-3 border-r last:border-r-0 min-h-[350px] transition-all duration-300 relative group ${
+      className={`p-4 border-r last:border-r-0 min-h-[400px] transition-all duration-300 relative group premium-hover ${
         isCurrentDay 
-          ? 'bg-gradient-to-br from-violet-50/80 to-purple-50/80 border-violet-200' 
-          : 'hover:bg-gradient-to-br hover:from-gray-50/50 hover:to-violet-50/30'
+          ? 'bg-gradient-to-br from-primary/10 to-purple-500/10 border-primary/30' 
+          : 'luxury-card hover:bg-gradient-to-br hover:from-primary/5 hover:to-purple-500/5'
       }`}
     >
-      
-      {/* Indicator pour le jour actuel */}
+      {/* Premium indicator pour le jour actuel */}
       {isCurrentDay && (
-        <div className="absolute top-2 right-2 w-3 h-3 bg-gradient-to-br from-violet-500 to-purple-600 rounded-full shadow-lg">
-          <div className="absolute inset-0 bg-violet-400 rounded-full animate-ping"></div>
+        <div className="absolute top-3 right-3 flex items-center gap-1">
+          <div className="w-4 h-4 premium-gradient rounded-full premium-shadow relative">
+            <div className="absolute inset-0 bg-primary rounded-full animate-ping opacity-75"></div>
+          </div>
+          <Crown className="w-4 h-4 text-primary" />
         </div>
       )}
 
       {sortedAppointments.length > 0 ? (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {sortedAppointments.map((appointment) => (
             <CalendarAppointment 
               key={appointment.id} 
@@ -97,40 +99,42 @@ const CalendarDay = ({ day, appointments, onAppointmentClick, onDrop, onDragStar
             />
           ))}
           
-          {/* Indicator pour plus de rendez-vous */}
+          {/* Premium indicator pour plus de rendez-vous */}
           {sortedAppointments.length > 3 && (
-            <div className="text-center py-2">
-              <div className="inline-flex items-center gap-1 text-xs text-violet-600 bg-violet-100 px-2 py-1 rounded-full">
-                <Plus className="w-3 h-3" />
-                <span>{sortedAppointments.length - 3} autres</span>
+            <div className="text-center py-3">
+              <div className="inline-flex items-center gap-2 text-sm text-primary bg-gradient-to-r from-primary/10 to-purple-500/10 px-4 py-2 rounded-full border border-primary/20 premium-shadow">
+                <Star className="w-3 h-3" />
+                <span className="font-bold">{sortedAppointments.length - 3} autres</span>
+                <Sparkles className="w-3 h-3" />
               </div>
             </div>
           )}
         </div>
       ) : (
-        <div className="h-full flex flex-col items-center justify-center text-center py-8">
-          <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-3 transition-all duration-300 ${
+        <div className="h-full flex flex-col items-center justify-center text-center py-12">
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-all duration-300 ${
             isCurrentDay 
-              ? 'bg-gradient-to-br from-violet-100 to-purple-100' 
-              : 'bg-gray-100 group-hover:bg-violet-100'
+              ? 'premium-gradient' 
+              : 'luxury-card border-2 border-primary/20 group-hover:border-primary/40'
           }`}>
-            <Calendar className={`w-5 h-5 ${
-              isCurrentDay ? 'text-violet-600' : 'text-gray-400 group-hover:text-violet-500'
+            <Calendar className={`w-7 h-7 ${
+              isCurrentDay ? 'text-white' : 'text-primary group-hover:text-primary/80'
             }`} />
           </div>
-          <p className={`text-xs font-medium ${
-            isCurrentDay ? 'text-violet-600' : 'text-gray-400 group-hover:text-violet-500'
+          <p className={`text-sm font-bold mb-1 ${
+            isCurrentDay ? 'text-primary' : 'text-muted-foreground group-hover:text-primary'
           }`}>
             Aucun rendez-vous
           </p>
-          <p className="text-xs text-gray-300 mt-1">
+          <p className="text-xs text-muted-foreground font-medium flex items-center gap-1">
+            <Sparkles className="w-3 h-3" />
             Journée libre
           </p>
         </div>
       )}
 
-      {/* Hover effect */}
-      <div className="absolute inset-0 bg-gradient-to-br from-violet-500/0 to-purple-500/0 group-hover:from-violet-500/5 group-hover:to-purple-500/5 transition-all duration-300 pointer-events-none rounded-lg"></div>
+      {/* Premium hover effect */}
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/0 to-purple-500/0 group-hover:from-primary/5 group-hover:to-purple-500/5 transition-all duration-300 pointer-events-none rounded-lg"></div>
     </div>
   );
 };

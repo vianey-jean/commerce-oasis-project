@@ -1,6 +1,6 @@
 
 import { Appointment } from '@/services/AppointmentService';
-import { Clock, MapPin, Sparkles, Calendar } from 'lucide-react';
+import { Clock, MapPin, Sparkles, Calendar, Star } from 'lucide-react';
 
 /**
  * Props pour un rendez-vous dans le calendrier
@@ -34,41 +34,58 @@ const CalendarAppointment = ({ appointment, onClick, onDragStart }: CalendarAppo
       draggable={true}
       onDragStart={handleDragStart}
       onClick={handleClick}
-      className="group relative p-3 bg-gradient-to-br from-rose-500 to-pink-600 text-white rounded-xl shadow-lg hover:shadow-2xl cursor-grab active:cursor-grabbing transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 overflow-hidden"
+      className="group relative p-4 appointment-luxury text-white rounded-2xl premium-shadow cursor-grab active:cursor-grabbing premium-hover overflow-hidden glow-effect"
       style={{ userSelect: 'none' }}
     >
-      {/* Background decoration */}
-      <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-      <div className="absolute top-1 right-1 w-8 h-8 bg-white/10 rounded-full blur-sm"></div>
+      {/* Luxury background decoration */}
+      <div className="absolute inset-0 bg-gradient-to-br from-white/30 via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+      <div className="absolute top-2 right-2 w-12 h-12 bg-white/10 rounded-full blur-xl"></div>
+      <div className="absolute bottom-2 left-2 w-8 h-8 bg-white/5 rounded-full blur-lg"></div>
+      
+      {/* Premium border effect */}
+      <div className="absolute inset-0 rounded-2xl border-2 border-white/20 group-hover:border-white/40 transition-all duration-300"></div>
       
       <div className="relative z-10">
-        {/* Title avec icon */}
-        <div className="flex items-center gap-2 mb-2">
-          <Calendar className="w-4 h-4 text-rose-200 flex-shrink-0" />
-          <p className="font-bold text-sm truncate group-hover:text-rose-100 transition-colors">
+        {/* Title avec icon premium */}
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+            <Calendar className="w-4 h-4 text-white flex-shrink-0" />
+          </div>
+          <p className="font-bold text-sm text-white group-hover:text-white/90 transition-colors truncate flex-1">
             {appointment.titre}
           </p>
-          <Sparkles className="w-3 h-3 text-yellow-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          <div className="flex items-center gap-1">
+            <Star className="w-3 h-3 text-yellow-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <Sparkles className="w-3 h-3 text-yellow-300 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100" />
+          </div>
         </div>
         
-        {/* Time */}
-        <div className="flex items-center gap-2 mb-2">
-          <Clock className="w-3 h-3 text-rose-200 flex-shrink-0" />
-          <p className="text-xs text-rose-100 font-medium">{appointment.heure}</p>
+        {/* Time avec style premium */}
+        <div className="flex items-center gap-3 mb-3">
+          <div className="w-6 h-6 bg-white/15 rounded-lg flex items-center justify-center">
+            <Clock className="w-3 h-3 text-white/90 flex-shrink-0" />
+          </div>
+          <p className="text-xs text-white/90 font-medium tracking-wide">{appointment.heure}</p>
         </div>
         
-        {/* Location */}
-        <div className="flex items-center gap-2">
-          <MapPin className="w-3 h-3 text-rose-200 flex-shrink-0" />
-          <p className="text-xs text-rose-100 truncate">{appointment.location}</p>
+        {/* Location avec effet premium */}
+        <div className="flex items-center gap-3">
+          <div className="w-6 h-6 bg-white/15 rounded-lg flex items-center justify-center">
+            <MapPin className="w-3 h-3 text-white/90 flex-shrink-0" />
+          </div>
+          <p className="text-xs text-white/90 truncate font-medium">{appointment.location}</p>
         </div>
       </div>
       
-      {/* Hover indicator */}
-      <div className="absolute bottom-1 right-1 w-2 h-2 bg-yellow-300 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-300 animate-pulse"></div>
+      {/* Premium hover indicators */}
+      <div className="absolute bottom-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all duration-300">
+        <div className="w-2 h-2 bg-yellow-300 rounded-full animate-pulse"></div>
+        <div className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse delay-75"></div>
+        <div className="w-1 h-1 bg-yellow-200 rounded-full animate-pulse delay-150"></div>
+      </div>
       
-      {/* Border glow effect */}
-      <div className="absolute inset-0 rounded-xl border-2 border-white/0 group-hover:border-white/30 transition-all duration-300"></div>
+      {/* Luxury shine effect */}
+      <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-full group-hover:-translate-x-full transition-transform duration-1000"></div>
     </div>
   );
 };
