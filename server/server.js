@@ -1,80 +1,50 @@
+
 const express = require('express');
 const cors = require('cors');
-const mongoose = require('mongoose');
-const passport = require('passport');
-const session = require('express-session');
-const MongoStore = require('connect-mongo');
-const authRoutes = require('./routes/auth');
-const productRoutes = require('./routes/products');
-const salesRoutes = require('./routes/sales');
-const depenseRoutes = require('./routes/depenses');
-const pretFamilleRoutes = require('./routes/pretfamilles');
-const pretProduitRoutes = require('./routes/pretproduits');
-const beneficeRoutes = require('./routes/benefices');
-const syncRoutes = require('./routes/sync');
-require('dotenv').config();
+const bodyParser = require('body-parser');
+const dotenv = require('dotenv');
+const path = require('path');
+const fs = require('fs');
 
+// Charger les variables d'environnement
+dotenv.config();
+
+// Initialiser l'application Express
 const app = express();
-const port = process.env.PORT || 8080;
 
-// Middleware
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true,
-}));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Middlewares
+app.use(cors());
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-// MongoDB Connection
-const mongoUrl = process.env.MONGO_URL || 'mongodb://localhost:27017/gestion_stock';
-mongoose.connect(mongoUrl, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log('Connected to MongoDB'))
-.catch(err => console.error('MongoDB connection error:', err));
-
-// Session configuration
-const sessionStore = new MongoStore({
-  mongoUrl: mongoUrl,
-  collectionName: 'sessions'
-});
-
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'your-default-secret',
-  resave: false,
-  saveUninitialized: false,
-  store: sessionStore,
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 1000 * 60 * 60 * 24 * 7, // 1 week
-    httpOnly: true,
-    sameSite: 'lax'
-  }
-}));
-
-// Passport middleware
-require('./config/passport')(passport);
-app.use(passport.initialize());
-app.use(passport.session());
+// Dossier pour les fichiers uploadés
+const uploadsDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir);
+}
+app.use('/uploads', express.static(uploadsDir));
 
 // Routes
-app.use('/api/auth', authRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/sales', salesRoutes);
-app.use('/api/depenses', depenseRoutes);
-app.use('/api/pretfamilles', pretFamilleRoutes);
-app.use('/api/pretproduits', pretProduitRoutes);
-app.use('/api/benefices', beneficeRoutes);
-app.use('/api/sync', syncRoutes);
+const usersRoutes = require('./routes/users');
+const appointmentsRoutes = require('./routes/appointements');
+const contactRoutes = require('./routes/contact');
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).send('Something broke!');
+app.use('/api/users', usersRoutes);
+app.use('/api/appointments', appointmentsRoutes);
+app.use('/api/contact', contactRoutes);
+
+// Route de base pour vérifier si le serveur fonctionne
+app.get('/', (req, res) => {
+  res.json({ message: 'Bienvenue sur l\'API de Riziky-Agendas' });
 });
 
-// Start the server
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+// Gestion des erreurs 404
+app.use((req, res) => {
+  res.status(404).json({ error: 'Route non trouvée' });
+});
+
+// Lancement du serveur
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => {
+  console.log(`Serveur démarré sur le port ${PORT}`);
 });
