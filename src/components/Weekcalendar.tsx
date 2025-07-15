@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { startOfWeek, addDays, parseISO, isSameDay } from 'date-fns';
+import { startOfWeek, addDays, parseISO, isSameDay, format } from 'date-fns';
 import { AppointmentService, Appointment } from '@/services/AppointmentService';
 import { useNotificationService } from '@/services/NotificationService';
 import { toast } from 'sonner';
@@ -14,17 +14,19 @@ import { Calendar, Sparkles } from 'lucide-react';
  */
 interface WeekCalendarProps {
   onAppointmentClick: (appointment: Appointment) => void;
+  onAppointmentDrop?: (appointment: Appointment, newDate: Date) => void;
 }
 
 /**
  * Composant de calendrier hebdomadaire
- * Affiche les rendez-vous sur une semaine avec navigation
+ * Affiche les rendez-vous sur une semaine avec navigation et drag & drop
  */
-const WeekCalendar: React.FC<WeekCalendarProps> = ({ onAppointmentClick }) => {
+const WeekCalendar: React.FC<WeekCalendarProps> = ({ onAppointmentClick, onAppointmentDrop }) => {
   // États pour gérer la date courante, les rendez-vous et le chargement
   const [currentDate, setCurrentDate] = useState(new Date());
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
+  const [draggedAppointment, setDraggedAppointment] = useState<Appointment | null>(null);
 
   // Service de notifications pour les rappels de rendez-vous
   const { resetNotifications } = useNotificationService(appointments);
@@ -68,6 +70,41 @@ const WeekCalendar: React.FC<WeekCalendarProps> = ({ onAppointmentClick }) => {
       const appointmentDate = parseISO(appointment.date);
       return isSameDay(appointmentDate, date);
     });
+  };
+
+  // Gestion du début du drag
+  const handleDragStart = (appointment: Appointment, e: React.DragEvent) => {
+    setDraggedAppointment(appointment);
+  };
+
+  // Gestion du drop
+  const handleDrop = (appointment: Appointment, newDate: Date) => {
+    const newDateString = format(newDate, 'yyyy-MM-dd');
+    const originalDateString = appointment.date;
+
+    // Vérifier si la date a vraiment changé
+    if (newDateString !== originalDateString) {
+      const updatedAppointment = {
+        ...appointment,
+        date: newDateString
+      };
+
+      // Mettre à jour localement
+      setAppointments(prev => 
+        prev.map(apt => 
+          apt.id === appointment.id ? updatedAppointment : apt
+        )
+      );
+
+      // Déclencher l'ouverture du formulaire de modification avec la nouvelle date
+      if (onAppointmentDrop) {
+        onAppointmentDrop(updatedAppointment, newDate);
+      }
+
+      toast.success(`Rendez-vous déplacé vers le ${format(newDate, 'dd/MM/yyyy')}`);
+    }
+
+    setDraggedAppointment(null);
   };
 
   // Affichage d'un indicateur de chargement pendant la récupération des données
@@ -114,6 +151,8 @@ const WeekCalendar: React.FC<WeekCalendarProps> = ({ onAppointmentClick }) => {
             day={day}
             appointments={getAppointmentsForDate(day)}
             onAppointmentClick={onAppointmentClick}
+            onDrop={handleDrop}
+            onDragStart={handleDragStart}
           />
         ))}
       </div>

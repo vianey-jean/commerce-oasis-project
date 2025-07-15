@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import WeekCalendar from '@/components/Weekcalendar';
 import AppointmentForm from '@/components/AppointmentForm';
@@ -64,6 +63,14 @@ const DashboardPage = () => {
     setActiveAppointment(appointment);
     setShowAppointmentDetails(true);
     setIsSearchModalOpen(false);
+  };
+
+  // Nouvelle fonction pour gérer le drop d'un rendez-vous
+  const handleAppointmentDrop = (appointment: Appointment, newDate: Date) => {
+    console.log('Appointment dropped', appointment, newDate);
+    setActiveAppointment(appointment);
+    setShowAppointmentDetails(false);
+    setIsAddModalOpen(true);
   };
 
   // Fonction appelée après une action réussie sur un rendez-vous
@@ -142,7 +149,8 @@ const DashboardPage = () => {
             </div>
             <WeekCalendar 
               key={`calendar-${refreshTrigger}`} 
-              onAppointmentClick={handleViewAppointment} 
+              onAppointmentClick={handleViewAppointment}
+              onAppointmentDrop={handleAppointmentDrop}
             />
           </div>
         </div>

@@ -8,16 +8,27 @@ import { Clock, MapPin, Sparkles, Calendar } from 'lucide-react';
 type CalendarAppointmentProps = {
   appointment: Appointment;
   onClick: (appointment: Appointment) => void;
+  onDragStart?: (appointment: Appointment, e: React.DragEvent) => void;
 };
 
 /**
- * Composant pour afficher un rendez-vous dans le calendrier avec design moderne
+ * Composant pour afficher un rendez-vous dans le calendrier avec design moderne et drag & drop
  */
-const CalendarAppointment = ({ appointment, onClick }: CalendarAppointmentProps) => {
+const CalendarAppointment = ({ appointment, onClick, onDragStart }: CalendarAppointmentProps) => {
+  const handleDragStart = (e: React.DragEvent) => {
+    e.dataTransfer.setData('text/plain', JSON.stringify(appointment));
+    e.dataTransfer.effectAllowed = 'move';
+    if (onDragStart) {
+      onDragStart(appointment, e);
+    }
+  };
+
   return (
     <div
+      draggable
+      onDragStart={handleDragStart}
       onClick={() => onClick(appointment)}
-      className="group relative p-3 bg-gradient-to-br from-rose-500 to-pink-600 text-white rounded-xl shadow-lg hover:shadow-2xl cursor-pointer transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 overflow-hidden"
+      className="group relative p-3 bg-gradient-to-br from-rose-500 to-pink-600 text-white rounded-xl shadow-lg hover:shadow-2xl cursor-move transition-all duration-300 transform hover:scale-105 hover:-translate-y-1 overflow-hidden"
     >
       {/* Background decoration */}
       <div className="absolute inset-0 bg-gradient-to-br from-white/20 via-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>

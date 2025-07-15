@@ -1,3 +1,4 @@
+
 import { format, isToday } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Appointment } from '@/services/AppointmentService';
@@ -11,13 +12,15 @@ type CalendarDayProps = {
   day: Date;
   appointments: Appointment[];
   onAppointmentClick: (appointment: Appointment) => void;
+  onDrop?: (appointment: Appointment, newDate: Date) => void;
+  onDragStart?: (appointment: Appointment, e: React.DragEvent) => void;
 };
 
 /**
  * Composant pour afficher un jour dans le calendrier hebdomadaire moderne
- * avec tous les rendez-vous associés à ce jour
+ * avec tous les rendez-vous associés à ce jour et support du drag & drop
  */
-const CalendarDay = ({ day, appointments, onAppointmentClick }: CalendarDayProps) => {
+const CalendarDay = ({ day, appointments, onAppointmentClick, onDrop, onDragStart }: CalendarDayProps) => {
   // Trier les rendez-vous par heure
   const sortedAppointments = [...appointments].sort((a, b) => {
     const [aHours, aMinutes] = a.heure.split(':').map(Number);
@@ -27,12 +30,34 @@ const CalendarDay = ({ day, appointments, onAppointmentClick }: CalendarDayProps
 
   const isCurrentDay = isToday(day);
 
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    try {
+      const appointmentData = e.dataTransfer.getData('text/plain');
+      const appointment = JSON.parse(appointmentData) as Appointment;
+      if (onDrop) {
+        onDrop(appointment, day);
+      }
+    } catch (error) {
+      console.error('Erreur lors du drop:', error);
+    }
+  };
+
   return (
-    <div className={`p-3 border-r last:border-r-0 min-h-[350px] transition-all duration-300 relative group ${
-      isCurrentDay 
-        ? 'bg-gradient-to-br from-violet-50/80 to-purple-50/80 border-violet-200' 
-        : 'hover:bg-gradient-to-br hover:from-gray-50/50 hover:to-violet-50/30'
-    }`}>
+    <div 
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+      className={`p-3 border-r last:border-r-0 min-h-[350px] transition-all duration-300 relative group ${
+        isCurrentDay 
+          ? 'bg-gradient-to-br from-violet-50/80 to-purple-50/80 border-violet-200' 
+          : 'hover:bg-gradient-to-br hover:from-gray-50/50 hover:to-violet-50/30'
+      }`}
+    >
       
       {/* Indicator pour le jour actuel */}
       {isCurrentDay && (
@@ -47,7 +72,8 @@ const CalendarDay = ({ day, appointments, onAppointmentClick }: CalendarDayProps
             <CalendarAppointment 
               key={appointment.id} 
               appointment={appointment} 
-              onClick={onAppointmentClick} 
+              onClick={onAppointmentClick}
+              onDragStart={onDragStart}
             />
           ))}
           

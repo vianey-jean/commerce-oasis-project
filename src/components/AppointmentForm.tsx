@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -56,9 +55,10 @@ type AppointmentFormProps = {
   appointment?: Appointment;
   onSuccess: () => void;
   onCancel: () => void;
+  disableDate?: boolean;
 };
 
-const AppointmentForm = ({ appointment, onSuccess, onCancel }: AppointmentFormProps) => {
+const AppointmentForm = ({ appointment, onSuccess, onCancel, disableDate = false }: AppointmentFormProps) => {
   const [isAvailable, setIsAvailable] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [availableHours, setAvailableHours] = useState<string[]>([]);
@@ -229,7 +229,8 @@ const AppointmentForm = ({ appointment, onSuccess, onCancel }: AppointmentFormPr
                     <FormControl>
                       <Button
                         variant={"outline"}
-                        className={`pl-3 text-left font-normal ${!field.value ? "text-muted-foreground" : ""}`}
+                        disabled={disableDate}
+                        className={`pl-3 text-left font-normal ${!field.value ? "text-muted-foreground" : ""} ${disableDate ? "opacity-50 cursor-not-allowed" : ""}`}
                       >
                         {field.value ? (
                           format(field.value, "EEEE d MMMM yyyy", { locale: fr })
@@ -240,16 +241,23 @@ const AppointmentForm = ({ appointment, onSuccess, onCancel }: AppointmentFormPr
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar
-                      mode="single"
-                      selected={field.value}
-                      onSelect={field.onChange}
-                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                      initialFocus
-                    />
-                  </PopoverContent>
+                  {!disableDate && (
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  )}
                 </Popover>
+                {disableDate && (
+                  <p className="text-xs text-muted-foreground">
+                    Date fixée suite au déplacement du rendez-vous
+                  </p>
+                )}
                 <FormMessage />
               </FormItem>
             )}
