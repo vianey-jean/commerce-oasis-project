@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import WeekCalendar from '@/components/Weekcalendar';
 import AppointmentForm from '@/components/AppointmentForm';
@@ -65,12 +66,27 @@ const DashboardPage = () => {
     setIsSearchModalOpen(false);
   };
 
-  // Nouvelle fonction pour gérer le drop d'un rendez-vous
+  // Fonction pour gérer le drop d'un rendez-vous avec ouverture automatique du formulaire
   const handleAppointmentDrop = (appointment: Appointment, newDate: Date) => {
-    console.log('Appointment dropped', appointment, newDate);
+    console.log('Dashboard - handleAppointmentDrop called:', {
+      appointmentId: appointment.id,
+      appointmentTitle: appointment.titre,
+      newDate
+    });
+    
+    // Définir le rendez-vous actif avec la nouvelle date
     setActiveAppointment(appointment);
+    
+    // Fermer toutes les autres modales
     setShowAppointmentDetails(false);
+    setIsEditModalOpen(false);
+    setIsDeleteModalOpen(false);
+    setIsSearchModalOpen(false);
+    
+    // Ouvrir le modal de modification
     setIsAddModalOpen(true);
+    
+    console.log('Modal should open for editing appointment with new date');
   };
 
   // Fonction appelée après une action réussie sur un rendez-vous
@@ -169,6 +185,7 @@ const DashboardPage = () => {
               appointment={activeAppointment || undefined}
               onSuccess={handleFormSuccess}
               onCancel={handleCloseModals}
+              disableDate={!!activeAppointment}
             />
           </AppointmentModal>
         )}

@@ -37,20 +37,38 @@ const CalendarDay = ({ day, appointments, onAppointmentClick, onDrop, onDragStar
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    console.log('Drop event triggered on day:', format(day, 'yyyy-MM-dd'));
+    
     try {
       const appointmentData = e.dataTransfer.getData('text/plain');
-      const appointment = JSON.parse(appointmentData) as Appointment;
-      if (onDrop) {
-        onDrop(appointment, day);
+      console.log('Dropped data:', appointmentData);
+      
+      if (appointmentData) {
+        const appointment = JSON.parse(appointmentData) as Appointment;
+        console.log('Parsed appointment:', appointment);
+        
+        if (onDrop) {
+          onDrop(appointment, day);
+        }
       }
     } catch (error) {
       console.error('Erreur lors du drop:', error);
     }
   };
 
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
   return (
     <div 
       onDragOver={handleDragOver}
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       className={`p-3 border-r last:border-r-0 min-h-[350px] transition-all duration-300 relative group ${
         isCurrentDay 

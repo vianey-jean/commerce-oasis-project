@@ -74,22 +74,32 @@ const WeekCalendar: React.FC<WeekCalendarProps> = ({ onAppointmentClick, onAppoi
 
   // Gestion du début du drag
   const handleDragStart = (appointment: Appointment, e: React.DragEvent) => {
+    console.log('Week calendar - drag start:', appointment.titre);
     setDraggedAppointment(appointment);
   };
 
   // Gestion du drop
   const handleDrop = (appointment: Appointment, newDate: Date) => {
+    console.log('Week calendar - handleDrop called with:', {
+      appointmentId: appointment.id,
+      appointmentTitle: appointment.titre,
+      originalDate: appointment.date,
+      newDate: format(newDate, 'yyyy-MM-dd')
+    });
+
     const newDateString = format(newDate, 'yyyy-MM-dd');
     const originalDateString = appointment.date;
 
     // Vérifier si la date a vraiment changé
     if (newDateString !== originalDateString) {
+      console.log('Date has changed, triggering appointment drop callback');
+      
       const updatedAppointment = {
         ...appointment,
         date: newDateString
       };
 
-      // Mettre à jour localement
+      // Mettre à jour localement l'état pour un feedback immédiat
       setAppointments(prev => 
         prev.map(apt => 
           apt.id === appointment.id ? updatedAppointment : apt
@@ -98,10 +108,13 @@ const WeekCalendar: React.FC<WeekCalendarProps> = ({ onAppointmentClick, onAppoi
 
       // Déclencher l'ouverture du formulaire de modification avec la nouvelle date
       if (onAppointmentDrop) {
+        console.log('Calling onAppointmentDrop callback');
         onAppointmentDrop(updatedAppointment, newDate);
       }
 
       toast.success(`Rendez-vous déplacé vers le ${format(newDate, 'dd/MM/yyyy')}`);
+    } else {
+      console.log('Date unchanged, no action needed');
     }
 
     setDraggedAppointment(null);
