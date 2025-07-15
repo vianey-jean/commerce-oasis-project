@@ -14,13 +14,15 @@ type CalendarDayProps = {
   onAppointmentClick: (appointment: Appointment) => void;
   onDrop?: (appointment: Appointment, newDate: Date) => void;
   onDragStart?: (appointment: Appointment, e: React.DragEvent) => void;
+  onCancelDrop?: () => void;
+  onConfirmDrop?: (appointment: Appointment) => void;
 };
 
 /**
  * Composant pour afficher un jour dans le calendrier hebdomadaire moderne
  * avec tous les rendez-vous associés à ce jour et support du drag & drop
  */
-const CalendarDay = ({ day, appointments, onAppointmentClick, onDrop, onDragStart }: CalendarDayProps) => {
+const CalendarDay = ({ day, appointments, onAppointmentClick, onDrop, onDragStart, onCancelDrop, onConfirmDrop }: CalendarDayProps) => {
   // Trier les rendez-vous par heure
   const sortedAppointments = [...appointments].sort((a, b) => {
     const [aHours, aMinutes] = a.heure.split(':').map(Number);

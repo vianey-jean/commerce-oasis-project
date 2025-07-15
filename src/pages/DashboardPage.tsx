@@ -17,6 +17,7 @@ import { Calendar, Sparkles, Zap, Star } from 'lucide-react';
 const DashboardPage = () => {
   // États pour gérer les rendez-vous et les différentes modales
   const [activeAppointment, setActiveAppointment] = useState<Appointment | null>(null);
+  const [originalAppointment, setOriginalAppointment] = useState<Appointment | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -33,6 +34,7 @@ const DashboardPage = () => {
   const handleOpenAdd = () => {
     console.log('Opening add modal');
     setActiveAppointment(null);
+    setOriginalAppointment(null);
     setShowAppointmentDetails(false);
     setIsAddModalOpen(true);
   };
@@ -41,6 +43,7 @@ const DashboardPage = () => {
     console.log('Opening edit modal', appointment);
     if (appointment) {
       setActiveAppointment(appointment);
+      setOriginalAppointment(null);
       setIsEditModalOpen(false);
       setShowAppointmentDetails(false);
       setIsAddModalOpen(true);
@@ -62,20 +65,23 @@ const DashboardPage = () => {
   const handleViewAppointment = (appointment: Appointment) => {
     console.log('Viewing appointment', appointment);
     setActiveAppointment(appointment);
+    setOriginalAppointment(null);
     setShowAppointmentDetails(true);
     setIsSearchModalOpen(false);
   };
 
   // Fonction pour gérer le drop d'un rendez-vous avec ouverture automatique du formulaire
-  const handleAppointmentDrop = (appointment: Appointment, newDate: Date) => {
+  const handleAppointmentDrop = (appointment: Appointment, newDate: Date, originalAppointment: Appointment) => {
     console.log('Dashboard - handleAppointmentDrop called:', {
       appointmentId: appointment.id,
       appointmentTitle: appointment.titre,
-      newDate
+      newDate,
+      originalAppointment
     });
     
-    // Définir le rendez-vous actif avec la nouvelle date
+    // Définir le rendez-vous actif avec la nouvelle date et conserver l'original
     setActiveAppointment(appointment);
+    setOriginalAppointment(originalAppointment);
     
     // Fermer toutes les autres modales
     setShowAppointmentDetails(false);
@@ -98,16 +104,28 @@ const DashboardPage = () => {
     setIsSearchModalOpen(false);
     setShowAppointmentDetails(false);
     setActiveAppointment(null);
+    setOriginalAppointment(null);
     refreshData();
   };
 
   const handleCloseModals = () => {
     console.log('Closing all modals');
+    
+    // Si on avait un rendez-vous original (annulation après drag & drop), le restaurer
+    if (originalAppointment && activeAppointment) {
+      console.log('Restoring original appointment after cancel');
+      // Ici on pourrait appeler une fonction de callback du calendrier pour restaurer
+      // Pour l'instant, on rafraîchit les données
+      refreshData();
+    }
+    
     setIsAddModalOpen(false);
     setIsEditModalOpen(false);
     setIsDeleteModalOpen(false);
     setIsSearchModalOpen(false);
     setShowAppointmentDetails(false);
+    setActiveAppointment(null);
+    setOriginalAppointment(null);
   };
 
   return (
@@ -185,7 +203,7 @@ const DashboardPage = () => {
               appointment={activeAppointment || undefined}
               onSuccess={handleFormSuccess}
               onCancel={handleCloseModals}
-              disableDate={!!activeAppointment}
+              disableDate={!!activeAppointment && !!originalAppointment}
             />
           </AppointmentModal>
         )}

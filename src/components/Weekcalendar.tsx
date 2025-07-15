@@ -14,7 +14,7 @@ import { Calendar, Sparkles } from 'lucide-react';
  */
 interface WeekCalendarProps {
   onAppointmentClick: (appointment: Appointment) => void;
-  onAppointmentDrop?: (appointment: Appointment, newDate: Date) => void;
+  onAppointmentDrop?: (appointment: Appointment, newDate: Date, originalAppointment: Appointment) => void;
 }
 
 /**
@@ -27,6 +27,7 @@ const WeekCalendar: React.FC<WeekCalendarProps> = ({ onAppointmentClick, onAppoi
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [draggedAppointment, setDraggedAppointment] = useState<Appointment | null>(null);
+  const [originalAppointment, setOriginalAppointment] = useState<Appointment | null>(null);
 
   // Service de notifications pour les rappels de rendez-vous
   const { resetNotifications } = useNotificationService(appointments);
@@ -76,6 +77,8 @@ const WeekCalendar: React.FC<WeekCalendarProps> = ({ onAppointmentClick, onAppoi
   const handleDragStart = (appointment: Appointment, e: React.DragEvent) => {
     console.log('Week calendar - drag start:', appointment.titre);
     setDraggedAppointment(appointment);
+    // Conserver l'état original du rendez-vous
+    setOriginalAppointment({ ...appointment });
   };
 
   // Gestion du drop
@@ -99,24 +102,46 @@ const WeekCalendar: React.FC<WeekCalendarProps> = ({ onAppointmentClick, onAppoi
         date: newDateString
       };
 
-      // Mettre à jour localement l'état pour un feedback immédiat
-      setAppointments(prev => 
-        prev.map(apt => 
-          apt.id === appointment.id ? updatedAppointment : apt
-        )
-      );
+      // NE PAS mettre à jour localement l'état ici
+      // L'état sera mis à jour seulement après confirmation
 
       // Déclencher l'ouverture du formulaire de modification avec la nouvelle date
-      if (onAppointmentDrop) {
+      if (onAppointmentDrop && originalAppointment) {
         console.log('Calling onAppointmentDrop callback');
-        onAppointmentDrop(updatedAppointment, newDate);
+        onAppointmentDrop(updatedAppointment, newDate, originalAppointment);
       }
 
-      toast.success(`Rendez-vous déplacé vers le ${format(newDate, 'dd/MM/yyyy')}`);
+      toast.success(`Rendez-vous préparé pour le ${format(newDate, 'dd/MM/yyyy')}`);
     } else {
       console.log('Date unchanged, no action needed');
     }
 
+    setDraggedAppointment(null);
+  };
+
+  // Fonction pour annuler le déplacement
+  const handleCancelDrop = () => {
+    if (originalAppointment) {
+      // Restaurer le rendez-vous original dans l'état
+      setAppointments(prev => 
+        prev.map(apt => 
+          apt.id === originalAppointment.id ? originalAppointment : apt
+        )
+      );
+    }
+    setOriginalAppointment(null);
+    setDraggedAppointment(null);
+  };
+
+  // Fonction pour confirmer le déplacement
+  const handleConfirmDrop = (updatedAppointment: Appointment) => {
+    // Mettre à jour l'état local avec le rendez-vous modifié
+    setAppointments(prev => 
+      prev.map(apt => 
+        apt.id === updatedAppointment.id ? updatedAppointment : apt
+      )
+    );
+    setOriginalAppointment(null);
     setDraggedAppointment(null);
   };
 
@@ -166,6 +191,8 @@ const WeekCalendar: React.FC<WeekCalendarProps> = ({ onAppointmentClick, onAppoi
             onAppointmentClick={onAppointmentClick}
             onDrop={handleDrop}
             onDragStart={handleDragStart}
+            onCancelDrop={handleCancelDrop}
+            onConfirmDrop={handleConfirmDrop}
           />
         ))}
       </div>
