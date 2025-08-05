@@ -1,3 +1,41 @@
+/**
+ * ============================================================================
+ * PAGE DE RÉINITIALISATION DE MOT DE PASSE - COMPOSANT FRONTEND
+ * ============================================================================
+ * 
+ * Ce fichier contient la page complète pour la réinitialisation de mot de passe oublié.
+ * Il gère un processus en deux étapes :
+ * 1. Vérification de l'email de l'utilisateur
+ * 2. Définition d'un nouveau mot de passe avec validation de sécurité
+ * 
+ * FONCTIONNALITÉS PRINCIPALES :
+ * - Validation d'email existant dans la base de données
+ * - Formulaire sécurisé avec validation Zod
+ * - Indicateur de force du mot de passe en temps réel
+ * - Interface utilisateur moderne avec animations
+ * - Gestion des états de chargement et d'erreurs
+ * - Design responsive avec Tailwind CSS
+ * 
+ * TECHNOLOGIES UTILISÉES :
+ * - React 18 avec hooks (useState, useForm)
+ * - React Hook Form pour la gestion des formulaires
+ * - Zod pour la validation des schémas
+ * - React Router pour la navigation
+ * - Sonner pour les notifications toast
+ * - Lucide React pour les icônes
+ * - Tailwind CSS pour le styling
+ * 
+ * SÉCURITÉ :
+ * - Validation côté client et serveur
+ * - Critères de mot de passe stricts (8+ caractères, majuscules, minuscules, chiffres, spéciaux)
+ * - Masquage/affichage sécurisé des mots de passe
+ * - Vérification de confirmation de mot de passe
+ * 
+ * @author Riziky Agendas Team
+ * @version 1.0.0
+ * @lastModified 2024
+ */
+
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -88,10 +126,10 @@ const ForgotPasswordPage = () => {
   };
   
   // Soumission du formulaire de mot de passe
-  const onSubmitPassword = (values: z.infer<typeof passwordSchema>) => {
+  const onSubmitPassword = async (values: z.infer<typeof passwordSchema>) => {
     setIsSubmitting(true);
     try {
-      const success = AuthService.resetPassword(email, values.password);
+      const success = await AuthService.resetPassword(email, values.password);
       
       if (success) {
         toast.success("Mot de passe réinitialisé avec succès");
@@ -109,7 +147,7 @@ const ForgotPasswordPage = () => {
   };
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="mt-[80px] min-h-screen bg-gradient-to-br from-orange-50 via-white to-red-50 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-orange-400/20 to-red-400/20 rounded-full blur-3xl animate-pulse"></div>

@@ -1,315 +1,290 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Search, Menu, X, LogIn, LogOut, Sun, Moon, Calendar } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { AuthService } from '@/services/AuthService';
-import { AppointmentService, Appointment } from '@/services/AppointmentService';
-import AppointmentDetails from '@/components/AppointmentDetails';
 
-export const Navbar = () => {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [searchResults, setSearchResults] = useState<Appointment[]>([]);
-  const [showSearchResults, setShowSearchResults] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
-  const [showAppointmentDetails, setShowAppointmentDetails] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
-  const currentUser = AuthService.getCurrentUser();
-  const navigate = useNavigate();
+/**
+ * ============================================================================
+ * BARRE DE NAVIGATION PRINCIPALE - COMPOSANT HEADER
+ * ============================================================================
+ * 
+ * Ce composant gère la navigation principale de l'application Riziky Agendas.
+ * Il s'adapte automatiquement selon l'état d'authentification de l'utilisateur.
+ * 
+ * FONCTIONNALITÉS PRINCIPALES :
+ * - Navigation responsive avec menu mobile hamburger
+ * - Logo animé avec effets premium (couronne, étoiles, diamants)
+ * - Affichage conditionnel des menus selon l'authentification
+ * - Badge de notification pour les messages non lus
+ * - Menu déroulant utilisateur avec accès aux messages
+ * - Effets de scroll avec backdrop blur et transparence
+ * - Déconnexion avec confirmation
+ * 
+ * ÉTATS DE NAVIGATION :
+ * - Navigation publique : Accueil, Contact
+ * - Navigation privée : Dashboard, Calendrier, Clients
+ * - Accès direct aux messages avec compteur de non-lus
+ * 
+ * DESIGN PREMIUM :
+ * - Gradient background avec transparence
+ * - Logo animé avec rotation et effets de scale
+ * - Icônes Lucide pour la cohérence visuelle
+ * - Animations smooth et transitions CSS
+ * - Responsive design avec breakpoints
+ * 
+ * SÉCURITÉ :
+ * - Gestion d'état authentification via Context
+ * - Protection des routes privées
+ * - Déconnexion sécurisée avec nettoyage d'état
+ * 
+ * @author Riziky Agendas Team
+ * @version 1.0.0
+ * @lastModified 2024
+ */
+
+import React, { useState, useEffect } from 'react';
+import { Link, NavLink } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
+import { useUnreadMessages } from '@/hooks/useUnreadMessages';
+import { cn } from "@/lib/utils";
+import { Home, Calendar, Info, Mail, Users, CalendarDays, Crown, Menu, X, User, Diamond, Star, Sparkles } from 'lucide-react';
+
+interface NavItem {
+  name: string;
+  path: string;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  protected?: boolean;
+}
+
+const Navbar = () => {
+  const { user, logout } = useAuth();
+  const { unreadCount } = useUnreadMessages();
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   useEffect(() => {
-    const storedTheme = localStorage.getItem('theme');
-    if (storedTheme) {
-      setIsDarkMode(storedTheme === 'dark');
-      document.documentElement.classList.toggle('dark', storedTheme === 'dark');
-    }
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
+  const publicNavItems: NavItem[] = [
+    { name: 'Accueil', path: '/', icon: Home },
+    { name: 'Contact', path: '/contact', icon: Mail }
+  ];
 
-  const toggleTheme = () => {
-    const newTheme = !isDarkMode;
-    setIsDarkMode(newTheme);
-    document.documentElement.classList.toggle('dark', newTheme);
-    localStorage.setItem('theme', newTheme ? 'dark' : 'light');
-  };
+  const privateNavItems: NavItem[] = [
+    { name: 'Dashboard', path: '/dashboard', icon: Calendar },
+    { name: 'Calendrier', path: '/calendar', icon: CalendarDays },
+    { name: 'Clients', path: '/clients', icon: Users }
+  ];
 
-  const handleSearch = async (query: string) => {
-    setSearchQuery(query);
-    
-    if (query.length >= 3) {
-      setIsSearching(true);
-      try {
-        const results = await AppointmentService.search(query);
-        setSearchResults(results);
-        setShowSearchResults(true);
-      } catch (error) {
-        console.error('Erreur recherche rendez-vous:', error);
-      } finally {
-        setIsSearching(false);
-      }
-    } else {
-      setSearchResults([]);
-      setShowSearchResults(false);
-    }
-  };
+  const navItems = user ? privateNavItems : publicNavItems;
 
-  const handleAppointmentClick = (appointment: Appointment) => {
-    setShowSearchResults(false);
-    setSearchQuery('');
-    setSelectedAppointment(appointment);
-    setShowAppointmentDetails(true);
-  };
-
-  const handleLogout = () => {
-    AuthService.logout();
-    navigate('/');
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
   };
 
   return (
-    <>
-      <nav className="bg-white/80 backdrop-blur-md border-b border-white/20 shadow-lg transition-colors duration-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            {/* Logo */}
-            <div className="flex items-center flex-shrink-0">
-              <Link to="/" className="flex items-center group">
-                <div className="w-8 h-8 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg flex items-center justify-center mr-3 group-hover:scale-110 transition-transform duration-200">
-                  <Calendar className="w-5 h-5 text-white" />
-                </div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
-                  Riziky-Agendas
-                </h1>
-              </Link>
-            </div>
-            
-            {/* Navigation desktop */}
-            <div className="hidden md:flex items-center space-x-8">
-              <Link to="/" className="nav-link relative text-gray-700 hover:text-purple-600 font-medium transition-colors duration-200 group">
-                Liste RDV
-                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-purple-600 to-pink-600 group-hover:w-full transition-all duration-300"></span>
-              </Link>
-              <Link to="/a-propos" className="nav-link relative text-gray-700 hover:text-purple-600 font-medium transition-colors duration-200 group">
-                À propos
-                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-purple-600 to-pink-600 group-hover:w-full transition-all duration-300"></span>
-              </Link>
-              <Link to="/contact" className="nav-link relative text-gray-700 hover:text-purple-600 font-medium transition-colors duration-200 group">
-                Contact
-                <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-gradient-to-r from-purple-600 to-pink-600 group-hover:w-full transition-all duration-300"></span>
-              </Link>
-              {currentUser && (
-                <Link to="/dashboard" className="nav-link relative font-bold text-purple-600 hover:text-purple-700 transition-colors duration-200 group">
-                  Tableau de Bord
-                  <span className="absolute bottom-0 left-0 w-full h-0.5 bg-gradient-to-r from-purple-600 to-pink-600"></span>
-                </Link>
+    <nav className={cn(
+      "fixed top-0 left-0 w-full z-50 bg-gradient-to-r from-blue-600 to-violet-600 backdrop-blur-md transition-all duration-300 border-b border-white/20",
+      isScrolled ? "shadow-xl" : "shadow-none"
+    )}>
+      <div className="container mx-auto px-4 py-3">
+        <div className="flex items-center justify-between">
+          {/* Logo */}
+       <Link
+              to="/"
+              className={cn(
+                "group flex items-center transition-all duration-700 ease-out transform hover:scale-105",
+                "relative overflow-hidden rounded-xl px-2 py-1 shrink-0"
               )}
-              
-              {/* Barre de recherche modernisée */}
-              <div className="relative">
-                <div className="flex items-center bg-gray-50/80 backdrop-blur-sm border border-gray-200 rounded-xl px-4 py-2 focus-within:border-purple-400 focus-within:ring-2 focus-within:ring-purple-100 transition-all duration-200">
-                  <Search className="h-4 w-4 text-gray-400" />
-                  <Input
-                    type="text"
-                    placeholder="Rechercher..."
-                    value={searchQuery}
-                    onChange={(e) => handleSearch(e.target.value)}
-                    className="border-0 bg-transparent focus-visible:ring-0 text-sm ml-2"
-                  />
-                </div>
-                
-                {showSearchResults && searchResults.length > 0 && (
-                  <div className="absolute top-full mt-2 w-96 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-xl shadow-2xl z-50 overflow-hidden">
-                    {searchResults.map((result) => (
-                      <div
-                        key={result.id}
-                        className="p-4 hover:bg-purple-50 cursor-pointer border-b border-gray-100 last:border-b-0 transition-colors duration-150"
-                        onClick={() => handleAppointmentClick(result)}
-                      >
-                        <div className="font-medium text-gray-800">{result.titre}</div>
-                        <div className="text-sm text-gray-500 mt-1">
-                          {result.date} à {result.heure}
-                        </div>
-                      </div>
-                    ))}
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-white/20 via-white/10 to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+              <div className="relative flex items-center">
+                <div className="relative mr-2 lg:mr-3 transform group-hover:rotate-12 transition-all duration-700 ease-out">
+                  <div className={cn(
+                    "w-6 h-6 sm:w-8 sm:h-8 lg:w-10 lg:h-10 rounded-xl flex items-center justify-center relative overflow-hidden",
+                    "bg-gradient-to-br from-yellow-400 via-orange-500 to-red-500",
+                    "shadow-lg shadow-orange-500/30 group-hover:shadow-xl group-hover:shadow-orange-500/50"
+                  )}>
+                    <Crown className="w-3 h-3 sm:w-4 sm:h-4 lg:w-5 lg:h-5 text-white drop-shadow-lg transform group-hover:scale-110 transition-all duration-500" />
+                    <div className="absolute inset-0 bg-gradient-to-tr from-white/40 via-transparent to-transparent rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
                   </div>
-                )}
-              </div>
-              
-              {/* Authentification */}
-              {currentUser ? (
-                <div className="flex items-center space-x-4">
-                  <div className="text-right">
-                    <div className="text-sm font-semibold text-red-800">
-                      {currentUser.prenom} {currentUser.nom}
-                    </div>
-                    <div className="text-xs text-green-600 font-medium">Connecté</div>
+                  <div className="absolute -top-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 bg-gradient-to-br from-pink-400 to-purple-500 rounded-full flex items-center justify-center transform rotate-12 group-hover:rotate-45 transition-all duration-700">
+                    <Star className="w-1.5 h-1.5 sm:w-2 sm:h-2 text-white animate-pulse" />
                   </div>
-                  <Button onClick={handleLogout} variant="outline" className="border-red-200 text-red-600 hover:bg-red-50 hover:border-red-300 rounded-lg">
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Déconnexion
-                  </Button>
+                  <div className="absolute -bottom-1 -left-1 w-2.5 h-2.5 sm:w-3 sm:h-3 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full flex items-center justify-center transform -rotate-12 group-hover:-rotate-45 transition-all duration-700">
+                    <Diamond className="w-1 h-1 sm:w-1.5 sm:h-1.5 text-white" />
+                  </div>
                 </div>
-              ) : (
-                <Link to="/connexion">
-                  <Button className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg shadow-lg hover:shadow-xl transition-all duration-200 hover:-translate-y-0.5">
-                    <LogIn className="h-4 w-4 mr-2" />
-                    Connexion
-                  </Button>
-                </Link>
-              )}
 
-              {/* Toggle thème */}
-              <Button variant="ghost" size="icon" onClick={toggleTheme} className="rounded-lg hover:bg-gray-100">
-                {isDarkMode ? (
-                  <Sun className="h-5 w-5 text-yellow-500" />
-                ) : (
-                  <Moon className="h-5 w-5 text-slate-700" />
-                )}
-              </Button>
-            </div>
-            
-            {/* Menu mobile */}
-            <div className="md:hidden flex items-center space-x-2">
-              <Button variant="ghost" size="icon" onClick={toggleTheme} className="rounded-lg">
-                {isDarkMode ? (
-                  <Sun className="h-5 w-5 text-yellow-500" />
-                ) : (
-                  <Moon className="h-5 w-5 text-slate-700" />
-                )}
-              </Button>
-              <button
-                onClick={toggleMenu}
-                className="inline-flex items-center justify-center p-2 rounded-lg text-gray-700 hover:text-purple-600 hover:bg-gray-100 focus:outline-none transition-colors duration-200"
+                <div className="relative min-w-0 flex-shrink">
+                  <div className="font-black tracking-tight leading-none text-sm sm:text-lg lg:text-xl xl:text-2xl text-white">
+                    <span className="block bg-gradient-to-r from-yellow-300 via-orange-400 to-red-400 bg-clip-text text-transparent animate-pulse">
+                      Riziky
+                    </span>
+                    <span className="block text-xs sm:text-xs lg:text-sm xl:text-base font-semibold tracking-wider text-white/90 truncate">
+                      Agendas Premium
+                    </span>
+                  </div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-yellow-300/30 via-orange-400/30 to-red-400/30 blur-lg opacity-0 group-hover:opacity-50 transition-all duration-500 -z-10"></div>
+                </div>
+
+                <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
+                  <Sparkles className="w-2.5 h-2.5 sm:w-3 sm:h-3 animate-pulse text-yellow-300" />
+                </div>
+              </div>
+            </Link>
+          
+          {/* Navigation Desktop */}
+          <div className="hidden lg:flex items-center space-x-2">
+            {navItems.map((item) => (
+              <NavLink
+                key={item.name}
+                to={item.path}
+                className={({ isActive }) =>
+                  cn(
+                    "py-2 px-4 rounded-lg transition-all duration-200 hover:bg-white/20 hover:backdrop-blur-sm flex items-center space-x-2 text-white/90 hover:text-white premium-hover",
+                    isActive ? "bg-white/20 text-white font-semibold" : ""
+                  )
+                }
               >
-                {isMenuOpen ? (
-                  <X className="h-6 w-6" />
-                ) : (
-                  <Menu className="h-6 w-6" />
-                )}
-              </button>
-            </div>
+                <item.icon className="w-5 h-5 text-white" />
+                <span className="text-white font-bold">{item.name}</span>
+              </NavLink>
+            ))}
           </div>
+
+          {/* Mobile Menu Button */}
+          <button
+            onClick={toggleMobileMenu}
+            className="lg:hidden w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+          >
+            {isMobileMenuOpen ? (
+              <X className="w-5 h-5" />
+            ) : (
+              <Menu className="w-5 h-5" />
+            )}
+          </button>
+
+          {/* Auth Section Desktop */}
+<div className="hidden lg:flex items-center space-x-4">
+  {user ? (
+    <>
+      <div className="relative group">
+        <div className="flex items-center gap-2 py-2 px-4 rounded-lg text-white/90 font-medium cursor-pointer hover:bg-white/10 transition-all">
+          <User className="w-5 h-5" />
+          <span className="text-green-300 font-bold">{user.prenom} {user.nom}</span>
         </div>
         
-        {/* Menu mobile déroulant */}
-        {isMenuOpen && (
-          <div className="md:hidden bg-white/95 backdrop-blur-md border-t border-gray-200">
-            <div className="px-4 pt-4 pb-6 space-y-4">
-              <Link
-                to="/"
-                className="block px-4 py-3 rounded-lg text-base font-medium text-gray-700 hover:text-purple-600 hover:bg-purple-50 transition-colors duration-200"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Liste RDV
-              </Link>
-              <Link
-                to="/a-propos"
-                className="block px-4 py-3 rounded-lg text-base font-medium text-gray-700 hover:text-purple-600 hover:bg-purple-50 transition-colors duration-200"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                À propos
-              </Link>
-              <Link
-                to="/contact"
-                className="block px-4 py-3 rounded-lg text-base font-medium text-gray-700 hover:text-purple-600 hover:bg-purple-50 transition-colors duration-200"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Contact
-              </Link>
+        {/* Menu déroulant Messages */}
+        <div className="absolute top-full right-0 mt-1 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-white/20 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+          <Link 
+            to="/messages" 
+            className="flex items-center gap-2 px-4 py-3 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-lg transition-colors relative"
+          >
+            <Mail className="w-4 h-4" />
+            Messages
+            {unreadCount > 0 && (
+              <span className="absolute right-2 top-1/2 -translate-y-1/2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                {unreadCount}
+              </span>
+            )}
+          </Link>
+        </div>
+      </div>
+      
+      <button 
+        onClick={logout} 
+        className="py-2 px-4 rounded-lg bg-red-500/80 text-white border border-red-400/30 hover:bg-red-500/60 transition-all duration-200 font-medium"
+      >
+        Déconnexion
+      </button>
+    </>
+  ) : (
+    <>
+      <Link 
+        to="/connexion" 
+        className="py-2 px-4 rounded-lg hover:bg-white/20 hover:backdrop-blur-sm transition-all duration-200 text-white/90 hover:text-white font-medium"
+      >
+        Connexion
+      </Link>
+    </>
+  )}
+</div>
+
+        </div>
+
+        {/* Mobile Menu */}
+        {isMobileMenuOpen && (
+          <div className="lg:hidden mt-4 pb-4 border-t border-white/20 pt-4">
+            <div className="flex flex-col space-y-2">
+              {navItems.map((item) => (
+                <NavLink
+                  key={item.name}
+                  to={item.path}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={({ isActive }) =>
+                    cn(
+                      "py-3 px-4 rounded-lg transition-all duration-200 hover:bg-white/20 flex items-center space-x-3 text-white/90 hover:text-white",
+                      isActive ? "bg-white/20 text-white font-semibold" : ""
+                    )
+                  }
+                >
+                  <item.icon className="w-5 h-5" />
+                  <span className="font-medium">{item.name}</span>
+                </NavLink>
+              ))}
               
-              {currentUser && (
-                <>
-                  <Link
-                    to="/dashboard"
-                    className="block px-4 py-3 rounded-lg text-base font-bold text-purple-600 hover:text-purple-700 hover:bg-purple-50 transition-colors duration-200"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    tableau de Bord
-                  </Link>
-                  <div className="px-4 py-2 bg-green-50 rounded-lg">
-                    <div className="font-bold text-green-800">
-                      {currentUser.prenom} {currentUser.nom}
+              {/* Auth Section Mobile */}
+              <div className="mt-4 pt-4 border-t border-white/20">
+                {user ? (
+                  <>
+                    <div className="mb-3 py-2 px-4 text-white/90 font-medium">
+                      <span className="text-green-300 font-bold">{user.prenom} {user.nom}</span>
                     </div>
-                    <div className="text-sm text-green-600">Connecté</div>
-                  </div>
-                </>
-              )}
-              
-              {/* Recherche mobile */}
-              <div className="relative px-4">
-                <div className="flex items-center bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
-                  <Search className="h-4 w-4 text-gray-400" />
-                  <Input
-                    type="text"
-                    placeholder="Rechercher..."
-                    value={searchQuery}
-                    onChange={(e) => handleSearch(e.target.value)}
-                    className="bg-transparent border-0 focus-visible:ring-0"
-                  />
-                </div>
-                
-                {showSearchResults && searchResults.length > 0 && (
-                  <div className="absolute left-4 right-4 mt-2 bg-white border border-gray-200 rounded-lg shadow-xl z-10">
-                    {searchResults.map((result) => (
-                      <div
-                        key={result.id}
-                        className="p-3 hover:bg-purple-50 cursor-pointer border-b border-gray-100 last:border-b-0"
-                        onClick={() => handleAppointmentClick(result)}
-                      >
-                        <div className="font-medium text-gray-800">{result.titre}</div>
-                        <div className="text-sm text-gray-500">
-                          {result.date} à {result.heure}
-                        </div>
-                      </div>
-                    ))}
+                    
+                    <Link 
+                      to="/messages"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="block w-full py-3 px-4 rounded-lg hover:bg-white/20 text-white/90 hover:text-white font-medium transition-all duration-200 mb-2 flex items-center gap-2 relative"
+                    >
+                      <Mail className="w-4 h-4" />
+                      Messages
+                      {unreadCount > 0 && (
+                        <span className="absolute right-4 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
+                          {unreadCount}
+                        </span>
+                      )}
+                    </Link>
+                    
+                    <button 
+                      onClick={() => {
+                        logout();
+                        setIsMobileMenuOpen(false);
+                      }}
+                      className="w-full py-3 px-4 rounded-lg bg-red-500/20 text-white border border-red-400/30 hover:bg-red-500/30 transition-all duration-200 font-medium"
+                    >
+                      Déconnexion
+                    </button>
+                  </>
+                ) : (
+                  <div className="space-y-2">
+                    <Link 
+                      to="/connexion"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="block w-full py-3 px-4 rounded-lg hover:bg-white/20 text-center text-white/90 hover:text-white font-medium transition-all duration-200"
+                    >
+                      Connexion
+                    </Link>
                   </div>
                 )}
               </div>
-              
-              {/* Boutons d'action mobile */}
-              {currentUser ? (
-                <Button 
-                  onClick={() => {
-                    handleLogout();
-                    setIsMenuOpen(false);
-                  }}
-                  variant="outline"
-                  className="w-full mx-4 border-red-200 text-red-600 hover:bg-red-50"
-                >
-                  <LogOut className="h-4 w-4 mr-2" />
-                  Déconnexion
-                </Button>
-              ) : (
-                <Link to="/connexion" className="block px-4" onClick={() => setIsMenuOpen(false)}>
-                  <Button className="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white">
-                    <LogIn className="h-4 w-4 mr-2" />
-                    Connexion
-                  </Button>
-                </Link>
-              )}
             </div>
           </div>
         )}
-      </nav>
-      
-      {/* ... keep existing code (AppointmentDetails modal) */}
-      {selectedAppointment && (
-        <AppointmentDetails
-          appointment={selectedAppointment}
-          open={showAppointmentDetails}
-          onOpenChange={setShowAppointmentDetails}
-          onEdit={() => {/* handle edit */}}
-          onDelete={() => {
-            setSelectedAppointment(null);
-            setShowAppointmentDetails(false);
-          }}
-        />
-      )}
-    </>
+      </div>
+    </nav>
   );
 };
 

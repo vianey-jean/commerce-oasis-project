@@ -7,8 +7,9 @@ export { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 export { Input } from './ui/input';
 export { Skeleton } from './ui/skeleton';
 export { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
+export { ThemeToggle } from './ui/theme-toggle';
 
-// Exports des composants personnalisés existants
+// Exports des composants personnalisés
 export { default as AppointmentDetails } from './AppointmentDetails';
 export { default as AppointmentForm } from './AppointmentForm';
 export { default as AppointmentSelector } from './AppointmentSelector';
@@ -18,15 +19,10 @@ export { default as Navbar } from './Navbar';
 export { default as WeekCalendar } from './Weekcalendar';
 export { default as DashboardCalendar } from './DashboardCalendar';
 export { default as PasswordStrengthIndicator } from './PasswordStrengthIndicator';
+export { default as ScrollToTop } from './ScrollToTop';
 
-// Exports des nouveaux composants premium
-export { default as DashboardStats } from './DashboardStats';
-export { default as CalendarViewToggle } from './CalendarViewToggle';
-export { default as QuickActions } from './QuickActions';
-export { default as RecentActivity } from './RecentActivity';
-export { default as UpcomingEvents } from './UpcomingEvents';
-export { default as WeatherWidget } from './WeatherWidget';
-export { default as TaskList } from './TaskList';
-export { default as CalendarSettings } from './CalendarSettings';
-export { default as NotificationPanel } from './NotificationPanel';
-export { default as CompleteDashboard } from './CompleteDashboard';
+// Exports des nouveaux composants dashboard
+export { default as DashboardHeader } from './dashboard/DashboardHeader';
+export { default as DashboardBackground } from './dashboard/DashboardBackground';
+export { default as PremiumCalendarSection } from './dashboard/PremiumCalendarSection';
+export { default as AppointmentModalsManager } from './dashboard/modals/AppointmentModalsManager';

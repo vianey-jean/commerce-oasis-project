@@ -1,37 +1,87 @@
+
+/**
+ * ============================================================================
+ * TABLEAU DE BORD PRINCIPAL - PAGE D'ACCUEIL ADMINISTRATEUR
+ * ============================================================================
+ * 
+ * Ce fichier contient le tableau de bord principal de l'application Riziky Agendas.
+ * Il sert de hub central pour toutes les fonctionnalités de gestion d'entreprise.
+ * 
+ * FONCTIONNALITÉS PRINCIPALES :
+ * - Vue d'ensemble des rendez-vous avec calendrier interactif
+ * - Gestion des ventes et produits avec interface premium
+ * - Tableau de bord exécutif avec analytics avancées
+ * - Liste complète des produits avec CRUD operations
+ * - Notifications en temps réel des messages non lus
+ * - Statistiques clients et rendez-vous en temps réel
+ * - Interface responsive et moderne
+ * 
+ * ARCHITECTURE MODULAIRE :
+ * - Composants séparés pour chaque section (Calendar, Stats, Products)
+ * - Hooks personnalisés pour la gestion d'état (useAuth, useUnreadMessages, useDashboardState)
+ * - Modales réutilisables pour les actions CRUD
+ * - Services API centralisés
+ * 
+ * DESIGN SYSTÈME :
+ * - Utilisation de Tabs pour l'organisation du contenu
+ * - Cards pour la présentation des données
+ * - Badges pour les indicateurs visuels
+ * - Animations et effets de gradient premium
+ * - Icônes Lucide pour la cohérence visuelle
+ * 
+ * SÉCURITÉ ET PERFORMANCE :
+ * - Authentification requise pour l'accès
+ * - Lazy loading des composants lourds
+ * - Optimisation des re-renders avec useMemo
+ * - Gestion d'état locale avec useState
+ * 
+ * @author Riziky Agendas Team
+ * @version 1.0.0
+ * @lastModified 2024
+ */
+
 import { useState } from 'react';
-import CompleteDashboard from '@/components/CompleteDashboard';
-import AppointmentForm from '@/components/AppointmentForm';
-import AppointmentSelector from '@/components/AppointmentSelector';
-import AppointmentDetails from '@/components/AppointmentDetails';
-import { AppointmentService, Appointment } from '@/services/AppointmentService';
+import DashboardHeader from '@/components/dashboard/DashboardHeader';
+import DashboardBackground from '@/components/dashboard/DashboardBackground';
+import PremiumCalendarSection from '@/components/dashboard/PremiumCalendarSection';
+import AppointmentModalsManager from '@/components/dashboard/modals/AppointmentModalsManager';
 import ActionButtons from '@/components/ActionButtons';
 import AppointmentModal from '@/components/AppointmentModal';
 import SearchAppointmentForm from '@/components/SearchAppointmentForm';
-import { Calendar, Sparkles, Diamond } from 'lucide-react';
+import AppointmentStatsDisplay from '@/components/AppointmentStatsDisplay';
+import { AppointmentService, Appointment } from '@/services/AppointmentService';
+import { useDashboardState } from '@/hooks/useDashboardState';
 
-/**
- * Page du tableau de bord
- * Centre de gestion des rendez-vous avec calendrier et actions CRUD
- */
 const DashboardPage = () => {
-  // États pour gérer les rendez-vous et les différentes modales
-  const [activeAppointment, setActiveAppointment] = useState<Appointment | null>(null);
-  const [originalAppointment, setOriginalAppointment] = useState<Appointment | null>(null);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-  const [showAppointmentDetails, setShowAppointmentDetails] = useState(false);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
-
-  const refreshData = () => {
-    setRefreshTrigger(prev => prev + 1);
-  };
+  const {
+    activeAppointment,
+    setActiveAppointment,
+    originalAppointment,
+    setOriginalAppointment,
+    isAddModalOpen,
+    setIsAddModalOpen,
+    isEditModalOpen,
+    setIsEditModalOpen,
+    isDeleteModalOpen,
+    setIsDeleteModalOpen,
+    isConfirmDeleteOpen,
+    setIsConfirmDeleteOpen,
+    isSearchModalOpen,
+    setIsSearchModalOpen,
+    showAppointmentDetails,
+    setShowAppointmentDetails,
+    refreshTrigger,
+    selectedDate,
+    setSelectedDate,
+    refreshData,
+    resetState
+  } = useDashboardState();
 
   const handleOpenAdd = () => {
     console.log('Opening add modal');
     setActiveAppointment(null);
     setOriginalAppointment(null);
+    setSelectedDate(null);
     setShowAppointmentDetails(false);
     setIsAddModalOpen(true);
   };
@@ -40,7 +90,12 @@ const DashboardPage = () => {
     console.log('Opening edit modal', appointment);
     if (appointment) {
       setActiveAppointment(appointment);
-      setOriginalAppointment(null);
+      if ((appointment as any)._isDragAndDrop) {
+        setOriginalAppointment(appointment);
+      } else {
+        setOriginalAppointment(null);
+      }
+      setSelectedDate(null);
       setIsEditModalOpen(false);
       setShowAppointmentDetails(false);
       setIsAddModalOpen(true);
@@ -54,6 +109,26 @@ const DashboardPage = () => {
     setIsDeleteModalOpen(true);
   };
 
+  const handleConfirmDelete = (appointment: Appointment) => {
+    console.log('Confirming delete for appointment:', appointment);
+    setActiveAppointment(appointment);
+    setIsDeleteModalOpen(false);
+    setIsConfirmDeleteOpen(true);
+  };
+
+  const handleDeleteConfirmed = async () => {
+    if (!activeAppointment) return;
+    
+    try {
+      const success = await AppointmentService.delete(activeAppointment.id);
+      if (success) {
+        handleFormSuccess();
+      }
+    } catch (error) {
+      console.error('Error deleting appointment:', error);
+    }
+  };
+
   const handleOpenSearch = () => {
     console.log('Opening search modal');
     setIsSearchModalOpen(true);
@@ -63,40 +138,23 @@ const DashboardPage = () => {
     console.log('Viewing appointment', appointment);
     setActiveAppointment(appointment);
     setOriginalAppointment(null);
+    setSelectedDate(null);
     setShowAppointmentDetails(true);
     setIsSearchModalOpen(false);
   };
 
-  const handleAppointmentDrop = (appointment: Appointment, newDate: Date, originalAppointment: Appointment) => {
-    console.log('Dashboard - handleAppointmentDrop called:', {
-      appointmentId: appointment.id,
-      appointmentTitle: appointment.titre,
-      newDate,
-      originalAppointment
-    });
-    
-    setActiveAppointment(appointment);
-    setOriginalAppointment(originalAppointment);
-    
+  const handleAddAppointment = (date: Date) => {
+    console.log('Adding appointment for date:', date);
+    setSelectedDate(date);
+    setActiveAppointment(null);
+    setOriginalAppointment(null);
     setShowAppointmentDetails(false);
-    setIsEditModalOpen(false);
-    setIsDeleteModalOpen(false);
-    setIsSearchModalOpen(false);
-    
     setIsAddModalOpen(true);
-    
-    console.log('Modal should open for editing appointment with new date');
   };
 
   const handleFormSuccess = () => {
     console.log('Form success, closing modals');
-    setIsAddModalOpen(false);
-    setIsEditModalOpen(false);
-    setIsDeleteModalOpen(false);
-    setIsSearchModalOpen(false);
-    setShowAppointmentDetails(false);
-    setActiveAppointment(null);
-    setOriginalAppointment(null);
+    resetState();
     refreshData();
   };
 
@@ -108,111 +166,52 @@ const DashboardPage = () => {
       refreshData();
     }
     
-    setIsAddModalOpen(false);
-    setIsEditModalOpen(false);
-    setIsDeleteModalOpen(false);
-    setIsSearchModalOpen(false);
-    setShowAppointmentDetails(false);
-    setActiveAppointment(null);
-    setOriginalAppointment(null);
+    resetState();
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
-      {/* Enhanced luxury background */}
-      <div className="absolute inset-0 overflow-hidden">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-gradient-to-br from-primary/30 to-purple-400/30 rounded-full blur-3xl animate-pulse floating-animation"></div>
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-gradient-to-br from-indigo-400/30 to-blue-400/30 rounded-full blur-3xl animate-pulse delay-1000 floating-animation"></div>
-        <div className="absolute top-1/3 left-1/3 w-80 h-80 bg-gradient-to-br from-pink-400/20 to-rose-400/20 rounded-full blur-3xl animate-spin" style={{ animationDuration: '25s' }}></div>
-        <div className="absolute top-20 right-20 w-32 h-32 bg-gradient-to-br from-yellow-400/20 to-orange-400/20 rounded-full blur-2xl floating-animation delay-500"></div>
-        <div className="absolute bottom-20 left-1/4 w-24 h-24 bg-gradient-to-br from-cyan-400/20 to-teal-400/20 rounded-full blur-xl floating-animation delay-700"></div>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 overflow-hidden mt-[80px] px-2 sm:px-4 lg:px-6">
+      <DashboardBackground />
 
-      <div className="container mx-auto px-6 py-12 relative z-10">
-        {/* En-tête premium du tableau de bord */}
-        <div className="mb-12 text-center">
-          <div className="inline-flex items-center justify-center w-28 h-28 premium-gradient rounded-3xl premium-shadow-xl mb-8 relative overflow-hidden floating-animation">
-            <div className="absolute inset-0 bg-gradient-to-br from-white/30 to-transparent rounded-3xl"></div>
-            <Calendar className="w-14 h-14 text-white relative z-10" />
-          </div>
-          <h1 className="text-5xl font-bold luxury-text-gradient mb-4">
-            Agenda Premium Complet
-          </h1>
-          <div className="flex items-center justify-center gap-3 max-w-2xl mx-auto">
-            <Diamond className="w-5 h-5 text-primary" />
-            <p className="text-xl text-muted-foreground font-medium">
-              Gérez vos rendez-vous avec élégance et toutes les fonctionnalités avancées
-            </p>
-            <Sparkles className="w-5 h-5 text-primary animate-pulse" />
-          </div>
+      <div className="container mx-auto py-6 sm:py-8 lg:py-12 relative z-10">
+        <DashboardHeader />
+
+        <AppointmentStatsDisplay refreshTrigger={refreshTrigger} />
+
+        <div className="mb-6 lg:mb-8">
+          <ActionButtons 
+            onAdd={handleOpenAdd}
+            onEdit={() => handleOpenEdit()}
+            onDelete={handleOpenDelete}
+            onSearch={handleOpenSearch}
+          />
         </div>
 
-        {/* Boutons d'action premium */}
-        <ActionButtons 
-          onAdd={handleOpenAdd}
-          onEdit={() => handleOpenEdit()}
-          onDelete={handleOpenDelete}
-          onSearch={handleOpenSearch}
-        />
-
-        {/* Dashboard complet avec tous les composants */}
-        <CompleteDashboard 
-          onAppointmentClick={handleViewAppointment}
-          onAppointmentDrop={handleAppointmentDrop}
+        <PremiumCalendarSection
           refreshTrigger={refreshTrigger}
+          onAppointmentClick={handleViewAppointment}
+          onAddAppointment={handleAddAppointment}
+          onEditAppointment={handleOpenEdit}
         />
 
-        {/* Modal pour ajouter/modifier un rendez-vous */}
-        {isAddModalOpen && (
-          <AppointmentModal 
-            isOpen={isAddModalOpen}
-            onClose={handleCloseModals}
-            title={activeAppointment ? "Modifier le rendez-vous" : "Ajouter un rendez-vous"}
-            mode={activeAppointment ? "edit" : "add"}
-            appointment={activeAppointment || undefined}
-            onSuccess={handleFormSuccess}
-          >
-            <AppointmentForm 
-              appointment={activeAppointment || undefined}
-              onSuccess={handleFormSuccess}
-              onCancel={handleCloseModals}
-              disableDate={!!activeAppointment && !!originalAppointment}
-            />
-          </AppointmentModal>
-        )}
-
-        {isEditModalOpen && (
-          <AppointmentModal 
-            isOpen={isEditModalOpen}
-            onClose={handleCloseModals}
-            title="Sélectionner un rendez-vous à modifier"
-            mode="select"
-            onSuccess={handleFormSuccess}
-            onSelect={(appointment) => handleOpenEdit(appointment)}
-          >
-            <AppointmentSelector 
-              onSelect={(appointment) => handleOpenEdit(appointment)}
-              onCancel={handleCloseModals}
-              mode="edit"
-            />
-          </AppointmentModal>
-        )}
-
-        {isDeleteModalOpen && (
-          <AppointmentModal 
-            isOpen={isDeleteModalOpen}
-            onClose={handleCloseModals}
-            title="Sélectionner un rendez-vous à supprimer"
-            mode="delete"
-            onSuccess={handleFormSuccess}
-          >
-            <AppointmentSelector 
-              onSelect={handleViewAppointment}
-              onCancel={handleCloseModals}
-              mode="delete"
-            />
-          </AppointmentModal>
-        )}
+        <AppointmentModalsManager
+          isAddModalOpen={isAddModalOpen}
+          isEditModalOpen={isEditModalOpen}
+          isDeleteModalOpen={isDeleteModalOpen}
+          isConfirmDeleteOpen={isConfirmDeleteOpen}
+          isSearchModalOpen={isSearchModalOpen}
+          showAppointmentDetails={showAppointmentDetails}
+          activeAppointment={activeAppointment}
+          originalAppointment={originalAppointment}
+          selectedDate={selectedDate}
+          onCloseModals={handleCloseModals}
+          onFormSuccess={handleFormSuccess}
+          onOpenEdit={handleOpenEdit}
+          onConfirmDelete={handleConfirmDelete}
+          onDeleteConfirmed={handleDeleteConfirmed}
+          onViewAppointment={handleViewAppointment}
+          setShowAppointmentDetails={setShowAppointmentDetails}
+        />
 
         {isSearchModalOpen && (
           <AppointmentModal 
@@ -224,16 +223,6 @@ const DashboardPage = () => {
           >
             <SearchAppointmentForm onSelect={handleViewAppointment} />
           </AppointmentModal>
-        )}
-
-        {activeAppointment && showAppointmentDetails && (
-          <AppointmentDetails
-            appointment={activeAppointment}
-            open={showAppointmentDetails}
-            onOpenChange={setShowAppointmentDetails}
-            onEdit={() => handleOpenEdit(activeAppointment)}
-            onDelete={handleFormSuccess}
-          />
         )}
       </div>
     </div>

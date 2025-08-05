@@ -1,10 +1,11 @@
+
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Clock, Crown, Star, Sparkles } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, Crown, Star, Sparkles, User, Phone, Cake, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -20,15 +21,30 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { AppointmentService, Appointment } from '@/services/AppointmentService';
 import { AuthService } from '@/services/AuthService';
 import { toast } from 'sonner';
 import {Reply, Edit } from 'lucide-react';
+import DateOfBirthInput from './DateOfBirthInput';
 
 // Schéma de validation pour le formulaire
 const formSchema = z.object({
+  statut: z.enum(['validé', 'annulé'], {
+    required_error: "Veuillez sélectionner un statut.",
+  }),
+  nom: z.string().optional(),
+  prenom: z.string().optional(),
+  dateNaissance: z.string().optional(),
+  telephone: z.string().optional(),
   titre: z.string().min(2, {
     message: "Le titre doit contenir au moins 2 caractères.",
   }),
@@ -53,12 +69,21 @@ const formSchema = z.object({
 
 type AppointmentFormProps = {
   appointment?: Appointment;
-  onSuccess: () => void;
+  onSuccess: (updatedAppointment?: Appointment) => void;
   onCancel: () => void;
   disableDate?: boolean;
+  mode?: 'add' | 'edit';
+  selectedDate?: Date | null;
 };
 
-const AppointmentForm = ({ appointment, onSuccess, onCancel, disableDate = false }: AppointmentFormProps) => {
+const AppointmentForm = ({ 
+  appointment, 
+  onSuccess, 
+  onCancel, 
+  disableDate = false, 
+  mode, 
+  selectedDate 
+}: AppointmentFormProps) => {
   const [isAvailable, setIsAvailable] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [availableHours, setAvailableHours] = useState<string[]>([]);
@@ -66,10 +91,22 @@ const AppointmentForm = ({ appointment, onSuccess, onCancel, disableDate = false
   
   const currentUser = AuthService.getCurrentUser();
   
+  // Déterminer la date par défaut
+  const getDefaultDate = () => {
+    if (appointment) return new Date(appointment.date);
+    if (selectedDate) return selectedDate;
+    return new Date();
+  };
+  
   // Initialiser le formulaire avec les valeurs par défaut ou les valeurs de l'appointment existant
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: appointment ? {
+      statut: (appointment.statut || 'validé') as 'validé' | 'annulé',
+      nom: appointment.nom || '',
+      prenom: appointment.prenom || '',
+      dateNaissance: appointment.dateNaissance || '',
+      telephone: appointment.telephone || '',
       titre: appointment.titre,
       description: appointment.description,
       date: new Date(appointment.date),
@@ -77,9 +114,14 @@ const AppointmentForm = ({ appointment, onSuccess, onCancel, disableDate = false
       duree: appointment.duree,
       location: appointment.location,
     } : {
+      statut: 'validé' as const,
+      nom: '',
+      prenom: '',
+      dateNaissance: '',
+      telephone: '',
       titre: "",
       description: "",
-      date: new Date(),
+      date: getDefaultDate(),
       heure: "09:00",
       duree: 60,
       location: "",
@@ -201,9 +243,34 @@ const AppointmentForm = ({ appointment, onSuccess, onCancel, disableDate = false
   };
   
   return (
-    <div className="luxury-card rounded-2xl p-6">
+    <div className="bg-white rounded-2xl p-6 max-h-[80vh] overflow-y-auto border border-gray-100">
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <FormField
+            control={form.control}
+            name="statut"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel className="text-base font-bold text-primary flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4" />
+                  Action
+                </FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger className="bg-gray-50/50 rounded-xl border-2 border-gray-200 focus:border-primary/60 h-12 text-base font-medium hover:bg-gray-50">
+                      <SelectValue placeholder="Sélectionner le statut" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent className="bg-white border border-gray-200">
+                    <SelectItem value="validé" className="bg-green-50 text-green-800 font-medium hover:bg-green-100">Validé</SelectItem>
+                    <SelectItem value="annulé" className="bg-red-50 text-red-800 font-medium hover:bg-red-100">Annulé</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <FormField
             control={form.control}
             name="titre"
@@ -216,7 +283,7 @@ const AppointmentForm = ({ appointment, onSuccess, onCancel, disableDate = false
                 <FormControl>
                   <Input 
                     placeholder="Rendez-vous avec..." 
-                    className="premium-input rounded-xl border-2 border-primary/20 focus:border-primary/60 h-12 text-base font-medium"
+                    className="bg-gray-50/50 rounded-xl border-2 border-gray-200 focus:border-primary/60 h-12 text-base font-medium hover:bg-gray-50"
                     {...field} 
                   />
                 </FormControl>
@@ -224,6 +291,94 @@ const AppointmentForm = ({ appointment, onSuccess, onCancel, disableDate = false
               </FormItem>
             )}
           />
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="nom"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-base font-bold text-primary flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    Nom (facultatif)
+                  </FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Nom de famille" 
+                      className="bg-gray-50/50 rounded-xl border-2 border-gray-200 focus:border-primary/60 h-12 text-base font-medium hover:bg-gray-50"
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="prenom"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-base font-bold text-primary flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    Prénom (facultatif)
+                  </FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="Prénom" 
+                      className="bg-gray-50/50 rounded-xl border-2 border-gray-200 focus:border-primary/60 h-12 text-base font-medium hover:bg-gray-50"
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="dateNaissance"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-base font-bold text-primary flex items-center gap-2">
+                    <Cake className="w-4 h-4" />
+                    Date de naissance (facultatif)
+                  </FormLabel>
+                  <FormControl>
+                    <DateOfBirthInput 
+                      value={field.value || ''}
+                      onChange={field.onChange}
+                      className="bg-gray-50/50 rounded-xl border-2 border-gray-200 focus:border-primary/60 h-12 text-base font-medium hover:bg-gray-50"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="telephone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-base font-bold text-primary flex items-center gap-2">
+                    <Phone className="w-4 h-4" />
+                    Numéro de téléphone (facultatif)
+                  </FormLabel>
+                  <FormControl>
+                    <Input 
+                      placeholder="06 XX XX XX XX" 
+                      className="bg-gray-50/50 rounded-xl border-2 border-gray-200 focus:border-primary/60 h-12 text-base font-medium hover:bg-gray-50"
+                      {...field} 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
@@ -231,7 +386,7 @@ const AppointmentForm = ({ appointment, onSuccess, onCancel, disableDate = false
               name="date"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel className="text-base font-bold text-primary flex items-center gap-2">
+                  <FormLabel className=" font-bold text-primary flex items-center gap-2">
                     <CalendarIcon className="w-4 h-4" />
                     Date
                   </FormLabel>
@@ -241,34 +396,40 @@ const AppointmentForm = ({ appointment, onSuccess, onCancel, disableDate = false
                         <Button
                           variant={"outline"}
                           disabled={disableDate}
-                          className={`pl-4 text-left font-medium h-12 rounded-xl border-2 border-primary/20 hover:border-primary/40 ${!field.value ? "text-muted-foreground" : ""} ${disableDate ? "opacity-60 cursor-not-allowed luxury-card" : "premium-input"}`}
+                          className={`pl-4 text-black font-medium h-12 rounded-xl border-2 border-gray-200 hover:border-primary/40 ${!field.value ? "text-muted-foreground" : ""} ${disableDate ? "opacity-60 cursor-not-allowed bg-gray-100" : "bg-gray-50/50 hover:bg-white hover:text-black"}`}
                         >
                           {field.value ? (
                             format(field.value, "EEEE d MMMM yyyy", { locale: fr })
                           ) : (
-                            <span>Sélectionner une date</span>
+                            <span >Sélectionner une date</span>
                           )}
                           <CalendarIcon className="ml-auto h-5 w-5 opacity-50" />
                         </Button>
                       </FormControl>
                     </PopoverTrigger>
                     {!disableDate && (
-                      <PopoverContent className="w-auto p-0 calendar-luxury border-0 premium-shadow-lg" align="start">
+                      <PopoverContent className="w-auto p-0 bg-white border border-gray-200 premium-shadow-lg" align="start">
                         <Calendar
                           mode="single"
                           selected={field.value}
                           onSelect={field.onChange}
                           disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
                           initialFocus
-                          className="rounded-2xl"
+                          className="rounded-2xl bg-white"
                         />
                       </PopoverContent>
                     )}
                   </Popover>
                   {disableDate && (
-                    <div className="flex items-center gap-2 text-sm text-primary bg-primary/10 rounded-lg p-2">
+                    <div className="flex items-center gap-2 text-sm text-primary bg-blue-50 rounded-lg p-2">
                       <Star className="w-4 h-4" />
                       <span>Date fixée suite au déplacement du rendez-vous</span>
+                    </div>
+                  )}
+                  {selectedDate && !disableDate && (
+                    <div className="flex items-center gap-2 text-sm text-green-700 bg-green-50 rounded-lg p-2">
+                      <Star className="w-4 h-4" />
+                      <span>Date sélectionnée dans le calendrier</span>
                     </div>
                   )}
                   <FormMessage />
@@ -288,7 +449,7 @@ const AppointmentForm = ({ appointment, onSuccess, onCancel, disableDate = false
                   <FormControl>
                     <div className="relative">
                       <select
-                        className="w-full px-4 py-3 border-2 border-primary/20 rounded-xl premium-input focus:border-primary/60 h-12 text-base font-medium"
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl bg-gray-50/50 focus:border-primary/60 h-12 text-base font-medium hover:bg-gray-50"
                         value={field.value}
                         onChange={field.onChange}
                         disabled={!isAvailable || availableHours.length === 0}
@@ -327,7 +488,7 @@ const AppointmentForm = ({ appointment, onSuccess, onCancel, disableDate = false
                     min={15} 
                     max={180} 
                     step={15}
-                    className="premium-input rounded-xl border-2 border-primary/20 focus:border-primary/60 h-12 text-base font-medium"
+                    className="bg-gray-50/50 rounded-xl border-2 border-gray-200 focus:border-primary/60 h-12 text-base font-medium hover:bg-gray-50"
                     {...field} 
                     onChange={e => field.onChange(parseInt(e.target.value))}
                   />
@@ -349,7 +510,7 @@ const AppointmentForm = ({ appointment, onSuccess, onCancel, disableDate = false
                 <FormControl>
                   <Input 
                     placeholder="Adresse du rendez-vous"
-                    className="premium-input rounded-xl border-2 border-primary/20 focus:border-primary/60 h-12 text-base font-medium"
+                    className="bg-gray-50/50 rounded-xl border-2 border-gray-200 focus:border-primary/60 h-12 text-base font-medium hover:bg-gray-50"
                     {...field} 
                   />
                 </FormControl>
@@ -370,7 +531,7 @@ const AppointmentForm = ({ appointment, onSuccess, onCancel, disableDate = false
                 <FormControl>
                   <Textarea 
                     placeholder="Détails du rendez-vous..."
-                    className="premium-input rounded-xl border-2 border-primary/20 focus:border-primary/60 min-h-[120px] text-base font-medium resize-none"
+                    className="bg-gray-50/50 rounded-xl border-2 border-gray-200 focus:border-primary/60 min-h-[120px] text-base font-medium resize-none hover:bg-gray-50"
                     {...field} 
                   />
                 </FormControl>
@@ -393,9 +554,10 @@ const AppointmentForm = ({ appointment, onSuccess, onCancel, disableDate = false
               type="button" 
               variant="outline" 
               onClick={onCancel}
-              className="px-8 py-3 border-2 border-primary/30 luxury-card hover:border-primary/50 font-semibold rounded-2xl premium-hover"
+            className="px-8 py-3 text-black border-2 border-red-500 luxury-card hover:border-red-600 font-semibold rounded-2xl premium-hover"
             >
-              <Reply className="mr-2 h-4 w-4" />
+              <Reply className="mr-2 h-4 w-4 text-black" />
+
               Annuler
             </Button>
             <Button 

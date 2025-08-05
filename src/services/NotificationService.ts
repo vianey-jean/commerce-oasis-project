@@ -2,7 +2,7 @@
 import { useEffect, useRef } from 'react';
 import { Appointment } from './AppointmentService';
 import { toast } from 'sonner';
-import { parseISO, differenceInHours, format } from 'date-fns';
+import { parseISO, differenceInHours, differenceInMinutes, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
 // Clé pour stockage local
@@ -69,27 +69,31 @@ export function useNotificationService(appointments: Appointment[]) {
         return;
       }
 
- 
       const now = new Date();
       const appointmentDate = parseISO(`${appointment.date}T${appointment.heure}`);
-      const hoursDifference = differenceInHours(appointmentDate, now);
+      const minutesDifference = differenceInMinutes(appointmentDate, now);
 
-
-        // Si dans moins de 24h
-      if (hoursDifference > 0 && hoursDifference <= 24) {
+      // Notification si entre 24h et 15min avant le rendez-vous
+      if (minutesDifference > 15 && minutesDifference <= 1440) { // 1440 min = 24h
         // Marquer comme temporairement vu
         temporaryNotifications.current.add(appointmentId);
         saveTemporaryNotification(appointmentId);
-            // Jouer le son et afficher la notification
+        
+        // Jouer le son et afficher la notification
         playNotificationSound();
 
+        const timeMessage = minutesDifference > 60 
+          ? `dans ${Math.floor(minutesDifference / 60)}h${minutesDifference % 60 > 0 ? ` ${minutesDifference % 60}min` : ''}`
+          : `dans ${minutesDifference} minutes`;
+
         toast(
-          `Vous avez un rendez-vous le ${format(appointmentDate, 'dd/MM/yyyy', { locale: fr })} à ${appointment.heure} au ${appointment.location}`,
+          `🔔 Rendez-vous ${timeMessage}`,
           {
-            description: appointment.description,
-            duration: 5000,
+            description: `${appointment.titre} - ${format(appointmentDate, 'dd/MM/yyyy', { locale: fr })} à ${appointment.heure} au ${appointment.location}`,
+            duration: 8000,
+            className: "bg-indigo-700 text-white border-indigo-600",
             action: {
-              label: "Ok",
+              label: "Compris",
               onClick: () => {
                 saveConfirmedNotification(appointment.id);
                 confirmedNotifications.current.add(appointment.id);

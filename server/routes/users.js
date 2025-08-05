@@ -76,6 +76,19 @@ router.get('/profile', isAuthenticated, (req, res) => {
   return res.json({ user: { ...req.user, password: undefined } });
 });
 
+// Route pour vérifier le mot de passe actuel
+router.post('/verify-password', isAuthenticated, (req, res) => {
+  const { currentPassword } = req.body;
+  const user = req.user;
+  
+  if (!currentPassword) {
+    return res.status(400).json({ error: 'Mot de passe actuel requis' });
+  }
+  
+  const isValid = user.password === currentPassword;
+  return res.json({ valid: isValid });
+});
+
 // Route pour mettre à jour le profil utilisateur
 router.put('/profile', isAuthenticated, (req, res) => {
   const userId = req.user.id;
@@ -96,6 +109,112 @@ router.put('/profile', isAuthenticated, (req, res) => {
   } else {
     return res.status(400).json({ error: result.message });
   }
+});
+
+// Route pour changer le mot de passe
+router.put('/change-password', isAuthenticated, (req, res) => {
+  const userId = req.user.id;
+  const { currentPassword, newPassword } = req.body;
+  
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'Mot de passe actuel et nouveau mot de passe requis' });
+  }
+  
+  // Vérifier que le mot de passe actuel est correct
+  const user = User.getById(userId);
+  if (!user || user.password !== currentPassword) {
+    return res.status(401).json({ error: 'Mot de passe actuel incorrect' });
+  }
+  
+  // Vérifier la force du nouveau mot de passe
+  const hasLowerCase = /[a-z]/.test(newPassword);
+  const hasUpperCase = /[A-Z]/.test(newPassword);
+  const hasNumber = /[0-9]/.test(newPassword);
+  const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword);
+  const hasMinLength = newPassword.length >= 8;
+  
+  if (!hasLowerCase || !hasUpperCase || !hasNumber || !hasSpecialChar || !hasMinLength) {
+    return res.status(400).json({ 
+      error: 'Le nouveau mot de passe doit contenir au moins 8 caractères, une majuscule, une minuscule, un chiffre et un caractère spécial' 
+    });
+  }
+  
+  if (newPassword === currentPassword) {
+    return res.status(400).json({ error: 'Le nouveau mot de passe doit être différent de l\'ancien' });
+  }
+  
+  const result = User.updatePassword(user.email, newPassword);
+  
+  if (result.success) {
+    return res.json({ success: true, message: 'Mot de passe modifié avec succès' });
+  } else {
+    return res.status(400).json({ error: result.message });
+  }
+});
+
+// Route pour supprimer le compte utilisateur
+router.delete('/profile', isAuthenticated, (req, res) => {
+  const userId = req.user.id;
+  
+  const result = User.delete(userId);
+  
+  if (result.success) {
+    return res.json({ success: true, message: 'Compte supprimé avec succès' });
+  } else {
+    return res.status(400).json({ error: result.message });
+  }
+});
+
+// Routes pour les paramètres de notification
+router.get('/notification-settings', isAuthenticated, (req, res) => {
+  const userId = req.user.id;
+  
+  // Récupérer les paramètres de notification depuis la base de données
+  // Pour l'instant, on retourne des valeurs par défaut
+  const defaultSettings = {
+    emailNotifications: true,
+    smsNotifications: false,
+    appointmentReminders: true,
+    marketingEmails: false
+  };
+  
+  return res.json({ settings: defaultSettings });
+});
+
+router.put('/notification-settings', isAuthenticated, (req, res) => {
+  const userId = req.user.id;
+  const { emailNotifications, smsNotifications, appointmentReminders, marketingEmails } = req.body;
+  
+  // Ici, vous pouvez sauvegarder les paramètres dans la base de données
+  // Pour l'instant, on simule une sauvegarde réussie
+  
+  return res.json({ success: true, message: 'Paramètres de notification mis à jour' });
+});
+
+// Routes pour les paramètres de confidentialité
+router.get('/privacy-settings', isAuthenticated, (req, res) => {
+  const userId = req.user.id;
+  
+  // Récupérer les paramètres de confidentialité depuis la base de données
+  // Pour l'instant, on retourne des valeurs par défaut
+  const defaultSettings = {
+    profileVisibility: 'private',
+    showEmail: false,
+    showPhone: false,
+    dataSharing: false
+  };
+  
+  return res.json({ settings: defaultSettings });
+});
+
+router.put('/privacy-settings', isAuthenticated, (req, res) => {
+  const userId = req.user.id;
+  const { profileVisibility, showEmail, showPhone, dataSharing } = req.body;
+  
+  // Ici, vous pouvez sauvegarder les paramètres dans la base de données
+  // Pour l'instant, on simule une sauvegarde réussie
+  
+  return res.json({ success: true, message: 'Paramètres de confidentialité mis à jour' });
 });
 
 module.exports = router;

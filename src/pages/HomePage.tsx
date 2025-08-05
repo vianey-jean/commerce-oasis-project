@@ -1,3 +1,41 @@
+/**
+ * ============================================================================
+ * PAGE D'ACCUEIL - LANDING PAGE DE L'APPLICATION
+ * ============================================================================
+ * 
+ * Cette page sert de vitrine principale pour l'application Riziky Agendas.
+ * Elle présente les fonctionnalités clés et offre un aperçu du calendrier.
+ * 
+ * FONCTIONNALITÉS PRINCIPALES :
+ * - Section héro avec présentation de l'application
+ * - Statistiques visuelles avec icônes animées
+ * - Aperçu du calendrier hebdomadaire interactif
+ * - Boutons d'action conditionnels selon l'authentification
+ * - Design moderne avec effets de parallaxe et gradients
+ * 
+ * SECTIONS PRINCIPALES :
+ * 1. Hero Section : Titre principal avec slogan et badges premium
+ * 2. Features Grid : Cards avec fonctionnalités (Gestion, Collaboration, Rappels)
+ * 3. CTA Buttons : Appels à l'action pour inscription/connexion
+ * 4. Calendar Preview : Aperçu fonctionnel du calendrier
+ * 
+ * INTERACTIONS :
+ * - Clic sur rendez-vous affiche un toast avec détails
+ * - Animations au survol des cards
+ * - Redirection vers inscription/connexion
+ * - Calendrier en lecture seule (preview mode)
+ * 
+ * DESIGN SYSTÈME :
+ * - Gradients modernes et arrière-plans animés
+ * - Cards avec glass-morphism effect
+ * - Animations CSS avec delays et transitions smooth
+ * - Layout responsive avec grid system
+ * - Couleurs cohérentes avec la charte graphique
+ * 
+ * @author Riziky Agendas Team
+ * @version 1.0.0
+ * @lastModified 2024
+ */
 
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -35,7 +73,7 @@ const HomePage = () => {
   };
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 overflow-hidden mt-[80px] lg:mt-[120px]">
       {/* Éléments décoratifs d'arrière-plan */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10">
         <div className="absolute top-20 left-10 w-72 h-72 bg-purple-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
@@ -43,8 +81,8 @@ const HomePage = () => {
         <div className="absolute -bottom-8 left-20 w-72 h-72 bg-pink-300 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse delay-2000"></div>
       </div>
 
-      <div className="container mx-auto px-4 py-12 relative">
-        <div className="max-w-6xl mx-auto">
+      <div className="container mx-auto px-4 py-12 lg:py-16 relative">
+        <div className=" mx-auto">
           {/* Section héro modernisée */}
           <div className="text-center mb-16 animate-fade-in">
             <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-purple-100 to-pink-100 rounded-full text-sm font-medium text-purple-800 mb-6 shadow-lg">
@@ -115,7 +153,11 @@ const HomePage = () => {
               </h2>
               <p className="text-center text-gray-600">Visualisez vos rendez-vous en un coup d'œil</p>
             </div>
-            <WeekCalendar onAppointmentClick={handleAppointmentClick} />
+            <WeekCalendar 
+              onAppointmentClick={handleAppointmentClick} 
+              enableDragAndDrop={false}
+              showActionButtons={false}
+            />
           </div>
         </div>
       </div>

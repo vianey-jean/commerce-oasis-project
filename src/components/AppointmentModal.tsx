@@ -72,15 +72,23 @@ const AppointmentModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleCloseModal}>
-      <DialogContent className="sm:max-w-[700px] calendar-luxury border-0 premium-shadow-xl overflow-hidden rounded-3xl">
-        {/* Background luxury decoration */}
-        <div className="absolute inset-0 bg-gradient-to-br from-white/80 via-primary/5 to-purple-500/10"></div>
-        <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-primary/20 to-purple-400/20 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-br from-pink-400/10 to-primary/10 rounded-full blur-2xl"></div>
+      <DialogContent className="text-black sm:max-w-[700px] bg-white border-0 shadow-lg overflow-hidden rounded-3xl">
+        {/* Background light decoration */}
+        <div className="absolute inset-0 bg-gradient-to-br from-white via-gray-50/30 to-blue-50/20"></div>
+        <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-br from-blue-100/30 to-purple-100/20 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-32 h-32 bg-gradient-to-br from-pink-100/20 to-blue-100/10 rounded-full blur-2xl"></div>
         
         <div className="relative z-10">
+          {/* Close button */}
+          {/* <button
+            onClick={handleCloseModal}
+            className="absolute top-4 right-4 w-8 h-8 bg-gray-100 hover:bg-gray-200 rounded-full flex items-center justify-center transition-colors"
+          >
+        
+          </button> */}
+
           {/* Header premium */}
-          <div className="flex items-center gap-4 mb-8 pb-6 border-b border-primary/20">
+          <div className="flex items-center gap-4 mb-8 pb-6 border-b border-gray-200">
             <div className={`w-16 h-16 rounded-2xl flex items-center justify-center relative overflow-hidden ${
               mode === 'delete' 
                 ? 'bg-gradient-to-br from-red-500 to-pink-600' 
@@ -103,7 +111,7 @@ const AppointmentModal = ({
               }`}>
                 {title}
               </DialogTitle>
-              <div className="flex items-center gap-2 text-muted-foreground">
+              <div className="flex items-center gap-2 text-gray-600">
                 <p className="text-base">
                   {mode === 'add' && 'Créez un nouveau rendez-vous premium'}
                   {mode === 'edit' && 'Modifiez les détails avec élégance'}
@@ -145,7 +153,7 @@ const AppointmentModal = ({
                   variant="outline" 
                   onClick={() => setConfirmDelete(false)}
                   disabled={isProcessing}
-                  className="px-8 py-3 border-2 border-primary/30 luxury-card hover:border-primary/50 font-semibold rounded-2xl premium-hover"
+                  className="text-black px-8 py-3 border-2 border-gray-300 bg-white text-black hover:bg-gray-50 hover:border-gray-400 font-semibold rounded-2xl premium-hover"
                 >
                   Annuler
                 </Button>

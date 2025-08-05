@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AuthService } from '@/services/AuthService';
+import { useAuth } from '@/contexts/AuthContext';
 import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator';
 import { toast } from '@/components/ui/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -50,6 +50,14 @@ const LoginPage = () => {
   const [isPasswordValid, setIsPasswordValid] = useState(false);
 
   const navigate = useNavigate();
+  const { login, checkEmail, user } = useAuth();
+
+  // Rediriger si déjà connecté
+  useEffect(() => {
+    if (user) {
+      navigate('/', { replace: true });
+    }
+  }, [user, navigate]);
 
   const emailForm = useForm<z.infer<typeof emailSchema>>({
     resolver: zodResolver(emailSchema),
@@ -71,7 +79,7 @@ const LoginPage = () => {
     setIsSubmitting(true);
     setEmailNotFound(false);
     try {
-      const exists = await AuthService.checkEmail(values.email);
+      const exists = await checkEmail(values.email);
       if (exists) {
         setEmailValue(values.email);
         setStep('password');
@@ -82,6 +90,11 @@ const LoginPage = () => {
           message: "Ce profil n'existe pas."
         });
       }
+    } catch (error) {
+      console.error('Erreur lors de la vérification de l\'email:', error);
+      emailForm.setError('email', {
+        message: "Erreur de connexion. Veuillez réessayer."
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -104,12 +117,25 @@ const LoginPage = () => {
     setIsSubmitting(true);
     setLoginError(null);
     try {
-      const success = await AuthService.login(values.email, values.password);
+      console.log('Tentative de connexion avec:', values.email);
+      const success = await login(values.email, values.password);
+      console.log('Résultat de la connexion:', success);
+      
       if (success) {
-        navigate('/dashboard', { replace: true });
+        toast({
+          title: "Connexion réussie !",
+          description: "Vous êtes maintenant connecté.",
+          variant: "default",
+          className: "bg-indigo-700 text-white",  
+        });
+        // Redirection vers la page d'accueil
+        navigate('/', { replace: true });
       } else {
         setLoginError("Mot de passe incorrect");
       }
+    } catch (error) {
+      console.error('Erreur lors de la connexion:', error);
+      setLoginError("Erreur de connexion. Veuillez réessayer.");
     } finally {
       setIsSubmitting(false);
     }
@@ -126,7 +152,7 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="mt-[80px] min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl animate-pulse"></div>
@@ -174,8 +200,8 @@ const LoginPage = () => {
                           <div className="relative">
                             <Input 
                               placeholder="votre@email.com" 
-                              autoComplete="off"
-                              className="pl-12 h-12 bg-white/50 backdrop-blur-sm border-2 border-gray-200/50 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200/50 transition-all duration-300 rounded-xl"
+                              autoComplete="email"
+                              className="premium-input pl-12 h-12 border-2 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200/50 transition-all duration-300 rounded-xl"
                               {...field}
                             />
                             <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -230,10 +256,10 @@ const LoginPage = () => {
                             <Input 
                               type={showPassword ? "text" : "password"}
                               placeholder="Votre mot de passe"
-                              autoComplete="new-password"
+                              autoComplete="current-password"
                               value={password}
                               onChange={handlePasswordChange}
-                              className="pl-12 pr-12 h-12 bg-white/50 backdrop-blur-sm border-2 border-gray-200/50 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200/50 transition-all duration-300 rounded-xl"
+                              className="premium-input pl-12 pr-12 h-12 border-2 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200/50 transition-all duration-300 rounded-xl"
                             />
                             <Lock className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                             <button
@@ -281,9 +307,9 @@ const LoginPage = () => {
                       type="button" 
                       variant="outline" 
                       onClick={() => setStep('email')} 
-                      className="flex-1 h-12 border-2 border-gray-200/50 hover:border-gray-300 bg-white/50 backdrop-blur-sm rounded-xl transition-all duration-300 hover:shadow-md"
+                      className="text-black flex-1 h-12 border-2 border-gray-200/50 hover:border-gray-300 bg-white/50 backdrop-blur-sm rounded-xl transition-all duration-300 hover:shadow-md"
                     >
-                      <Reply className="mr-2 h-4 w-4" />
+                      <Reply className="mr-2 h-4 w-4 text-black" />
                       Retour
                     </Button>
                     <Button 

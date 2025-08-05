@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { AppointmentService, Appointment } from '@/services/AppointmentService';
+import { Badge } from '@/components/ui/badge';
 
 /**
  * Props du composant de recherche de rendez-vous
@@ -54,10 +55,20 @@ const SearchAppointmentForm = ({ onSelect }: SearchAppointmentFormProps) => {
               className="p-3 border rounded-md hover:bg-gray-50 cursor-pointer"
               onClick={() => onSelect(appointment)}
             >
-              <div className="font-bold">{appointment.titre}</div>
+              <div className="flex items-center justify-between mb-2">
+                <div className="font-bold">{appointment.titre}</div>
+                <Badge variant={appointment.statut === 'validé' ? 'default' : 'destructive'}>
+                  {appointment.statut || 'validé'}
+                </Badge>
+              </div>
               <div className="text-sm text-gray-500">
                 {appointment.date} à {appointment.heure}
               </div>
+              {(appointment.nom || appointment.prenom) && (
+                <div className="text-sm text-gray-600">
+                  {appointment.prenom} {appointment.nom}
+                </div>
+              )}
               <div className="text-sm text-gray-600 truncate">{appointment.description}</div>
             </div>
           ))}

@@ -1,4 +1,46 @@
 
+/**
+ * ============================================================================
+ * MODÈLE UTILISATEUR - GESTION DES DONNÉES UTILISATEURS (BACKEND)
+ * ============================================================================
+ * 
+ * Ce modèle gère toutes les opérations CRUD pour les utilisateurs de l'application.
+ * Il utilise un système de stockage JSON pour la persistance des données.
+ * 
+ * FONCTIONNALITÉS PRINCIPALES :
+ * - CRUD complet : Create, Read, Update, Delete
+ * - Validation d'unicité des emails
+ * - Gestion sécurisée des mots de passe
+ * - Recherche par ID et par email
+ * - Stockage persistent dans users.json
+ * 
+ * STRUCTURE UTILISATEUR :
+ * - id : Identifiant unique auto-généré
+ * - nom : Nom de famille de l'utilisateur
+ * - prenom : Prénom de l'utilisateur
+ * - email : Adresse email unique (utilisée pour la connexion)
+ * - password : Mot de passe (devrait être hashé en production)
+ * - genre : Genre de l'utilisateur (homme/femme/autre)
+ * - adresse : Adresse postale complète
+ * - phone : Numéro de téléphone de contact
+ * 
+ * SÉCURITÉ :
+ * - Validation d'unicité email avant création/modification
+ * - Vérification d'existence avant mise à jour
+ * - Protection contre les doublons
+ * - Gestion d'erreurs robuste avec try/catch
+ * 
+ * STOCKAGE :
+ * - Fichier JSON : /server/data/users.json
+ * - Création automatique si fichier inexistant
+ * - Formatage JSON lisible avec indentation
+ * - Gestion des erreurs de lecture/écriture
+ * 
+ * @author Riziky Agendas Team
+ * @version 1.0.0
+ * @lastModified 2024
+ */
+
 const fs = require('fs');
 const path = require('path');
 

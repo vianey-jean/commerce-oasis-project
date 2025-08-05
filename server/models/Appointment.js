@@ -1,4 +1,51 @@
 
+/**
+ * ============================================================================
+ * MODÈLE RENDEZ-VOUS - GESTION DES DONNÉES DE RENDEZ-VOUS (BACKEND)
+ * ============================================================================
+ * 
+ * Ce modèle gère toutes les opérations CRUD pour les rendez-vous de l'application.
+ * Il fournit des méthodes avancées de recherche, filtrage et gestion des données.
+ * 
+ * FONCTIONNALITÉS PRINCIPALES :
+ * - CRUD complet pour les rendez-vous
+ * - Recherche avancée par mots-clés
+ * - Filtrage par période (semaine, mois)
+ * - Filtrage par utilisateur
+ * - Gestion des statuts (validé, annulé, reporté)
+ * - Stockage persistent dans appointments.json
+ * 
+ * STRUCTURE RENDEZ-VOUS :
+ * - id : Identifiant unique auto-généré
+ * - userId : ID de l'utilisateur propriétaire
+ * - statut : État du rendez-vous (validé, annulé, reporté)
+ * - nom/prenom : Nom du client/participant
+ * - dateNaissance : Date de naissance du participant
+ * - telephone : Numéro de téléphone de contact
+ * - titre : Titre/objet du rendez-vous
+ * - description : Description détaillée
+ * - date : Date du rendez-vous (YYYY-MM-DD)
+ * - heure : Heure du rendez-vous (HH:MM)
+ * - duree : Durée en minutes
+ * - location : Lieu/adresse du rendez-vous
+ * 
+ * FONCTIONNALITÉS AVANCÉES :
+ * - Recherche full-text dans titre, description, lieu, noms
+ * - Filtrage par plage de dates pour calendrier
+ * - Méthodes spécialisées par utilisateur
+ * - Validation et sanitisation des données
+ * 
+ * SÉCURITÉ :
+ * - Validation des types de données
+ * - Protection contre les injections
+ * - Vérification d'existence avant modification
+ * - Gestion robuste des erreurs
+ * 
+ * @author Riziky Agendas Team
+ * @version 1.0.0
+ * @lastModified 2024
+ */
+
 const fs = require('fs');
 const path = require('path');
 
@@ -14,9 +61,14 @@ if (!fs.existsSync(appointmentsFilePath)) {
 }
 
 class Appointment {
-  constructor(id, userId, titre, description, date, heure, duree, location) {
+  constructor(id, userId, statut, nom, prenom, dateNaissance, telephone, titre, description, date, heure, duree, location) {
     this.id = id;
     this.userId = userId;
+    this.statut = statut || 'validé';
+    this.nom = nom || '';
+    this.prenom = prenom || '';
+    this.dateNaissance = dateNaissance || '';
+    this.telephone = telephone || '';
     this.titre = titre;
     this.description = description;
     this.date = date;
@@ -72,7 +124,9 @@ class Appointment {
       const matchesQuery = 
         appointment.titre.toLowerCase().includes(lowerCaseQuery) ||
         appointment.description.toLowerCase().includes(lowerCaseQuery) ||
-        appointment.location.toLowerCase().includes(lowerCaseQuery);
+        appointment.location.toLowerCase().includes(lowerCaseQuery) ||
+        (appointment.nom && appointment.nom.toLowerCase().includes(lowerCaseQuery)) ||
+        (appointment.prenom && appointment.prenom.toLowerCase().includes(lowerCaseQuery));
       
       if (userId) {
         return matchesQuery && appointment.userId === parseInt(userId);
@@ -91,6 +145,11 @@ class Appointment {
     const newAppointment = {
       id: newId,
       userId: parseInt(appointmentData.userId),
+      statut: appointmentData.statut || 'validé',
+      nom: appointmentData.nom || '',
+      prenom: appointmentData.prenom || '',
+      dateNaissance: appointmentData.dateNaissance || '',
+      telephone: appointmentData.telephone || '',
       titre: appointmentData.titre,
       description: appointmentData.description,
       date: appointmentData.date,
@@ -124,7 +183,12 @@ class Appointment {
       ...appointmentData,
       id: parseInt(id),
       userId: parseInt(appointmentData.userId || appointments[index].userId),
-      duree: parseInt(appointmentData.duree || appointments[index].duree)
+      duree: parseInt(appointmentData.duree || appointments[index].duree),
+      statut: appointmentData.statut || appointments[index].statut,
+      nom: appointmentData.nom !== undefined ? appointmentData.nom : appointments[index].nom,
+      prenom: appointmentData.prenom !== undefined ? appointmentData.prenom : appointments[index].prenom,
+      dateNaissance: appointmentData.dateNaissance !== undefined ? appointmentData.dateNaissance : appointments[index].dateNaissance,
+      telephone: appointmentData.telephone !== undefined ? appointmentData.telephone : appointments[index].telephone
     };
     
     try {

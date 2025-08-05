@@ -1,4 +1,44 @@
 
+/**
+ * ============================================================================
+ * PAGE D'INSCRIPTION - CRÉATION DE COMPTE UTILISATEUR
+ * ============================================================================
+ * 
+ * Cette page gère l'inscription de nouveaux utilisateurs avec un formulaire complet
+ * et sécurisé incluant la validation en temps réel et la vérification des mots de passe.
+ * 
+ * FONCTIONNALITÉS PRINCIPALES :
+ * - Formulaire d'inscription complet avec validation Zod
+ * - Vérification de force du mot de passe en temps réel
+ * - Confirmation de mot de passe avec validation
+ * - Sélection du genre avec icônes personnalisées
+ * - Acceptation des conditions d'utilisation obligatoire
+ * - Redirection automatique après inscription réussie
+ * 
+ * CHAMPS DU FORMULAIRE :
+ * - Informations personnelles : Nom, Prénom, Genre
+ * - Contact : Email, Téléphone, Adresse
+ * - Sécurité : Mot de passe, Confirmation mot de passe
+ * - Légal : Acceptation des conditions d'utilisation
+ * 
+ * SÉCURITÉ :
+ * - Validation stricte des mots de passe (8+ chars, maj, min, chiffres, spéciaux)
+ * - Vérification unicité de l'email côté serveur
+ * - Hachage sécurisé des mots de passe (côté serveur)
+ * - Protection contre les attaques par injection
+ * 
+ * EXPÉRIENCE UTILISATEUR :
+ * - Interface moderne avec animations fluides
+ * - Indicateur de force du mot de passe visuel
+ * - Messages d'erreur contextuels et utiles
+ * - Boutons avec états de chargement
+ * - Design responsive et accessible
+ * 
+ * @author Riziky Agendas Team
+ * @version 1.0.0
+ * @lastModified 2024
+ */
+
 import { useState, useEffect } from 'react';
 import { Navigate, Link, useNavigate } from 'react-router-dom';
 import { z } from 'zod';
@@ -140,7 +180,7 @@ const RegisterPage = () => {
   const isFormDisabled = !isEmailAvailable || isEmailChecking || isSubmitting || !isPasswordValid;
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="mt-[80px] min-h-screen bg-gradient-to-br from-emerald-50 via-white to-blue-50 flex items-center justify-center p-4 relative overflow-hidden">
       {/* Background decoration */}
       <div className="absolute inset-0 overflow-hidden">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-emerald-400/20 to-teal-400/20 rounded-full blur-3xl animate-pulse"></div>

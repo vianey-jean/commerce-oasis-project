@@ -2,8 +2,9 @@
 import { useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Edit, Trash2, Clock, MapPin, CalendarIcon, Reply, Sparkles, Star } from 'lucide-react';
+import { Edit, Trash2, Clock, MapPin, CalendarIcon, Reply, Sparkles, Star, User, Phone, Cake, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { AppointmentService, Appointment } from '@/services/AppointmentService';
 import {
   Dialog,
@@ -85,6 +86,10 @@ const AppointmentDetails = ({
                   {appointment.titre}
                 </DialogTitle>
                 <div className="flex items-center gap-2 mt-1">
+                  <Badge variant={appointment.statut === 'validé' ? 'default' : 'destructive'}>
+                    <CheckCircle className="w-3 h-3 mr-1" />
+                    {appointment.statut || 'validé'}
+                  </Badge>
                   <div className="flex items-center gap-1">
                     <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
                     <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
@@ -100,6 +105,48 @@ const AppointmentDetails = ({
           </DialogHeader>
           
           <div className="py-6 space-y-5">
+            {(appointment.nom || appointment.prenom) && (
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 border border-green-200/50">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <User className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-800 mb-1">Nom et Prénom</p>
+                    <p className="text-green-700 font-medium">{appointment.prenom} {appointment.nom}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {appointment.dateNaissance && (
+              <div className="bg-gradient-to-r from-pink-50 to-rose-50 rounded-xl p-4 border border-pink-200/50">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-gradient-to-br from-pink-500 to-rose-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Cake className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-800 mb-1">Date de naissance</p>
+                    <p className="text-pink-700 font-medium">{appointment.dateNaissance}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {appointment.telephone && (
+              <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl p-4 border border-indigo-200/50">
+                <div className="flex items-start gap-3">
+                  <div className="w-8 h-8 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <Phone className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <p className="font-semibold text-gray-800 mb-1">Téléphone</p>
+                    <p className="text-indigo-700 font-medium">{appointment.telephone}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div className="bg-gradient-to-r from-violet-50 to-purple-50 rounded-xl p-4 border border-violet-200/50">
               <div className="flex items-start gap-3">
                 <div className="w-8 h-8 bg-gradient-to-br from-violet-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0">

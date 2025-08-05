@@ -18,6 +18,7 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'Format d\'email invalide' });
   }
   
+  // Utiliser directement le modèle Contact qui gère déjà la sauvegarde
   const result = await Contact.send({ nom, email, sujet, message });
   
   if (result.success) {

@@ -4,7 +4,10 @@ import { Heart, Shield, Users, Zap, Award, Target } from 'lucide-react';
 
 const AboutPage = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 mt-[80px]">
+  {/* Ton contenu */}
+
+
       {/* Éléments décoratifs */}
       <div className="absolute inset-0 overflow-hidden -z-10">
         <div className="absolute top-10 left-10 w-64 h-64 bg-blue-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-pulse"></div>

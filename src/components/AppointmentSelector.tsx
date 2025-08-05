@@ -40,8 +40,8 @@ const AppointmentSelector = ({
       let appointmentsData: Appointment[] = [];
       if (date) {
         const dateStr = format(date, 'yyyy-MM-dd');
-        const weekAppointments = await AppointmentService.getCurrentWeekAppointments();
-        appointmentsData = weekAppointments.filter(a => a.date === dateStr);
+        const allAppointments = await AppointmentService.getAll();
+        appointmentsData = allAppointments.filter(a => a.date === dateStr);
       } else {
         appointmentsData = await AppointmentService.getAll();
       }
