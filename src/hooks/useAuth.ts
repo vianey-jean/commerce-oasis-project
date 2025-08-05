@@ -16,7 +16,7 @@ interface UseAuthReturn {
   readonly login: (email: string, password: string) => Promise<boolean>;
   readonly register: (userData: Omit<User, 'id'>) => Promise<boolean>;
   readonly logout: () => void;
-  readonly resetPassword: (email: string, newPassword: string) => Promise<boolean>;
+  readonly resetPassword: (email: string, newPassword: string, code: string) => Promise<boolean>;
 }
 
 /**
@@ -56,8 +56,8 @@ export const useAuth = (): UseAuthReturn => {
   /**
    * Fonction de réinitialisation de mot de passe
    */
-  const resetPassword = useCallback(async (email: string, newPassword: string): Promise<boolean> => {
-    return await AuthService.resetPassword(email, newPassword);
+  const resetPassword = useCallback(async (email: string, newPassword: string, code: string): Promise<boolean> => {
+    return await AuthService.resetPassword(email, newPassword, code);
   }, []);
 
   return {

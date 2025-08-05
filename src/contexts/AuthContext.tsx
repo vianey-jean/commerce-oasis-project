@@ -10,7 +10,9 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<boolean>;
   register: (user: Omit<User, 'id'>) => Promise<boolean>;
   logout: () => void;
-  resetPassword: (email: string, newPassword: string) => Promise<boolean>;
+  resetPassword: (email: string, newPassword: string, code: string) => Promise<boolean>;
+  sendResetCode: (email: string) => Promise<boolean>;
+  verifyResetCode: (email: string, code: string) => Promise<boolean>;
   resetPasswordRequest: (email: string) => Promise<boolean>;
   checkEmail: (email: string) => Promise<boolean>;
 }
@@ -73,14 +75,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setUser(null);
   };
 
-  const resetPassword = async (email: string, newPassword: string): Promise<boolean> => {
+  const resetPassword = async (email: string, newPassword: string, code: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      const result = await AuthService.resetPassword(email, newPassword);
+      const result = await AuthService.resetPassword(email, newPassword, code);
       setIsLoading(false);
       return result;
     } catch (error) {
       console.error('AuthContext: Erreur lors de la réinitialisation:', error);
+      setIsLoading(false);
+      return false;
+    }
+  };
+
+  const sendResetCode = async (email: string): Promise<boolean> => {
+    setIsLoading(true);
+    try {
+      const result = await AuthService.sendResetCode(email);
+      setIsLoading(false);
+      return result;
+    } catch (error) {
+      console.error('AuthContext: Erreur lors de l\'envoi du code:', error);
+      setIsLoading(false);
+      return false;
+    }
+  };
+
+  const verifyResetCode = async (email: string, code: string): Promise<boolean> => {
+    setIsLoading(true);
+    try {
+      const result = await AuthService.verifyResetCode(email, code);
+      setIsLoading(false);
+      return result;
+    } catch (error) {
+      console.error('AuthContext: Erreur lors de la vérification du code:', error);
       setIsLoading(false);
       return false;
     }
@@ -119,6 +147,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     logout,
     resetPassword,
     resetPasswordRequest,
+    sendResetCode,
+    verifyResetCode,
     checkEmail
   };
 
