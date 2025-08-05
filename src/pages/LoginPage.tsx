@@ -277,22 +277,21 @@ const LoginPage = () => {
                         </FormControl>
                         <FormMessage />
 
+                        <div className="text-center mt-3">
+                          <Link
+                            to="/mot-de-passe-oublie"
+                            className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors group"
+                          >
+                            <KeyRound className="w-4 h-4 group-hover:rotate-12 transition-transform duration-300" />
+                            Changer le mot de passe
+                          </Link>
+                        </div>
+
                         {loginError && (
-                          <div className="space-y-3 mt-3">
-                            <Alert variant="destructive" className="bg-gradient-to-r from-red-50 to-pink-50 border-red-200/50">
-                              <AlertCircle className="h-4 w-4" />
-                              <AlertDescription>{loginError}</AlertDescription>
-                            </Alert>
-                            <div className="text-center">
-                              <Link
-                                to="/mot-de-passe-oublie"
-                                className="inline-flex items-center gap-2 text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors group"
-                              >
-                                <KeyRound className="w-4 h-4 group-hover:rotate-12 transition-transform duration-300" />
-                                Mot de passe oublié ?
-                              </Link>
-                            </div>
-                          </div>
+                          <Alert variant="destructive" className="bg-gradient-to-r from-red-50 to-pink-50 border-red-200/50 mt-3">
+                            <AlertCircle className="h-4 w-4" />
+                            <AlertDescription>Mot de passe incorrect</AlertDescription>
+                          </Alert>
                         )}
 
                         <PasswordStrengthIndicator 

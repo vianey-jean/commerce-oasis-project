@@ -41,12 +41,13 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Eye, EyeOff, Mail, Shield, KeyRound, Sparkles, RotateCcw } from 'lucide-react';
+import { Eye, EyeOff, Mail, Shield, KeyRound, Sparkles, RotateCcw, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AuthService } from '@/services/AuthService';
+import { EmailService } from '@/services/EmailService';
 import { toast } from 'sonner';
 import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator';
 
@@ -54,6 +55,15 @@ import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator';
 const emailSchema = z.object({
   email: z.string().email({
     message: "Veuillez entrer une adresse email valide.",
+  }),
+});
+
+// Schéma de validation pour le code
+const codeSchema = z.object({
+  code: z.string().length(6, {
+    message: "Le code doit contenir exactement 6 chiffres.",
+  }).regex(/^\d{6}$/, {
+    message: "Le code doit contenir uniquement des chiffres.",
   }),
 });
 
@@ -80,11 +90,13 @@ const passwordSchema = z.object({
 const ForgotPasswordPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [code, setCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [step, setStep] = useState<'email' | 'password'>('email');
+  const [step, setStep] = useState<'email' | 'code' | 'password'>('email');
   const [isPasswordValid, setIsPasswordValid] = useState(false);
+  const [sentCode, setSentCode] = useState('');
   
   const navigate = useNavigate();
   
@@ -92,6 +104,12 @@ const ForgotPasswordPage = () => {
   const emailForm = useForm<z.infer<typeof emailSchema>>({
     resolver: zodResolver(emailSchema),
     defaultValues: { email: "" },
+  });
+  
+  // Formulaire pour le code
+  const codeForm = useForm<z.infer<typeof codeSchema>>({
+    resolver: zodResolver(codeSchema),
+    defaultValues: { code: "" },
   });
   
   // Formulaire pour le mot de passe
@@ -110,10 +128,38 @@ const ForgotPasswordPage = () => {
       const emailExists = await AuthService.checkEmail(values.email);
       
       if (emailExists) {
-        setEmail(values.email);
-        setStep('password');
+        const result = await EmailService.sendResetCode(values.email);
+        if (result.success) {
+          setEmail(values.email);
+          setSentCode(result.code || ''); // Pour simulation uniquement
+          setStep('code');
+          toast.success("Un code de vérification a été envoyé à votre email");
+        } else {
+          toast.error("Erreur lors de l'envoi du code");
+        }
       } else {
         toast.error("Cette adresse email n'est pas enregistrée");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  // Soumission du formulaire de code
+  const onSubmitCode = async (values: z.infer<typeof codeSchema>) => {
+    setIsSubmitting(true);
+    try {
+      const isValid = EmailService.verifyCode(email, values.code);
+      
+      if (isValid) {
+        setCode(values.code);
+        setStep('password');
+        toast.success("Code vérifié avec succès");
+      } else {
+        toast.error("Code incorrect ou expiré");
+        codeForm.setError('code', {
+          message: "Code incorrect ou expiré"
+        });
       }
     } finally {
       setIsSubmitting(false);
@@ -129,9 +175,13 @@ const ForgotPasswordPage = () => {
   const onSubmitPassword = async (values: z.infer<typeof passwordSchema>) => {
     setIsSubmitting(true);
     try {
+      // Vérifier que le nouveau mot de passe est différent de l'ancien
+      // Pour cela, on devrait récupérer l'ancien mot de passe depuis le serveur
       const success = await AuthService.resetPassword(email, values.password);
       
       if (success) {
+        // Invalider le code après utilisation
+        EmailService.invalidateCode(email);
         toast.success("Mot de passe réinitialisé avec succès");
         navigate('/connexion');
       }
@@ -173,7 +223,7 @@ const ForgotPasswordPage = () => {
             <div className="flex items-center justify-center gap-2 mb-2">
               <Sparkles className="w-5 h-5 text-orange-500" />
               <CardTitle className="text-2xl bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent">
-                {step === 'email' ? 'Votre email' : 'Nouveau mot de passe'}
+                {step === 'email' ? 'Votre email' : step === 'code' ? 'Code de vérification' : 'Nouveau mot de passe'}
               </CardTitle>
               <Sparkles className="w-5 h-5 text-red-500" />
             </div>
@@ -214,15 +264,87 @@ const ForgotPasswordPage = () => {
                     {isSubmitting ? (
                       <div className="flex items-center gap-2">
                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                        Vérification en cours...
+                        Envoi du code...
                       </div>
                     ) : (
                       <div className="flex items-center gap-2">
-                        <RotateCcw className="w-4 h-4" />
-                        Continuer
+                        <Mail className="w-4 h-4" />
+                        Envoyer le code
                       </div>
                     )}
                   </Button>
+                </form>
+              </Form>
+            ) : step === 'code' ? (
+              <Form {...codeForm}>
+                <form onSubmit={codeForm.handleSubmit(onSubmitCode)} className="space-y-6">
+                  <div className="p-4 bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200/50 rounded-xl mb-4">
+                    <p className="text-sm text-gray-700 flex items-center gap-2">
+                      <Mail className="w-4 h-4 text-orange-500" />
+                      Un code de vérification a été envoyé à <span className="font-medium text-orange-600">{email}</span>
+                    </p>
+                    {/* Affichage du code pour simulation - À SUPPRIMER EN PRODUCTION */}
+                    <p className="text-xs text-gray-500 mt-2 bg-yellow-50 p-2 rounded border border-yellow-200">
+                      Code de test : <span className="font-mono font-bold">{sentCode}</span>
+                    </p>
+                  </div>
+                  
+                  <FormField
+                    control={codeForm.control}
+                    name="code"
+                    render={({ field }) => (
+                      <FormItem className="space-y-3">
+                        <FormLabel className="text-sm font-medium text-gray-700 flex items-center gap-2">
+                          <Shield className="w-4 h-4 text-orange-500" />
+                          Code de vérification
+                        </FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Input 
+                              placeholder="123456" 
+                              maxLength={6}
+                              className="pl-12 h-12 bg-white/50 backdrop-blur-sm border-2 border-gray-200/50 focus:border-orange-400 focus:ring-2 focus:ring-orange-200/50 transition-all duration-300 rounded-xl text-center text-lg font-mono tracking-widest"
+                              {...field} 
+                            />
+                            <Shield className="absolute left-4 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                        <p className="text-xs text-gray-500">
+                          Le code expire dans 24 heures. Vérifiez votre boîte mail et vos spams.
+                        </p>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  <div className="flex gap-3">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => setStep('email')} 
+                      className="flex-1 h-12 border-2 border-gray-200/50 hover:border-gray-300 bg-white/50 backdrop-blur-sm rounded-xl transition-all duration-300 hover:shadow-md"
+                    >
+                      <RotateCcw className="mr-2 h-4 w-4" />
+                      Retour
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      className="flex-1 h-12 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]" 
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                          Vérification...
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="w-4 h-4" />
+                          Vérifier
+                        </div>
+                      )}
+                    </Button>
+                  </div>
                 </form>
               </Form>
             ) : (
@@ -314,23 +436,34 @@ const ForgotPasswordPage = () => {
                     )}
                   />
                   
-                  <Button 
-                    type="submit" 
-                    className="w-full h-12 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]" 
-                    disabled={isSubmitting || !isPasswordValid}
-                  >
-                    {isSubmitting ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                        Mise à jour en cours...
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <KeyRound className="w-4 h-4" />
-                        Réinitialiser le mot de passe
-                      </div>
-                    )}
-                  </Button>
+                  <div className="flex gap-3">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => setStep('code')} 
+                      className="flex-1 h-12 border-2 border-gray-200/50 hover:border-gray-300 bg-white/50 backdrop-blur-sm rounded-xl transition-all duration-300 hover:shadow-md"
+                    >
+                      <RotateCcw className="mr-2 h-4 w-4" />
+                      Retour
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      className="flex-1 h-12 bg-gradient-to-r from-orange-500 to-red-600 hover:from-orange-600 hover:to-red-700 text-white font-medium rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]" 
+                      disabled={isSubmitting || !isPasswordValid}
+                    >
+                      {isSubmitting ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                          Mise à jour...
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <KeyRound className="w-4 h-4" />
+                          Réinitialiser
+                        </div>
+                      )}
+                    </Button>
+                  </div>
                 </form>
               </Form>
             )}

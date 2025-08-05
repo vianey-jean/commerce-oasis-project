@@ -52,6 +52,19 @@ router.post('/reset-password', (req, res) => {
     return res.status(400).json({ error: 'Email et nouveau mot de passe requis' });
   }
   
+  // Récupérer l'utilisateur pour vérifier l'ancien mot de passe
+  const user = User.getByEmail(email);
+  if (!user) {
+    return res.status(404).json({ error: 'Utilisateur non trouvé' });
+  }
+  
+  // Vérifier si le nouveau mot de passe est identique à l'ancien
+  if (user.password === newPassword) {
+    return res.status(400).json({ 
+      error: 'Erreur : le nouveau mot de passe est identique à l\'ancien. Veuillez en choisir un autre.' 
+    });
+  }
+  
   const result = User.updatePassword(email, newPassword);
   
   if (result.success) {
