@@ -46,8 +46,8 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/contexts/AuthContext';
-
+import { AuthService } from '@/services/AuthService';
+import { EmailService } from '@/services/EmailService';
 import { toast } from 'sonner';
 import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator';
 
@@ -96,9 +96,9 @@ const ForgotPasswordPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [step, setStep] = useState<'email' | 'code' | 'password'>('email');
   const [isPasswordValid, setIsPasswordValid] = useState(false);
+  const [sentCode, setSentCode] = useState('');
   
   const navigate = useNavigate();
-  const { checkEmail, sendResetCode, verifyResetCode, resetPassword } = useAuth();
   
   // Formulaire pour l'email
   const emailForm = useForm<z.infer<typeof emailSchema>>({
@@ -125,12 +125,13 @@ const ForgotPasswordPage = () => {
   const onSubmitEmail = async (values: z.infer<typeof emailSchema>) => {
     setIsSubmitting(true);
     try {
-      const emailExists = await checkEmail(values.email);
+      const emailExists = await AuthService.checkEmail(values.email);
       
       if (emailExists) {
-        const result = await sendResetCode(values.email);
-        if (result) {
+        const result = await EmailService.sendResetCode(values.email);
+        if (result.success) {
           setEmail(values.email);
+          setSentCode(result.code || ''); // Pour simulation uniquement
           setStep('code');
           toast.success("Un code de vérification a été envoyé à votre email");
         } else {
@@ -148,7 +149,7 @@ const ForgotPasswordPage = () => {
   const onSubmitCode = async (values: z.infer<typeof codeSchema>) => {
     setIsSubmitting(true);
     try {
-      const isValid = await verifyResetCode(email, values.code);
+      const isValid = EmailService.verifyCode(email, values.code);
       
       if (isValid) {
         setCode(values.code);
@@ -174,11 +175,15 @@ const ForgotPasswordPage = () => {
   const onSubmitPassword = async (values: z.infer<typeof passwordSchema>) => {
     setIsSubmitting(true);
     try {
-      const success = await resetPassword(email, values.password, code);
+      // Vérifier que le nouveau mot de passe est différent de l'ancien
+      // Pour cela, on devrait récupérer l'ancien mot de passe depuis le serveur
+      const success = await AuthService.resetPassword(email, values.password);
       
       if (success) {
+        // Invalider le code après utilisation
+        EmailService.invalidateCode(email);
         toast.success("Mot de passe réinitialisé avec succès");
-        navigate('/login');
+        navigate('/connexion');
       }
     } finally {
       setIsSubmitting(false);
@@ -278,8 +283,9 @@ const ForgotPasswordPage = () => {
                       <Mail className="w-4 h-4 text-orange-500" />
                       Un code de vérification a été envoyé à <span className="font-medium text-orange-600">{email}</span>
                     </p>
-                    <p className="text-xs text-gray-500 mt-2 text-center">
-                      Vérifiez votre boîte email et vos spams
+                    {/* Affichage du code pour simulation - À SUPPRIMER EN PRODUCTION */}
+                    <p className="text-xs text-gray-500 mt-2 bg-yellow-50 p-2 rounded border border-yellow-200">
+                      Code de test : <span className="font-mono font-bold">{sentCode}</span>
                     </p>
                   </div>
                   

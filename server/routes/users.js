@@ -3,19 +3,6 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const { isAuthenticated } = require('../middlewares/authMiddleware');
-const nodemailer = require('nodemailer');
-
-// Configuration du transporteur SMTP
-const transporter = nodemailer.createTransporter({
-  service: 'gmail', // ou votre service SMTP
-  auth: {
-    user: process.env.SMTP_USER || 'your-email@gmail.com', // Remplacez par votre email
-    pass: process.env.SMTP_PASS || 'your-app-password' // Remplacez par votre mot de passe d'application
-  }
-});
-
-// Stockage temporaire des codes (en production, utiliser Redis ou une base de données)
-const resetCodes = new Map();
 
 // Route pour l'inscription d'un utilisateur
 router.post('/register', (req, res) => {
@@ -59,16 +46,10 @@ router.post('/login', (req, res) => {
 
 // Route pour la réinitialisation du mot de passe
 router.post('/reset-password', (req, res) => {
-  const { email, newPassword, code } = req.body;
+  const { email, newPassword } = req.body;
   
-  if (!email || !newPassword || !code) {
-    return res.status(400).json({ error: 'Email, nouveau mot de passe et code requis' });
-  }
-  
-  // Vérifier le code
-  const storedData = resetCodes.get(email);
-  if (!storedData || storedData.code !== code || Date.now() > storedData.expiresAt) {
-    return res.status(400).json({ error: 'Code invalide ou expiré' });
+  if (!email || !newPassword) {
+    return res.status(400).json({ error: 'Email et nouveau mot de passe requis' });
   }
   
   // Récupérer l'utilisateur pour vérifier l'ancien mot de passe
@@ -87,95 +68,10 @@ router.post('/reset-password', (req, res) => {
   const result = User.updatePassword(email, newPassword);
   
   if (result.success) {
-    // Supprimer le code après utilisation
-    resetCodes.delete(email);
     return res.json({ message: 'Mot de passe mis à jour avec succès' });
   } else {
     return res.status(400).json({ error: result.message });
   }
-});
-
-// Route pour envoyer un code de réinitialisation
-router.post('/send-reset-code', async (req, res) => {
-  const { email } = req.body;
-  
-  if (!email) {
-    return res.status(400).json({ error: 'Email requis' });
-  }
-  
-  const user = User.getByEmail(email);
-  if (!user) {
-    return res.status(404).json({ error: 'Email non trouvé' });
-  }
-  
-  // Générer un code aléatoire de 6 chiffres
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const timestamp = Date.now();
-  const expiresAt = timestamp + (24 * 60 * 60 * 1000); // 24h
-  
-  // Stocker le code avec expiration
-  resetCodes.set(email, {
-    code,
-    email,
-    timestamp,
-    expiresAt
-  });
-  
-  try {
-    // Envoyer l'email avec le code
-    await transporter.sendMail({
-      from: process.env.SMTP_USER || 'your-email@gmail.com',
-      to: email,
-      subject: 'Code de réinitialisation de mot de passe - Riziky Agendas',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #333;">Réinitialisation de mot de passe</h2>
-          <p>Bonjour,</p>
-          <p>Vous avez demandé la réinitialisation de votre mot de passe pour Riziky Agendas.</p>
-          <p>Votre code de vérification est :</p>
-          <div style="background-color: #f5f5f5; padding: 20px; text-align: center; margin: 20px 0;">
-            <span style="font-size: 24px; font-weight: bold; color: #007bff;">${code}</span>
-          </div>
-          <p>Ce code est valide pendant 24 heures.</p>
-          <p>Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</p>
-          <p>Cordialement,<br>L'équipe Riziky Agendas</p>
-        </div>
-      `
-    });
-    
-    return res.json({ success: true, message: 'Code envoyé par email' });
-  } catch (error) {
-    console.error('Erreur lors de l\'envoi de l\'email:', error);
-    return res.status(500).json({ error: 'Erreur lors de l\'envoi de l\'email' });
-  }
-});
-
-// Route pour vérifier un code de réinitialisation
-router.post('/verify-reset-code', (req, res) => {
-  const { email, code } = req.body;
-  
-  if (!email || !code) {
-    return res.status(400).json({ error: 'Email et code requis' });
-  }
-  
-  const storedData = resetCodes.get(email);
-  
-  if (!storedData) {
-    return res.status(400).json({ error: 'Code non trouvé ou expiré' });
-  }
-  
-  // Vérifier si le code n'a pas expiré
-  if (Date.now() > storedData.expiresAt) {
-    resetCodes.delete(email);
-    return res.status(400).json({ error: 'Code expiré' });
-  }
-  
-  // Vérifier si le code correspond
-  if (storedData.code !== code) {
-    return res.status(400).json({ error: 'Code incorrect' });
-  }
-  
-  return res.json({ success: true, message: 'Code vérifié avec succès' });
 });
 
 // Route pour vérifier si un email existe

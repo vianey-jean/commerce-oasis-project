@@ -106,10 +106,10 @@ export const AuthService = {
    * @param newPassword - Nouveau mot de passe
    * @returns Promise<boolean> True si réinitialisation réussie, false sinon
    */
-  resetPassword: async (email: string, newPassword: string, code: string): Promise<boolean> => {
+  resetPassword: async (email: string, newPassword: string): Promise<boolean> => {
     try {
       // Envoi de la demande de réinitialisation à l'API
-      const response = await api.post('/users/reset-password', { email, newPassword, code });
+      const response = await api.post('/users/reset-password', { email, newPassword });
 
       // Si l'API confirme la modification
       if (response.data.message) {
@@ -124,30 +124,6 @@ export const AuthService = {
     } catch (error: any) {
       // Affichage d'une erreur en cas d'échec
       toast.error(error.response?.data?.error || "Erreur lors de la réinitialisation du mot de passe", {
-        className: "bg-indigo-700 text-white border-indigo-600"
-      });
-      return false;
-    }
-  },
-
-  sendResetCode: async (email: string): Promise<boolean> => {
-    try {
-      const response = await api.post('/users/send-reset-code', { email });
-      return response.data.success;
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || "Erreur lors de l'envoi du code", {
-        className: "bg-indigo-700 text-white border-indigo-600"
-      });
-      return false;
-    }
-  },
-
-  verifyResetCode: async (email: string, code: string): Promise<boolean> => {
-    try {
-      const response = await api.post('/users/verify-reset-code', { email, code });
-      return response.data.success;
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || "Code incorrect ou expiré", {
         className: "bg-indigo-700 text-white border-indigo-600"
       });
       return false;
