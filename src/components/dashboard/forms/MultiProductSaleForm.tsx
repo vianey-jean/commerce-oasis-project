@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useApp } from '@/contexts/AppContext';
-import { Product, SaleProduct } from '@/types';
+import { Product, SaleProduct, Sale } from '@/types';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Trash2, Package, Euro } from 'lucide-react';
 import ProductSearchInput from '../ProductSearchInput';
@@ -17,6 +17,7 @@ import axios from 'axios';
 interface MultiProductSaleFormProps {
   isOpen: boolean;
   onClose: () => void;
+  editSale?: Sale;
 }
 
 interface FormProduct {
@@ -31,8 +32,8 @@ interface FormProduct {
   isAdvanceProduct: boolean;
 }
 
-const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onClose }) => {
-  const { products, addSale } = useApp();
+const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onClose, editSale }) => {
+  const { products, addSale, updateSale, deleteSale } = useApp();
   const { toast } = useToast();
   
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -54,26 +55,59 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:10000';
 
-  // Réinitialiser le formulaire quand il s'ouvre
+  // Réinitialiser le formulaire quand il s'ouvre ou charger les données d'édition
   useEffect(() => {
     if (isOpen) {
-      setDate(new Date().toISOString().split('T')[0]);
-      setClientName('');
-      setClientPhone('');
-      setClientAddress('');
-      setFormProducts([{
-        productId: '',
-        description: '',
-        sellingPriceUnit: '',
-        quantitySold: '1',
-        purchasePriceUnit: '',
-        profit: '',
-        selectedProduct: null,
-        maxQuantity: 0,
-        isAdvanceProduct: false
-      }]);
+      if (editSale) {
+        // Mode édition - charger les données existantes
+        setDate(new Date(editSale.date).toISOString().split('T')[0]);
+        setClientName(editSale.clientName || '');
+        setClientPhone(editSale.clientPhone || '');
+        setClientAddress(editSale.clientAddress || '');
+        
+        // Charger les produits existants
+        if (editSale.products && editSale.products.length > 0) {
+          const loadedProducts = editSale.products.map(saleProduct => {
+            const product = products.find(p => p.id === saleProduct.productId);
+            const isAdvance = saleProduct.description.toLowerCase().includes('avance');
+            
+            const purchasePriceUnit = isAdvance ? saleProduct.purchasePrice : (saleProduct.purchasePrice / saleProduct.quantitySold);
+            const sellingPriceUnit = isAdvance ? saleProduct.sellingPrice : (saleProduct.sellingPrice / saleProduct.quantitySold);
+            
+            return {
+              productId: saleProduct.productId,
+              description: saleProduct.description,
+              sellingPriceUnit: sellingPriceUnit.toString(),
+              quantitySold: saleProduct.quantitySold.toString(),
+              purchasePriceUnit: purchasePriceUnit.toString(),
+              profit: saleProduct.profit.toString(),
+              selectedProduct: product || null,
+              maxQuantity: product ? (product.quantity || 0) + saleProduct.quantitySold : 0,
+              isAdvanceProduct: isAdvance
+            };
+          });
+          setFormProducts(loadedProducts);
+        }
+      } else {
+        // Mode création - réinitialiser
+        setDate(new Date().toISOString().split('T')[0]);
+        setClientName('');
+        setClientPhone('');
+        setClientAddress('');
+        setFormProducts([{
+          productId: '',
+          description: '',
+          sellingPriceUnit: '',
+          quantitySold: '1',
+          purchasePriceUnit: '',
+          profit: '',
+          selectedProduct: null,
+          maxQuantity: 0,
+          isAdvanceProduct: false
+        }]);
+      }
     }
-  }, [isOpen]);
+  }, [isOpen, editSale, products]);
 
   // Gestion du client
   const handleClientSelect = (client: any) => {
@@ -320,12 +354,20 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
         clientPhone: clientPhone || null,
       };
 
-      const success = await addSale(saleData);
+      let success;
+      
+      if (editSale) {
+        success = await updateSale({ ...saleData, id: editSale.id });
+      } else {
+        success = await addSale(saleData);
+      }
       
       if (success) {
         toast({
           title: "Succès",
-          description: `Vente avec ${saleProducts.length} produit(s) ajoutée avec succès`,
+          description: editSale 
+            ? `Vente avec ${saleProducts.length} produit(s) mise à jour avec succès`
+            : `Vente avec ${saleProducts.length} produit(s) ajoutée avec succès`,
           variant: "default",
           className: "notification-success",
         });
@@ -348,9 +390,9 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Ajouter une vente multi-produits</DialogTitle>
+          <DialogTitle>{editSale ? 'Modifier la vente multi-produits' : 'Ajouter une vente multi-produits'}</DialogTitle>
           <DialogDescription>
-            Enregistrez une vente avec un ou plusieurs produits.
+            {editSale ? 'Modifiez les détails de cette vente avec plusieurs produits.' : 'Enregistrez une vente avec un ou plusieurs produits.'}
           </DialogDescription>
         </DialogHeader>
         
@@ -560,6 +602,43 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
           )}
           
           <DialogFooter>
+            {editSale && (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={async () => {
+                  if (deleteSale && editSale) {
+                    setIsSubmitting(true);
+                    try {
+                      const success = await deleteSale(editSale.id);
+                      if (success) {
+                        toast({
+                          title: "Succès",
+                          description: "La vente a été supprimée avec succès",
+                          variant: "default",
+                          className: "notification-success",
+                        });
+                        onClose();
+                      }
+                    } catch (error) {
+                      toast({
+                        title: "Erreur",
+                        description: "Une erreur est survenue lors de la suppression",
+                        variant: "destructive",
+                      });
+                    } finally {
+                      setIsSubmitting(false);
+                    }
+                  }
+                }}
+                disabled={isSubmitting}
+                className="mr-auto"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Supprimer
+              </Button>
+            )}
+            
             <Button
               type="button"
               variant="outline"
@@ -574,7 +653,7 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
               className="bg-app-green hover:bg-opacity-90"
               disabled={isSubmitting || formProducts.filter(p => p.selectedProduct && p.sellingPriceUnit).length === 0}
             >
-              {isSubmitting ? "Enregistrement..." : "Ajouter la vente"}
+              {isSubmitting ? "Enregistrement..." : (editSale ? "Mettre à jour" : "Ajouter la vente")}
             </Button>
           </DialogFooter>
         </form>

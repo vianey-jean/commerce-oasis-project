@@ -42,7 +42,13 @@ const SalesManagementSection: React.FC<SalesManagementSectionProps> = ({
 
   const handleRowClick = (sale: Sale) => {
     setSelectedSale(sale);
-    setAddSaleDialogOpen(true);
+    
+    // Vérifier si c'est une vente multi-produits
+    if (sale.products && sale.products.length > 0) {
+      setMultiProductSaleDialogOpen(true);
+    } else {
+      setAddSaleDialogOpen(true);
+    }
   };
 
   const actions = [
@@ -173,7 +179,11 @@ const SalesManagementSection: React.FC<SalesManagementSectionProps> = ({
       {multiProductSaleDialogOpen && (
         <MultiProductSaleForm 
           isOpen={multiProductSaleDialogOpen} 
-          onClose={() => setMultiProductSaleDialogOpen(false)} 
+          onClose={() => {
+            setMultiProductSaleDialogOpen(false);
+            setSelectedSale(undefined);
+          }} 
+          editSale={selectedSale}
         />
       )}
       
