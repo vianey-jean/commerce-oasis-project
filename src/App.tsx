@@ -1,83 +1,79 @@
 
-/**
- * ============================================================================
- * COMPOSANT RACINE DE L'APPLICATION RIZIKY AGENDAS
- * ============================================================================
- * 
- * Ce fichier est le point d'entrée principal de l'application React.
- * Il configure l'architecture globale, les providers, et le système de routage.
- * 
- * ARCHITECTURE GLOBALE :
- * - Configuration du routeur React Router pour la navigation SPA
- * - Provider React Query pour la gestion des requêtes API et du cache
- * - Context d'authentification pour la gestion des utilisateurs
- * - Provider de thème pour le mode sombre/clair
- * - Système de notifications toast global
- * 
- * COMPOSANTS LAYOUT :
- * - Navbar : Navigation principale en haut de l'application
- * - Footer : Pied de page avec informations légales
- * - ScrollToTop : Bouton de retour en haut de page
- * - Toaster : Système de notifications toast
- * 
- * GESTION DES ROUTES :
- * - Routes publiques : Accueil, À propos, Contact, etc.
- * - Routes d'authentification : Connexion, Inscription, Mot de passe oublié
- * - Routes protégées : Tableau de bord, Calendrier, Clients, Messages
- * - Système de protection des routes avec redirection automatique
- * 
- * SÉCURITÉ ET PERFORMANCE :
- * - Protection des routes sensibles
- * - Lazy loading des pages (si nécessaire)
- * - Optimisation du cache avec React Query
- * - Gestion d'état global centralisée
- * 
- * @author Riziky Agendas Team
- * @version 1.0.0
- * @lastModified 2024
- */
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from '@/components/ui/toaster';
+import { AuthProvider } from '@/contexts/AuthContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
+import { AppProvider } from '@/contexts/AppContext';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+import { RealtimeWrapper } from '@/components/common/RealtimeWrapper';
+import { AccessibilityProvider } from '@/components/accessibility/AccessibilityProvider';
+import { ErrorBoundaryProvider } from '@/hooks/use-error-boundary';
 
-import React, { useEffect } from 'react';
-import { BrowserRouter as Router } from 'react-router-dom';
-import { ThemeProvider } from "@/components/theme-provider"
-import { Toaster } from "@/components/ui/sonner"
-import Index from './pages/Index';
-import Navbar from './components/Navbar';
-import Footer from './components/Footer';
-import AutoLogout from './components/AutoLogout';
-import ScrollToTop from './components/ScrollToTop';
-import { AuthProvider } from './contexts/AuthContext';
-import { AdvancedNotificationService } from './services/AdvancedNotificationService';
+import HomePage from '@/pages/HomePage';
+import AboutPage from '@/pages/AboutPage';
+import ContactPage from '@/pages/ContactPage';
+import LoginPage from '@/pages/LoginPage';
+import RegisterPage from '@/pages/RegisterPage';
+import ResetPasswordPage from '@/pages/ResetPasswordPage';
+import DashboardPage from '@/pages/DashboardPage';
+import TendancesPage from '@/pages/TendancesPage';
+import ClientsPage from '@/pages/ClientsPage';
+import NotFound from '@/pages/NotFound';
+
+import './App.css';
+
+// Create a client with optimized settings
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 2,
+      refetchOnWindowFocus: false,
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      gcTime: 10 * 60 * 1000, // 10 minutes (renamed from cacheTime)
+    },
+    mutations: {
+      retry: 1,
+    },
+  },
+});
 
 function App() {
-  // Initialize advanced notifications
-  useEffect(() => {
-    AdvancedNotificationService.initializeNotifications();
-    
-    // Cleanup on unmount
-    return () => {
-      AdvancedNotificationService.clearAllTimers();
-    };
-  }, []);
-
   return (
-    <AuthProvider>
-      <ThemeProvider defaultTheme="system" storageKey="vite-react-theme">
-        <Router
-          future={{
-            v7_startTransition: true,
-            v7_relativeSplatPath: true
-          }}
-        >
-          <Navbar />
-          <Index />
-          <Footer />
-          <AutoLogout />
-          <ScrollToTop />
-          <Toaster />
-        </Router>
-      </ThemeProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ErrorBoundaryProvider>
+          <AccessibilityProvider>
+            <ThemeProvider>
+              <AuthProvider>
+                <AppProvider>
+                  <RealtimeWrapper>
+                    <div className="App min-h-screen bg-background text-foreground">
+                      <Router>
+                        <Routes>
+                          <Route path="/" element={<HomePage />} />
+                          <Route path="/about" element={<AboutPage />} />
+                          <Route path="/contact" element={<ContactPage />} />
+                          <Route path="/login" element={<LoginPage />} />
+                          <Route path="/register" element={<RegisterPage />} />
+                          <Route path="/reset-password" element={<ResetPasswordPage />} />
+                          <Route path="/dashboard" element={<DashboardPage />} />
+                          <Route path="/tendances" element={<TendancesPage />} />
+                          <Route path="/clients" element={<ClientsPage />} />
+                          <Route path="/404" element={<NotFound />} />
+                          <Route path="*" element={<Navigate to="/404" replace />} />
+                        </Routes>
+                      </Router>
+                      <Toaster />
+                    </div>
+                  </RealtimeWrapper>
+                </AppProvider>
+              </AuthProvider>
+            </ThemeProvider>
+          </AccessibilityProvider>
+        </ErrorBoundaryProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

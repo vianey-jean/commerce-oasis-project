@@ -2,133 +2,141 @@
 const fs = require('fs');
 const path = require('path');
 
-const clientsFilePath = path.join(__dirname, '../data/clients.json');
+const clientsPath = path.join(__dirname, '../db/clients.json');
 
-// Vérifier si le fichier clients.json existe, sinon le créer
-if (!fs.existsSync(path.dirname(clientsFilePath))) {
-  fs.mkdirSync(path.dirname(clientsFilePath), { recursive: true });
-}
-
-if (!fs.existsSync(clientsFilePath)) {
-  fs.writeFileSync(clientsFilePath, JSON.stringify([], null, 2));
-}
-
-class Client {
-  constructor(id, nom, prenom, email, telephone, adresse, dateNaissance, notes, dateCreation, derniereVisite, status, totalRendezVous) {
-    this.id = id;
-    this.nom = nom;
-    this.prenom = prenom;
-    this.email = email;
-    this.telephone = telephone;
-    this.adresse = adresse;
-    this.dateNaissance = dateNaissance;
-    this.notes = notes;
-    this.dateCreation = dateCreation;
-    this.derniereVisite = derniereVisite;
-    this.status = status;
-    this.totalRendezVous = totalRendezVous;
-  }
-
-  static getAll() {
+const Client = {
+  // Get all clients
+  getAll: () => {
     try {
-      const clientsData = fs.readFileSync(clientsFilePath, 'utf8');
-      return JSON.parse(clientsData);
+      const clients = JSON.parse(fs.readFileSync(clientsPath, 'utf8'));
+      return clients;
     } catch (error) {
-      console.error('Erreur lors de la lecture des clients:', error);
+      console.error("Error reading clients:", error);
       return [];
     }
-  }
+  },
 
-  static getById(id) {
-    const clients = this.getAll();
-    return clients.find(client => client.id === parseInt(id));
-  }
-
-  static getByEmail(email) {
-    const clients = this.getAll();
-    return clients.find(client => client.email === email);
-  }
-
-  static save(clientData) {
-    const clients = this.getAll();
-    
-    // Vérifier si l'email existe déjà (seulement si l'email est fourni)
-    if (clientData.email && clientData.email.trim() !== '' && clients.some(client => client.email === clientData.email)) {
-      return { success: false, message: 'Cet email est déjà utilisé par un autre client' };
-    }
-    
-    // Générer un nouvel ID
-    const newId = clients.length > 0 ? Math.max(...clients.map(client => client.id)) + 1 : 1;
-    
-    const newClient = {
-      id: newId,
-      nom: clientData.nom,
-      prenom: clientData.prenom,
-      email: clientData.email || '',
-      telephone: clientData.telephone || '',
-      adresse: clientData.adresse || '',
-      dateNaissance: clientData.dateNaissance || null,
-      notes: clientData.notes || '',
-      dateCreation: clientData.dateCreation || new Date().toISOString().split('T')[0],
-      derniereVisite: clientData.derniereVisite || null,
-      status: clientData.status || 'actif',
-      totalRendezVous: clientData.totalRendezVous || 0
-    };
-    
-    clients.push(newClient);
-    
+  // Get client by ID
+  getById: (id) => {
     try {
-      fs.writeFileSync(clientsFilePath, JSON.stringify(clients, null, 2));
-      return { success: true, client: newClient };
+      const clients = JSON.parse(fs.readFileSync(clientsPath, 'utf8'));
+      return clients.find(client => client.id === id);
     } catch (error) {
-      console.error('Erreur lors de l\'enregistrement du client:', error);
-      return { success: false, message: 'Erreur lors de l\'enregistrement' };
+      console.error("Error reading client by ID:", error);
+      return null;
     }
-  }
+  },
 
-  static update(id, clientData) {
-    const clients = this.getAll();
-    const index = clients.findIndex(client => client.id === parseInt(id));
-    
-    if (index === -1) {
-      return { success: false, message: 'Client non trouvé' };
+  // Get client by name
+  getByName: (nom) => {
+    try {
+      const clients = JSON.parse(fs.readFileSync(clientsPath, 'utf8'));
+      return clients.find(client => client.nom.toLowerCase() === nom.toLowerCase());
+    } catch (error) {
+      console.error("Error reading client by name:", error);
+      return null;
     }
-    
-    // Vérifier si l'email mis à jour existe déjà chez un autre client (seulement si l'email est fourni)
-    if (clientData.email && clientData.email.trim() !== '' && clientData.email !== clients[index].email) {
-      if (clients.some(client => client.email === clientData.email && client.id !== parseInt(id))) {
-        return { success: false, message: 'Cet email est déjà utilisé par un autre client' };
+  },
+
+  // Create new client
+  create: (clientData) => {
+    try {
+      const clients = JSON.parse(fs.readFileSync(clientsPath, 'utf8'));
+      
+      // Check if client already exists
+      const existingClient = clients.find(client => 
+        client.nom.toLowerCase() === clientData.nom.toLowerCase()
+      );
+      
+      if (existingClient) {
+        return { error: 'Un client avec ce nom existe déjà' };
       }
-    }
-    
-    // Mettre à jour les champs modifiés
-    clients[index] = { ...clients[index], ...clientData };
-    
-    try {
-      fs.writeFileSync(clientsFilePath, JSON.stringify(clients, null, 2));
-      return { success: true, client: clients[index] };
+      
+      // Create new client object
+      const newClient = {
+        id: Date.now().toString(),
+        nom: clientData.nom,
+        phone: clientData.phone,
+        adresse: clientData.adresse,
+        dateCreation: new Date().toISOString()
+      };
+      
+      // Add to clients array
+      clients.push(newClient);
+      
+      // Write back to file
+      fs.writeFileSync(clientsPath, JSON.stringify(clients, null, 2));
+      
+      return newClient;
     } catch (error) {
-      console.error('Erreur lors de la mise à jour du client:', error);
-      return { success: false, message: 'Erreur lors de la mise à jour' };
+      console.error("Error creating client:", error);
+      return null;
     }
-  }
+  },
 
-  static delete(id) {
-    const clients = this.getAll();
-    const filteredClients = clients.filter(client => client.id !== parseInt(id));
-    
-    if (filteredClients.length === clients.length) {
-      return { success: false, message: 'Client non trouvé' };
-    }
-    
+  // Update client
+  update: (id, clientData) => {
     try {
-      fs.writeFileSync(clientsFilePath, JSON.stringify(filteredClients, null, 2));
-      return { success: true };
+      let clients = JSON.parse(fs.readFileSync(clientsPath, 'utf8'));
+      
+      // Find client index
+      const clientIndex = clients.findIndex(client => client.id === id);
+      if (clientIndex === -1) {
+        return null;
+      }
+      
+      // Check if another client with the same name exists (excluding current client)
+      const existingClient = clients.find(client => 
+        client.id !== id && client.nom.toLowerCase() === clientData.nom.toLowerCase()
+      );
+      
+      if (existingClient) {
+        return { error: 'Un autre client avec ce nom existe déjà' };
+      }
+      
+      const oldClient = clients[clientIndex];
+      
+      // Update client data
+      clients[clientIndex] = { 
+        ...oldClient, 
+        nom: clientData.nom,
+        phone: clientData.phone,
+        adresse: clientData.adresse
+      };
+      
+      // Write back to file
+      fs.writeFileSync(clientsPath, JSON.stringify(clients, null, 2));
+      
+      return clients[clientIndex];
     } catch (error) {
-      console.error('Erreur lors de la suppression du client:', error);
-      return { success: false, message: 'Erreur lors de la suppression' };
+      console.error("Error updating client:", error);
+      return null;
+    }
+  },
+
+  // Delete client
+  delete: (id) => {
+    try {
+      let clients = JSON.parse(fs.readFileSync(clientsPath, 'utf8'));
+      
+      // Find client index
+      const clientIndex = clients.findIndex(client => client.id === id);
+      if (clientIndex === -1) {
+        return false;
+      }
+      
+      // Remove from clients array
+      clients.splice(clientIndex, 1);
+      
+      // Write back to file
+      fs.writeFileSync(clientsPath, JSON.stringify(clients, null, 2));
+      
+      return true;
+    } catch (error) {
+      console.error("Error deleting client:", error);
+      return false;
     }
   }
-}
+};
 
 module.exports = Client;

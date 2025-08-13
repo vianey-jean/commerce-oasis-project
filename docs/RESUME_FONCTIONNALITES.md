@@ -1,169 +1,275 @@
 
-# RÉSUMÉ COMPLET DES FONCTIONNALITÉS - RIZIKY-AGENDAS
+# RÉSUMÉ DES FONCTIONNALITÉS
 
-## 🎯 Vue d'ensemble fonctionnelle
+## 🔐 Module d'Authentification
 
-Riziky-Agendas est une plateforme complète de gestion de rendez-vous qui couvre l'ensemble du cycle de vie d'un cabinet ou d'un professionnel : de l'acquisition client jusqu'au suivi post-rendez-vous.
+### Connexion utilisateur
+- **Endpoint**: `POST /api/auth/login`
+- **Fonctionnalités**:
+  - Validation email/mot de passe
+  - Génération token JWT (24h)
+  - Gestion des erreurs de connexion
+  - Redirection automatique après connexion
 
-## 🔐 Module Authentification et Sécurité
+### Inscription utilisateur
+- **Endpoint**: `POST /api/auth/register`
+- **Champs requis**:
+  - Email, mot de passe, prénom, nom
+  - Genre, adresse, téléphone
+  - Acceptation des conditions
+- **Validations**:
+  - Format email valide
+  - Mot de passe fort
+  - Email unique
+  - Hashage sécurisé (bcrypt)
 
-### Gestion des comptes utilisateur
-| Fonctionnalité | Description technique | Valeur métier |
-|---|---|---|
-| **Inscription complète** | Formulaire avec validation Zod + vérification email unique | Onboarding utilisateur simplifié |
-| **Connexion sécurisée** | Authentication avec session localStorage | Accès rapide et mémorisé |
-| **Récupération mot de passe** | Système reset par email via Nodemailer | Autonomie utilisateur |
-| **Déconnexion auto** | Timeout 5min d'inactivité avec warning | Sécurité des données |
+### Réinitialisation mot de passe
+- **Endpoints**: 
+  - `POST /api/auth/reset-password-request`
+  - `POST /api/auth/reset-password`
+- **Processus**:
+  - Vérification existence email
+  - Envoi lien de réinitialisation (simulé)
+  - Changement sécurisé du mot de passe
 
-### Sécurité des données
-- **Protection routes privées** : Middleware d'authentification sur toutes les routes sensibles
-- **Validation double** : Client (React) + Serveur (Express) pour intégrité maximale  
-- **Headers sécurisés** : Configuration CORS stricte pour production
-- **Sessions isolées** : Données utilisateur cloisonnées par user-id
+### Déconnexion automatique
+- **Durée**: 10 minutes d'inactivité
+- **Événements surveillés**: 
+  - Mouvements souris, clavier, scroll, touch
+- **Notification**: Toast d'avertissement
+- **Nettoyage**: Suppression token et redirection
 
-## 📅 Module Gestion des Rendez-vous
+## 📦 Module Gestion des Produits
 
-### CRUD complet des rendez-vous
-| Action | Fonctionnalités | Validations |
-|---|---|---|
-| **Création** | Formulaire guidé avec tous les champs métier | Date future, horaires, durée, lieu |
-| **Consultation** | Vue liste + calendrier + recherche | Filtres par date, statut, client |
-| **Modification** | Édition en place avec sauvegarde auto | Détection changements, confirmation |
-| **Suppression** | Modal de confirmation avec récap | Protection suppression accidentelle |
+### CRUD Produits
+- **Endpoints**:
+  - `GET /api/products` - Liste tous les produits
+  - `GET /api/products/:id` - Détail d'un produit
+  - `POST /api/products` - Création (Auth requise)
+  - `PUT /api/products/:id` - Modification (Auth requise)
+  - `DELETE /api/products/:id` - Suppression (Auth requise)
 
-### Planification intelligente
-- **Calendrier hebdomadaire** : Vue planning avec créneaux libres/occupés
-- **Détection de conflits** : Alertes automatiques pour créneaux qui se chevauchent  
-- **Suggestions créneaux** : Propositions de créneaux libres proches
-- **Durée flexible** : Gestion rendez-vous de 15min à plusieurs heures
+### Fonctionnalités avancées
+- **Recherche**: `GET /api/products/search?query=`
+- **Upload images**: `POST /api/products/:id/image`
+- **Gestion stock**: Mise à jour automatique lors des ventes
+- **Validation**: Prix positifs, quantités entières
 
-### Recherche et filtrage avancés
-- **Recherche textuelle** : Minimum 3 caractères, recherche dans tous les champs
-- **Filtres multiples** : Date, heure, client, statut, lieu
-- **Tri personnalisable** : Par date, client, durée, statut
-- **Sauvegarde filtres** : Mémorisation des préférences utilisateur
+### Interface utilisateur
+- **Tableau des produits**: Affichage paginé avec actions
+- **Formulaires**: Ajout/modification avec validation temps réel
+- **Recherche**: Barre de recherche avec suggestions
+- **Images**: Upload drag & drop avec prévisualisation
 
-## 👥 Module Gestion des Clients
+## 💰 Module Gestion des Ventes
 
-### Base de données clients complète
-| Information | Type | Usage |
-|---|---|---|
-| **Identité** | Nom, prénom, civilité | Personnalisation communication |
-| **Contact** | Email, téléphone, adresse | Multi-canal de communication |
-| **Profil** | Date naissance, notes privées | Contextualisation rendez-vous |
-| **Historique** | Rendez-vous passés/futurs | Suivi relation client |
-| **Métriques** | Nombre RDV, dernière visite | Analytics et fidélisation |
+### Enregistrement des ventes
+- **Endpoint**: `POST /api/sales`
+- **Données**:
+  - Date, produit sélectionné, prix de vente
+  - Quantité vendue, calcul automatique du bénéfice
+- **Logique métier**:
+  - Vérification stock disponible
+  - Mise à jour automatique des quantités
+  - Support produits "avance" (quantité = 0)
 
-### Fonctionnalités clients avancées
-- **Import/Export** : Gestion en lot des données clients
-- **Fusion de doublons** : Détection automatique et fusion manuelle
-- **Segmentation** : Classement par statut (actif/inactif/prospect)
-- **Notes privées** : Mémorisation d'informations contextuelles
+### Consultation des ventes
+- **Endpoint**: `GET /api/sales/by-month?month=X&year=Y`
+- **Filtres**: Par mois et année
+- **Affichage**: Tableau avec détails et actions
+- **Statistiques**: Totaux et moyennes automatiques
 
-## 🔔 Module Notifications et Communication
+### Export et archivage
+- **Endpoint**: `POST /api/sales/export-month`
+- **Fonctionnalité**: 
+  - Export des ventes du mois
+  - Archivage et nettoyage
+  - Génération de rapports (futur PDF)
 
-### Système de notifications multi-canal
-| Canal | Déclencheurs | Configuration |
-|---|---|---|
-| **Toast (interface)** | Actions utilisateur, confirmations | Instantané, non-persistant |
-| **Email automatique** | Créations/modifications RDV | Template personnalisable |
-| **WebSocket temps réel** | Synchronisation multi-sessions | Automatique, transparent |
-| **SMS (simulé)** | Rappels programmés | Développement, intégration future |
+## 📊 Module Calcul de Bénéfices
 
-### Gestion des communications
-- **Templates emails** : Modèles personnalisables pour chaque type de notification
-- **Historique communications** : Traçabilité de tous les envois
-- **Préférences utilisateur** : Choix des notifications à recevoir
-- **Multi-langues** : Support français natif, extensible
+### Calculateur interactif
+- **Endpoint**: `POST /api/benefices`
+- **Paramètres configurables**:
+  - Prix d'achat
+  - Taxe douanière (%)
+  - TVA (défaut: 20%)
+  - Autres frais
+  - Marge désirée (%)
 
-## 💬 Module Messages et Contact
+### Calculs automatiques
+- **Coût total**: Prix d'achat + taxes + frais
+- **Prix recommandé**: Coût total × (1 + marge/100)
+- **Bénéfice net**: Prix vente - coût total
+- **Taux de marge**: (Bénéfice / coût total) × 100
 
-### Interface de contact public
-- **Formulaire web** : Intégré au site public pour prospects
-- **Validation stricte** : Email, téléphone, message obligatoires
-- **Anti-spam** : Protection contre abus et robots
-- **Accusé réception** : Confirmation automatique par email
+### Sauvegarde et historique
+- **Persistance**: Sauvegarde des calculs
+- **Consultation**: `GET /api/benefices`
+- **Recherche**: Par produit `GET /api/benefices/product/:id`
 
-### Administration des messages
-- **Centre de messages** : Interface admin pour gérer tous les contacts
-- **Statuts de lecture** : Marquage lu/non lu avec compteurs
-- **Réponse intégrée** : Système de réponse par email depuis l'interface  
-- **Archivage** : Suppression et archivage des messages traités
+## 🏦 Module Gestion des Prêts
 
-## 📊 Module Analytics et Reporting
+### Prêts Familiaux
+- **Endpoints**: `/api/pretfamilles/*`
+- **Fonctionnalités**:
+  - Enregistrement des prêts accordés
+  - Suivi des remboursements
+  - Calcul automatique des soldes
+  - Historique complet
 
-### Tableaux de bord interactifs
-| Métrique | Calcul | Utilité |
-|---|---|---|
-| **RDV par période** | Comptage avec filtres date | Analyse activité |
-| **Taux d'occupation** | Créneaux occupés / disponibles | Optimisation planning |
-| **Top clients** | Nombre RDV par client | Identification VIP |
-| **Revenus estimés** | RDV * tarif moyen | Suivi financier |
+### Prêts Produits (Avances)
+- **Endpoints**: `/api/pretproduits/*`
+- **Gestion**:
+  - Ventes avec avance partielle
+  - Suivi des paiements restants
+  - Statut payé/non payé
+  - Notifications de retard
 
-### Rapports automatisés
-- **Export Excel/CSV** : Données brutes pour analyses poussées
-- **Graphiques interactifs** : Visualisations avec Chart.js
-- **Comparaisons périodiques** : Évolution mois/semaine/jour
-- **Alertes seuils** : Notifications sur objectifs atteints
+### Fonctionnalités communes
+- **CRUD complet**: Création, lecture, modification, suppression
+- **Recherche**: Par nom de famille
+- **Validation**: Montants positifs, dates valides
+- **Calculs**: Soldes et échéances automatiques
 
-## 🎨 Module Interface et Expérience
+## 💳 Module Gestion des Dépenses
 
-### Design system premium
-- **Tailwind CSS** : Framework utilitaire pour cohérence visuelle
-- **shadcn/ui** : Composants accessibles et customisables
-- **Responsive design** : Adaptation automatique mobile/tablette/desktop
-- **Mode sombre/clair** : Thème adaptatif selon préférences système
+### Dépenses Mensuelles
+- **Endpoints**: `/api/depenses/mouvements/*`
+- **Types de mouvements**:
+  - Débits (sorties d'argent)
+  - Crédits (entrées d'argent)
+- **Catégories**: Salaire, courses, restaurant, etc.
+- **Calculs**: Solde automatique après chaque mouvement
 
-### Navigation intuitive
-- **Menu contextuel** : Actions disponibles selon la page
-- **Breadcrumbs** : Navigation hiérarchique toujours visible
-- **Raccourcis clavier** : Touches rapides pour utilisateurs avancés
-- **Recherche globale** : Accès rapide à toutes les données
+### Dépenses Fixes
+- **Endpoint**: `/api/depenses/fixe`
+- **Charges récurrentes**:
+  - Abonnements téléphone/internet
+  - Assurances (voiture, vie)
+  - Autres charges fixes
+- **Calcul**: Total automatique des charges
 
-### Animations et feedback
-- **Transitions fluides** : Changements d'état visuellement guidés
-- **Loading states** : Indicateurs de progression pour toutes les actions
-- **Micro-interactions** : Feedback immédiat sur chaque action
-- **Skeleton loading** : Chargement progressif du contenu
+### Réinitialisation mensuelle
+- **Endpoint**: `POST /api/depenses/reset`
+- **Logique**:
+  - Détection automatique fin de mois
+  - Vidage des mouvements mensuels
+  - Conservation des dépenses fixes
+  - Notification utilisateur
 
-## ⚡ Module Performance et Technique
+## 📈 Module Analyses et Tendances
 
-### Optimisations Frontend
-- **React Query** : Cache intelligent avec invalidation automatique
-- **Code splitting** : Chargement à la demande des fonctionnalités
-- **Bundle optimization** : Taille minimisée avec tree-shaking
-- **Service Worker** : Cache des ressources pour usage hors-ligne
+### Graphiques interactifs
+- **Bibliothèque**: Recharts
+- **Types de graphiques**:
+  - Courbes d'évolution des ventes
+  - Barres de comparaison mensuelle
+  - Camemberts de répartition
+  - Aires de bénéfices
 
-### Architecture Backend
-- **API RESTful** : Endpoints normalisés et documentés
-- **WebSocket** : Communication bidirectionnelle temps réel  
-- **File system JSON** : Stockage simple et portable
-- **Rate limiting** : Protection contre surcharge et abus
+### Statistiques avancées
+- **Métriques calculées**:
+  - Chiffre d'affaires mensuel
+  - Bénéfices moyens
+  - Produits les plus vendus
+  - Évolution des tendances
 
-### Monitoring et logs
-- **Métriques temps réel** : Performance et utilisation trackées
-- **Logs structurés** : Traçabilité complète des actions
-- **Error tracking** : Capture et analyse des erreurs
-- **Health checks** : Surveillance de l'état des services
+### Périodes d'analyse
+- **Vues disponibles**:
+  - Mois en cours
+  - Comparaisons annuelles
+  - Tendances historiques
+  - Projections futures
 
-## 🚀 Avantages concurrentiels
+## 🔄 Module Synchronisation Temps Réel
 
-### Valeur ajoutée technique
-1. **Temps réel natif** : Synchronisation instantanée multi-utilisateurs
-2. **Architecture moderne** : Stack technique à jour et évolutive
-3. **Design premium** : Interface professionnelle et intuitive
-4. **Performance optimale** : Temps de réponse <100ms
-5. **Sécurité renforcée** : Protection des données à tous les niveaux
+### Server-Sent Events (SSE)
+- **Endpoint**: `/api/sync/events`
+- **Connexion**: Authentifiée avec token JWT
+- **Événements**:
+  - `connected`: Connexion établie
+  - `data-changed`: Données modifiées
+  - `force-sync`: Synchronisation forcée
 
-### Bénéfices métier
-1. **Productivité++ ** : Automatisation de 80% des tâches répétitives
-2. **Expérience client** : Communication fluide et professionnelle  
-3. **Croissance business** : Analytics pour optimiser l'activité
-4. **Flexibilité** : Adaptation à tous types de métiers de service
-5. **Évolutivité** : Plateforme qui grandit avec l'entreprise
+### Gestion des connexions
+- **Multi-onglets**: Support connexions multiples
+- **Reconnexion**: Automatique en cas de coupure
+- **Timeout**: Nettoyage après 5 minutes d'inactivité
+- **Statut**: Indicateur visuel de connexion
 
----
+### Synchronisation automatique
+- **Fréquence**: Toutes les 5 secondes (configurable)
+- **Debouncing**: Évite les appels trop fréquents
+- **Détection activité**: Synchronise seulement si onglet actif
+- **Gestion erreurs**: Retry automatique
 
-**Fonctionnalités documentées** : 47 fonctionnalités majeures
-**Couverture métier** : 100% du cycle de vie client
-**Niveau technique** : Production-ready avec monitoring complet
+## 🎨 Interface Utilisateur
+
+### Design System
+- **Framework**: Tailwind CSS
+- **Composants**: Shadcn/UI
+- **Thème**: Support mode sombre/clair
+- **Responsive**: Mobile-first design
+
+### Composants principaux
+- **Dashboard**: Vue d'ensemble avec statistiques
+- **Formulaires**: Validation temps réel
+- **Tableaux**: Pagination et tri
+- **Modales**: Actions CRUD
+- **Notifications**: Toast système
+
+### Expérience utilisateur
+- **Navigation**: Menu intuitif
+- **Feedback**: Indicateurs de chargement
+- **Validation**: Messages d'erreur clairs
+- **Accessibilité**: Support clavier et lecteurs d'écran
+
+## 🛡️ Sécurité et Validation
+
+### Authentification
+- **JWT**: Tokens sécurisés avec expiration
+- **Middleware**: Protection des routes sensibles
+- **Sessions**: Gestion automatique des déconnexions
+
+### Validation des données
+- **Côté client**: React Hook Form + Zod
+- **Côté serveur**: Validation Express
+- **Sanitisation**: Nettoyage des entrées utilisateur
+
+### Protection
+- **CORS**: Configuration pour développement/production
+- **Hashage**: Mots de passe avec bcrypt (salt 10)
+- **Injection**: Protection contre les attaques courantes
+
+## 📱 Fonctionnalités Transversales
+
+### Gestion d'erreurs
+- **Error Boundary**: Capture des erreurs React
+- **Logging**: Console structurée
+- **Notifications**: Messages utilisateur explicites
+
+### Performance
+- **Lazy Loading**: Chargement paresseux des pages
+- **Memoization**: Évite les re-renders inutiles
+- **Debouncing**: Optimise les recherches
+- **Caching**: Mise en cache des données
+
+### Monitoring
+- **Statut système**: Indicateurs de santé
+- **Métriques**: Compteurs de performance
+- **Logs**: Traçabilité des actions utilisateur
+
+## 🔧 Administration
+
+### Configuration
+- **Variables d'environnement**: JWT_SECRET, PORT
+- **Paramètres**: Timeouts, intervalles
+- **Base de données**: Fichiers JSON (dev)
+
+### Maintenance
+- **Backup**: Sauvegarde automatique des données
+- **Nettoyage**: Purge des données expirées
+- **Monitoring**: Surveillance de l'état système
+
+Cette architecture modulaire et ces fonctionnalités complètes font de ce système une solution robuste et évolutive pour la gestion commerciale moderne.

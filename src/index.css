@@ -1,4 +1,5 @@
 
+@import './styles/accessibility.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -11,25 +12,28 @@
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    --primary: 224 71% 55%;
+    --primary: 221.2 83.2% 53.3%;
     --primary-foreground: 210 40% 98%;
-    --secondary: 220 40% 96%;
+    --secondary: 210 40% 96%;
     --secondary-foreground: 222.2 84% 4.9%;
-    --muted: 220 40% 96%;
+    --muted: 210 40% 96%;
     --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 220 40% 96%;
+    --accent: 210 40% 96%;
     --accent-foreground: 222.2 84% 4.9%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
-    --border: 220 31.8% 91.4%;
-    --input: 220 31.8% 91.4%;
-    --ring: 224 71% 55%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221.2 83.2% 53.3%;
+    --radius: 0.75rem;
     --chart-1: 12 76% 61%;
     --chart-2: 173 58% 39%;
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
+    --app-red: 0 84% 60%;
+    --app-blue: 221 83% 53%;
+    --app-purple: 262 83% 58%;
   }
 
   .dark {
@@ -39,7 +43,7 @@
     --card-foreground: 210 40% 98%;
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-    --primary: 224 71% 65%;
+    --primary: 217.2 91.2% 59.8%;
     --primary-foreground: 222.2 84% 4.9%;
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
@@ -51,7 +55,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 217.2 32.6% 17.5%;
     --input: 217.2 32.6% 17.5%;
-    --ring: 224 71% 65%;
+    --ring: 224.3 76.3% 94.1%;
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
@@ -64,373 +68,150 @@
   * {
     @apply border-border;
   }
+  
   body {
     @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  /* Amélioration de la lisibilité */
+  p, li, td, th {
+    line-height: 1.6;
+  }
+  
+  /* Focus visible pour tous les éléments interactifs */
+  button, a, input, textarea, select, [tabindex]:not([tabindex="-1"]) {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2;
+  }
+  
+  /* Skip link pour l'accessibilité */
+  .skip-link {
+    @apply absolute -top-10 left-2 bg-primary text-primary-foreground px-4 py-2 rounded z-50 transition-all;
+  }
+  
+  .skip-link:focus {
+    @apply top-2;
   }
 }
 
-/* Animations et effets premium améliorés */
-@keyframes floating {
-  0%, 100% { 
-    transform: translateY(0px) rotate(0deg); 
+@layer components {
+  /* Composants d'interface modernisés */
+  .card-3d {
+    @apply shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1;
   }
-  25% { 
-    transform: translateY(-10px) rotate(1deg); 
+  
+  .btn-3d {
+    @apply shadow-md hover:shadow-lg active:shadow-sm transition-all duration-200 transform hover:-translate-y-0.5 active:translate-y-0;
   }
-  50% { 
-    transform: translateY(-20px) rotate(0deg); 
+  
+  /* Animations personnalisées pour l'accessibilité */
+  .fade-in {
+    animation: fadeIn 0.3s ease-out;
   }
-  75% { 
-    transform: translateY(-10px) rotate(-1deg); 
+  
+  .slide-up {
+    animation: slideUp 0.4s ease-out;
   }
-}
-
-@keyframes gradient-shift {
-  0%, 100% { 
-    background-position: 0% 50%; 
-    transform: scale(1);
+  
+  .scale-in {
+    animation: scaleIn 0.2s ease-out;
   }
-  25% {
-    background-position: 50% 0%;
-    transform: scale(1.02);
+  
+  /* Styles pour les graphiques accessibles */
+  .chart-accessible {
+    @apply rounded-lg border bg-card text-card-foreground shadow-sm;
   }
-  50% { 
-    background-position: 100% 50%; 
-    transform: scale(1);
+  
+  /* Styles pour les tableaux responsives */
+  .table-responsive {
+    @apply overflow-x-auto rounded-lg border;
   }
-  75% {
-    background-position: 50% 100%;
-    transform: scale(1.02);
+  
+  /* Styles pour les formulaires accessibles */
+  .form-group {
+    @apply space-y-2;
   }
-}
-
-@keyframes pulse-glow {
-  0%, 100% { 
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3), 0 0 40px rgba(139, 92, 246, 0.2); 
-    transform: scale(1);
+  
+  .form-input {
+    @apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
   }
-  50% { 
-    box-shadow: 0 0 40px rgba(59, 130, 246, 0.6), 0 0 60px rgba(139, 92, 246, 0.4); 
-    transform: scale(1.05);
+  
+  .form-label {
+    @apply text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70;
   }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -100% 0;
-  }
-  100% {
-    background-position: 100% 0;
+  
+  .form-error {
+    @apply text-sm font-medium text-destructive;
   }
 }
 
-@keyframes bounce-in {
-  0% {
-    transform: scale(0.3) rotate(-10deg);
+@keyframes fadeIn {
+  from {
     opacity: 0;
+    transform: translateY(10px);
   }
-  50% {
-    transform: scale(1.1) rotate(5deg);
-    opacity: 0.8;
-  }
-  100% {
-    transform: scale(1) rotate(0deg);
+  to {
     opacity: 1;
-  }
-}
-
-@keyframes slide-up {
-  0% {
-    transform: translateY(100%);
-    opacity: 0;
-  }
-  100% {
     transform: translateY(0);
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
     opacity: 1;
+    transform: translateY(0);
   }
 }
 
-.floating-animation {
-  animation: floating 6s ease-in-out infinite;
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
-.luxury-text-gradient {
-  background: linear-gradient(135deg, hsl(224, 71%, 55%) 0%, hsl(262, 83%, 58%) 25%, hsl(314, 100%, 74%) 50%, hsl(262, 83%, 58%) 75%, hsl(224, 71%, 55%) 100%);
-  background-size: 300% 300%;
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: gradient-shift 4s ease infinite;
-}
-
-.premium-gradient {
-  background: linear-gradient(135deg, hsl(224, 71%, 55%) 0%, hsl(262, 83%, 58%) 50%, hsl(224, 71%, 65%) 100%);
-  background-size: 200% 200%;
-  animation: gradient-shift 3s ease infinite;
-}
-
-.premium-shadow {
-  box-shadow: 
-    0 10px 25px -3px rgba(59, 130, 246, 0.1), 
-    0 4px 6px -2px rgba(139, 92, 246, 0.05),
-    0 0 0 1px rgba(255, 255, 255, 0.1);
-}
-
-.premium-shadow-lg {
-  box-shadow: 
-    0 20px 25px -5px rgba(59, 130, 246, 0.15), 
-    0 10px 10px -5px rgba(139, 92, 246, 0.08),
-    0 0 0 1px rgba(255, 255, 255, 0.1);
-}
-
-.premium-shadow-xl {
-  box-shadow: 
-    0 25px 50px -12px rgba(59, 130, 246, 0.25),
-    0 0 0 1px rgba(255, 255, 255, 0.1);
-}
-
-.glow-effect {
-  animation: pulse-glow 3s ease-in-out infinite;
-}
-
-.shimmer-effect {
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.4) 50%,
-    transparent 100%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 2s infinite;
-}
-
-.bounce-in-animation {
-  animation: bounce-in 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-}
-
-.slide-up-animation {
-  animation: slide-up 0.5s ease-out;
-}
-
-/* Styles de transition améliorés */
-.transition-luxury {
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.hover-scale {
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.hover-scale:hover {
-  transform: scale(1.05) translateY(-2px);
-}
-
-.hover-scale-sm:hover {
-  transform: scale(1.02) translateY(-1px);
-}
-
-/* Améliorations pour les composants de l'application */
-.luxury-card {
-  @apply bg-white backdrop-blur-lg border border-white premium-shadow-lg;
-  background-color: rgba(255, 255, 255, 0.95);
-}
-
-.appointment-luxury {
-  background: linear-gradient(135deg, hsl(224, 71%, 55%), hsl(262, 83%, 58%));
-  min-height: 32px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: white;
-  border-radius: 8px;
-  padding: 4px 8px;
-  margin-bottom: 2px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-}
-
-.appointment-luxury::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-  transition: left 0.5s;
-}
-
-.appointment-luxury:hover {
-  transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
-}
-
-.appointment-luxury:hover::before {
-  left: 100%;
-}
-
-/* Responsive amélioré */
-@media (max-width: 768px) {
-  .appointment-luxury {
-    min-height: 28px;
-    font-size: 0.65rem;
-    padding: 3px 6px;
-    border-radius: 6px;
+/* Support pour le mode impression */
+@media print {
+  .no-print {
+    display: none !important;
   }
   
-  .luxury-text-gradient {
-    background-size: 200% 200%;
-  }
-}
-
-@media (max-width: 480px) {
-  .appointment-luxury {
-    min-height: 24px;
-    font-size: 0.6rem;
-    padding: 2px 4px;
-    border-radius: 4px;
-  }
-}
-
-/* Styles pour le calendrier */
-.calendar-luxury {
-  @apply bg-white backdrop-blur-xl border border-white premium-shadow-xl;
-  background-color: rgba(255, 255, 255, 0.98);
-}
-
-/* Effet premium pour les boutons */
-.premium-hover {
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-}
-
-.premium-hover::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(45deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
-  transform: translateX(-100%);
-  transition: transform 0.6s;
-}
-
-.premium-hover:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 20px 25px -5px rgba(59, 130, 246, 0.15), 0 10px 10px -5px rgba(139, 92, 246, 0.1);
-}
-
-.premium-hover:hover::before {
-  transform: translateX(100%);
-}
-
-/* Scrollbar premium */
-.premium-scroll::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-.premium-scroll::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 4px;
-}
-
-.premium-scroll::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, hsl(224, 71%, 55%), hsl(262, 83%, 58%));
-  border-radius: 4px;
-  transition: background 0.3s ease;
-}
-
-.premium-scroll::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, hsl(262, 83%, 58%), hsl(224, 71%, 55%));
-}
-
-/* Amélioration des formulaires */
-.form-input {
-  @apply bg-white border border-blue-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 rounded-lg px-4 py-2 text-gray-700 transition-luxury;
-  background-color: rgba(255, 255, 255, 0.9);
-}
-
-.form-button {
-  @apply bg-gradient-to-r from-blue-500 to-violet-600 hover:from-blue-600 hover:to-violet-700 text-white font-medium py-2 px-6 rounded-lg transition-luxury;
-}
-
-/* Amélioration des notifications - bleu violet */
-.notification-success {
-  @apply bg-gradient-to-r from-blue-500 to-violet-600 text-white;
-}
-
-.notification-error {
-  @apply bg-gradient-to-r from-blue-500 to-violet-600 text-white;
-}
-
-.notification-info {
-  @apply bg-gradient-to-r from-blue-500 to-violet-600 text-white;
-}
-
-/* Boutons du profil - bleu violet avec hover personnalisé */
-.profile-button-password {
-  @apply bg-gradient-to-r from-blue-500 to-violet-600 text-white border-0 transition-luxury;
-}
-
-.profile-button-password:hover {
-  @apply bg-gradient-to-r from-blue-600 to-violet-700;
-}
-
-.profile-button-notifications {
-  @apply bg-gradient-to-r from-blue-500 to-violet-600 text-white border-0 transition-luxury;
-}
-
-.profile-button-notifications:hover {
-  @apply bg-gradient-to-r from-violet-600 to-blue-700;
-}
-
-.profile-button-privacy {
-  @apply bg-gradient-to-r from-blue-500 to-violet-600 text-white border-0 transition-luxury;
-}
-
-.profile-button-privacy:hover {
-  @apply bg-gradient-to-r from-green-600 to-blue-700;
-}
-
-.profile-button-delete {
-  @apply bg-gradient-to-r from-blue-500 to-violet-600 text-white border-0 transition-luxury;
-}
-
-.profile-button-delete:hover {
-  @apply bg-gradient-to-r from-red-600 to-red-700;
-}
-
-/* Styles pour les rendez-vous multiples */
-.appointment-stack {
-  position: relative;
-  transform-style: preserve-3d;
-}
-
-.appointment-stack .appointment-luxury:nth-child(n+2) {
-  margin-top: -6px;
-  transform: scale(0.95);
-  z-index: 1;
-}
-
-.appointment-stack .appointment-luxury:nth-child(n+3) {
-  margin-top: -12px;
-  transform: scale(0.9);
-  z-index: 0;
-}
-
-@media (max-width: 768px) {
-  .appointment-stack .appointment-luxury:nth-child(n+2) {
-    margin-top: -4px;
-    transform: scale(0.96);
+  .print-only {
+    display: block !important;
   }
   
-  .appointment-stack .appointment-luxury:nth-child(n+3) {
-    margin-top: -8px;
-    transform: scale(0.92);
+  * {
+    color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+/* Support pour les préférences utilisateur */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media (prefers-contrast: high) {
+  :root {
+    --border: 0 0% 40%;
+    --input: 0 0% 40%;
+  }
+  
+  .dark {
+    --border: 0 0% 60%;
+    --input: 0 0% 60%;
   }
 }

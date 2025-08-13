@@ -1,367 +1,402 @@
 
-# DOCUMENTATION DU CODE - RIZIKY-AGENDAS
+# DOCUMENTATION DU CODE
 
-## Services Frontend (/src/services)
+## Table des matières
+1. [Structure du projet](#structure-du-projet)
+2. [Frontend React](#frontend-react)
+3. [Backend Node.js](#backend-nodejs)
+4. [Base de données](#base-de-données)
+5. [API Documentation](#api-documentation)
+6. [Hooks personnalisés](#hooks-personnalisés)
+7. [Services](#services)
+8. [Composants UI](#composants-ui)
 
-### AppointmentService.ts
-**Rôle**: Service principal pour la gestion des rendez-vous
+## Structure du projet
+
+### Arborescence générale
+```
+projet/
+├── src/                    # Code source frontend
+├── server/                 # Code source backend
+├── docs/                   # Documentation
+└── public/                 # Assets statiques
+```
+
+## Frontend React
+
+### Contextes (Context API)
+
+#### AuthContext
 ```typescript
-// Point d'entrée unique pour toutes les opérations sur les rendez-vous
-// Délègue vers des services spécialisés (API, Search, Calendar)
-export const AppointmentService = {
-  // CRUD operations
-  getAll: AppointmentAPI.getAll,              // Récupère tous les rendez-vous
-  add: AppointmentAPI.create,                 // Crée un nouveau rendez-vous
-  update: AppointmentAPI.update,              // Met à jour un rendez-vous
-  delete: AppointmentAPI.delete,              // Supprime un rendez-vous
+// src/contexts/AuthContext.tsx
+interface AuthContextType {
+  user: User | null;
+  isAuthenticated: boolean;
+  login: (credentials: LoginCredentials) => Promise<boolean>;
+  logout: () => void;
+  register: (data: RegistrationData) => Promise<boolean>;
+}
+```
+
+**Fonctionnalités:**
+- Gestion de l'état d'authentification
+- Persistance du token JWT
+- Fonctions de connexion/déconnexion
+- Gestion des erreurs d'authentification
+
+#### AppContext
+```typescript
+// src/contexts/AppContext.tsx
+interface AppContextType {
+  products: Product[];
+  sales: Sale[];
+  addProduct: (product: Product) => Promise<Product | null>;
+  updateProduct: (product: Product) => Promise<Product | null>;
+  addSale: (sale: Sale) => Promise<Sale | null>;
+  refreshData: () => Promise<void>;
+}
+```
+
+**Fonctionnalités:**
+- État global de l'application
+- Gestion des produits et ventes
+- Synchronisation automatique des données
+- Mise à jour temps réel
+
+### Pages principales
+
+#### DashboardPage
+- **Fichier**: `src/pages/DashboardPage.tsx`
+- **Description**: Page principale du tableau de bord
+- **Composants intégrés**:
+  - `Inventaire`: Gestion des produits
+  - `VentesProduits`: Enregistrement des ventes
+  - `ProfitCalculator`: Calculateur de bénéfices
+  - `PretFamilles`: Gestion des prêts familiaux
+  - `DepenseDuMois`: Suivi des dépenses
+
+#### TendancesPage
+- **Fichier**: `src/pages/TendancesPage.tsx`
+- **Description**: Analyse des tendances et statistiques
+- **Fonctionnalités**:
+  - Graphiques de ventes
+  - Évolution des bénéfices
+  - Comparaisons mensuelles
+
+### Composants dashboard
+
+#### Inventaire
+```typescript
+// src/components/dashboard/Inventaire.tsx
+const Inventaire: React.FC = () => {
+  const { products, addProduct, updateProduct } = useApp();
+  // Logique de gestion des produits
+};
+```
+
+**Fonctionnalités:**
+- Affichage des produits en tableau
+- Formulaire d'ajout/modification
+- Recherche et filtrage
+- Upload d'images
+
+#### VentesProduits
+```typescript
+// src/components/dashboard/VentesProduits.tsx
+const VentesProduits: React.FC = () => {
+  const { sales, addSale } = useApp();
+  // Logique de gestion des ventes
+};
+```
+
+**Fonctionnalités:**
+- Enregistrement des ventes
+- Sélection de produits
+- Calcul automatique des bénéfices
+- Gestion des quantités
+
+### Hooks personnalisés
+
+#### useAutoLogout
+```typescript
+// src/hooks/use-auto-logout.tsx
+export function useAutoLogout() {
+  const { logout, isAuthenticated } = useAuth();
+  const timeoutRef = useRef<number | null>(null);
   
-  // Recherche et filtrage
-  search: AppointmentSearch.search,           // Recherche textuelle avancée
-  getByDateRange: AppointmentAPI.getByDateRange, // Filtrage par période
-  
-  // Utilitaires calendrier
-  getCurrentWeekAppointments: CalendarUtils.getCurrentWeekAppointments
+  const resetTimer = () => {
+    // Réinitialise le timer d'inactivité
+  };
 }
 ```
 
-### AuthService.ts
-**Rôle**: Gestion complète de l'authentification utilisateur
+**Fonctionnalités:**
+- Déconnexion automatique après 10 minutes d'inactivité
+- Écoute des événements utilisateur
+- Nettoyage automatique des timers
+
+#### useRealtimeSync
 ```typescript
-export const AuthService = {
-  // Authentification
-  login(email: string, password: string): Promise<boolean>
-  register(userData: Omit<User, 'id'>): Promise<boolean>
-  logout(): void
-  
-  // Gestion d'état
-  getCurrentUser(): User | null
-  isAuthenticated(): boolean
-  
-  // Récupération de mot de passe
-  resetPassword(email: string, newPassword: string): Promise<boolean>
-}
+// src/hooks/use-realtime-sync.ts
+export const useRealtimeSync = (options: RealtimeSyncOptions = {}) => {
+  const { refreshData } = useApp();
+  // Logique de synchronisation
+};
 ```
 
-### AdvancedNotificationService.ts
-**Rôle**: Système de notifications multi-canal
-```typescript
-export class AdvancedNotificationService {
-  // Configuration
-  static updateSettings(settings: NotificationSettings): void
-  static getSettings(): NotificationSettings
-  
-  // Notifications système
-  static initializeNotifications(): Promise<void>
-  static scheduleUpcomingReminders(): void
-  
-  // Notifications toast
-  static showAppointmentCreated(appointment: Appointment): void
-  static showConflictWarning(conflicts: Appointment[]): void
-}
-```
+**Fonctionnalités:**
+- Synchronisation périodique des données
+- Détection de l'activité de l'onglet
+- Debouncing des appels
+- Gestion des erreurs
 
-## Composants UI (/src/components)
+## Backend Node.js
 
-### Composants de base (ui/)
-Tous basés sur **shadcn/ui** et **Radix UI** pour l'accessibilité
+### Structure des routes
 
-#### Button.tsx
-```typescript
-// Système de variants pour différents styles
-const buttonVariants = cva(
-  "base-classes",              // Classes de base communes
-  {
-    variants: {
-      variant: {
-        default: "primary-style",    // Bouton principal
-        destructive: "danger-style", // Actions destructives
-        outline: "bordered-style",   // Style contour
-        ghost: "transparent-style"   // Transparent
-      },
-      size: {
-        default: "standard-size",    // Taille normale
-        sm: "small-size",           // Petit
-        lg: "large-size",           // Grand
-        icon: "icon-only-size"      // Icône seule
-      }
-    }
-  }
-)
-```
-
-#### Dialog.tsx
-**Composants modaux réutilisables**
-```typescript
-// Composants composés pour construire des modales
-export const Dialog = DialogPrimitive.Root           // Conteneur principal
-export const DialogTrigger = DialogPrimitive.Trigger // Déclencheur
-export const DialogContent = forwardRef<...>         // Contenu modal
-export const DialogHeader = ({ className, ...props }) // En-tête
-export const DialogTitle = forwardRef<...>           // Titre accessible
-```
-
-### Composants métier
-
-#### AppointmentForm.tsx
-**Rôle**: Formulaire principal de création/édition de rendez-vous
-```typescript
-interface AppointmentFormProps {
-  appointment?: Appointment      // Mode édition si présent
-  onSave: (data: Appointment) => Promise<void>  // Callback sauvegarde
-  onCancel: () => void          // Callback annulation
-}
-
-// Utilise React Hook Form + Zod pour validation
-const form = useForm<AppointmentFormData>({
-  resolver: zodResolver(appointmentSchema),  // Validation automatique
-  defaultValues: appointment || defaultValues
-})
-```
-
-#### WeekCalendar.tsx
-**Rôle**: Vue calendrier hebdomadaire interactive
-```typescript
-interface WeekCalendarProps {
-  appointments: Appointment[]    // Rendez-vous à afficher
-  onAppointmentClick: (apt: Appointment) => void  // Clic sur rendez-vous
-  onTimeSlotClick: (date: string, time: string) => void // Clic sur créneau
-}
-
-// Structure de données pour l'affichage
-const weekStructure = {
-  days: CalendarUtils.getWeekDays(),      // 7 jours de lundi à dimanche
-  hours: CalendarUtils.getHours(),        // Heures de travail 7h-20h
-  appointmentGrid: Map<string, Appointment[]> // Mapping date+heure -> rendez-vous
-}
-```
-
-## Hooks personnalisés (/src/hooks)
-
-### useAuth.ts
-**Rôle**: Hook centralisé pour l'authentification
-```typescript
-export const useAuth = (): UseAuthReturn => {
-  const [user, setUser] = useState<User | null>(
-    () => AuthService.getCurrentUser()  // Initialisation depuis localStorage
-  )
-  
-  // Fonctions mémorisées avec useCallback pour éviter re-renders
-  const login = useCallback(async (email, password) => {
-    const success = await AuthService.login(email, password)
-    if (success) setUser(AuthService.getCurrentUser())
-    return success
-  }, [])
-  
-  return { user, isAuthenticated: !!user, login, logout, register }
-}
-```
-
-### useAppointments.ts
-**Rôle**: Hooks React Query pour gestion des rendez-vous
-```typescript
-// Hook principal avec cache intelligent
-export const useAppointments = () => {
-  return useQuery({
-    queryKey: ['appointments'],
-    queryFn: AppointmentService.getAll,
-    staleTime: 5 * 60 * 1000,        // Cache valide 5min
-    gcTime: 10 * 60 * 1000,          // Garbage collect après 10min
-  })
-}
-
-// Mutations avec invalidation automatique du cache
-export const useCreateAppointment = () => {
-  const queryClient = useQueryClient()
-  
-  return useMutation({
-    mutationFn: AppointmentService.add,
-    onSuccess: () => {
-      // Invalide et recharge automatiquement la liste
-      queryClient.invalidateQueries({ queryKey: ['appointments'] })
-    }
-  })
-}
-```
-
-## Utilitaires (/src/utils)
-
-### dateUtils.ts
-**Rôle**: Manipulation des dates avec date-fns
-```typescript
-// Formatage français automatique
-export const formatDateFr = (date: Date | string, pattern = 'PPP'): string => {
-  const dateObj = typeof date === 'string' ? parseISO(date) : date
-  return format(dateObj, pattern, { locale: fr })
-}
-
-// Génération semaine de travail
-export const getWeekDays = (startDate?: Date) => {
-  const monday = startOfWeek(referenceDate, { weekStartsOn: 1 })
-  return Array(7).fill(null).map((_, index) => {
-    const date = addDays(monday, index)
-    return {
-      fullDate: date,
-      isToday: isToday(date),
-      formattedDate: format(date, 'yyyy-MM-dd')
-    }
-  })
-}
-```
-
-### formatUtils.ts
-**Rôle**: Formatage d'affichage utilisateur
-```typescript
-// Formatage nom complet
-export const formatFullName = (nom: string, prenom: string): string => {
-  return `${prenom} ${nom}`.trim()
-}
-
-// Durée lisible
-export const formatDuration = (minutes: number): string => {
-  if (minutes < 60) return `${minutes} min`
-  const hours = Math.floor(minutes / 60)
-  const remaining = minutes % 60
-  return remaining === 0 ? `${hours}h` : `${hours}h ${remaining}min`
-}
-```
-
-## Backend - Structure des modèles (/server/models)
-
-### Appointment.js
-**Rôle**: Modèle de données pour les rendez-vous
+#### Routes d'authentification
 ```javascript
-class Appointment {
-  // Sauvegarde avec validation
-  static save(appointmentData) {
-    // 1. Validation des champs obligatoires
-    // 2. Génération ID unique
-    // 3. Horodatage création/modification
-    // 4. Sauvegarde fichier JSON
-    // 5. Notification WebSocket
+// server/routes/auth.js
+router.post('/login', (req, res) => {
+  // Logique de connexion
+});
+
+router.post('/register', (req, res) => {
+  // Logique d'inscription
+});
+```
+
+#### Routes produits
+```javascript
+// server/routes/products.js
+router.get('/', async (req, res) => {
+  // Récupération des produits
+});
+
+router.post('/', authMiddleware, async (req, res) => {
+  // Création d'un produit
+});
+```
+
+### Modèles de données
+
+#### Product Model
+```javascript
+// server/models/Product.js
+class Product {
+  static getAll() {
+    // Récupère tous les produits
   }
   
-  // Recherche avec filtres
-  static getByUserId(userId, filters = {}) {
-    // 1. Lecture fichier JSON
-    // 2. Filtrage par utilisateur
-    // 3. Application filtres additionnels
-    // 4. Tri par date/heure
+  static create(productData) {
+    // Crée un nouveau produit
+  }
+  
+  static update(id, productData) {
+    // Met à jour un produit
   }
 }
 ```
 
-### User.js
-**Rôle**: Modèle utilisateur avec authentification
+#### Sale Model
 ```javascript
-class User {
-  // Authentification sécurisée
-  static authenticate(email, password) {
-    // 1. Recherche utilisateur par email
-    // 2. Vérification mot de passe (hashage prévu)
-    // 3. Mise à jour dernière connexion
-    // 4. Retour données utilisateur (sans mot de passe)
+// server/models/Sale.js
+class Sale {
+  static getByMonthYear(month, year) {
+    // Récupère les ventes par mois/année
   }
   
-  // Validation unicité email
-  static isEmailUnique(email, excludeUserId = null) {
-    // Vérifie que l'email n'est pas déjà utilisé
-    // Exclut l'utilisateur actuel en cas de modification
+  static create(saleData) {
+    // Crée une nouvelle vente
+    // Mise à jour automatique du stock
   }
 }
 ```
 
-## Routes API (/server/routes)
+### Middleware
 
-### appointments.js
-**Structure des endpoints**
+#### Authentification
 ```javascript
-// GET /api/appointments - Liste des rendez-vous
-router.get('/', isAuthenticated, async (req, res) => {
-  // 1. Extraction user-id depuis headers
-  // 2. Appel modèle avec filtres URL
-  // 3. Formatage réponse JSON
-  // 4. Gestion erreurs avec status appropriés
-})
-
-// POST /api/appointments - Création
-router.post('/', isAuthenticated, async (req, res) => {
-  // 1. Validation payload avec Joi/Yup (prévu)
-  // 2. Vérification conflits horaires
-  // 3. Sauvegarde via modèle
-  // 4. Notification WebSocket aux clients connectés
-  // 5. Réponse avec données créées
-})
+// server/middleware/auth.js
+const authMiddleware = (req, res, next) => {
+  const token = req.header('Authorization')?.replace('Bearer ', '');
+  
+  if (!token) {
+    return res.status(401).json({ message: 'No token provided' });
+  }
+  
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    res.status(401).json({ message: 'Invalid token' });
+  }
+};
 ```
 
-### WebSocket (/server/websocket.js)
-**Communication temps réel**
+#### Synchronisation
 ```javascript
-// Gestionnaire de connexions WebSocket
-const setupWebSocket = (server) => {
-  const wss = new WebSocketServer({ port: 3001 })
+// server/middleware/sync.js
+class SyncManager {
+  static clients = new Map();
   
-  wss.on('connection', (ws, request) => {
-    // 1. Extraction userId depuis query params
-    // 2. Ajout à la map des connexions actives
-    // 3. Envoi état initial (messages non lus, etc.)
-    // 4. Gestion déconnexion automatique
-  })
+  static addClient(clientId, sendEvent) {
+    this.clients.set(clientId, sendEvent);
+  }
   
-  // Diffusion sélective par utilisateur
-  const broadcastToUser = (userId, message) => {
-    // Envoie uniquement aux connexions de cet utilisateur
+  static notifyClients(event, data) {
+    this.clients.forEach(sendEvent => {
+      sendEvent(event, data);
+    });
   }
 }
 ```
 
-## Configuration et setup
+## Base de données
 
-### tailwind.config.ts
-**Design system personnalisé**
+### Fichiers JSON
+- `products.json`: Stockage des produits
+- `sales.json`: Stockage des ventes
+- `users.json`: Stockage des utilisateurs
+- `pretfamilles.json`: Prêts familiaux
+- `pretproduits.json`: Prêts produits
+- `depensedumois.json`: Dépenses mensuelles
+
+### Structure des données
+
+#### Produit
+```json
+{
+  "id": "1",
+  "description": "Laptop",
+  "purchasePrice": 500,
+  "quantity": 10,
+  "imageUrl": "/uploads/laptop.jpg"
+}
+```
+
+#### Vente
+```json
+{
+  "id": "1",
+  "date": "2024-04-15",
+  "productId": "1",
+  "description": "Laptop",
+  "sellingPrice": 800,
+  "quantitySold": 1,
+  "purchasePrice": 500,
+  "profit": 300
+}
+```
+
+## API Documentation
+
+### Endpoints Produits
+
+#### GET /api/products
+- **Description**: Récupère tous les produits
+- **Authentification**: Non requise
+- **Réponse**: Array de produits
+
+#### POST /api/products
+- **Description**: Crée un nouveau produit
+- **Authentification**: Requise
+- **Body**:
+```json
+{
+  "description": "string",
+  "purchasePrice": "number",
+  "quantity": "number"
+}
+```
+
+### Endpoints Ventes
+
+#### GET /api/sales/by-month
+- **Description**: Récupère les ventes par mois
+- **Authentification**: Requise
+- **Paramètres**: `month`, `year`
+
+#### POST /api/sales
+- **Description**: Crée une nouvelle vente
+- **Authentification**: Requise
+- **Body**:
+```json
+{
+  "date": "string",
+  "productId": "string",
+  "sellingPrice": "number",
+  "quantitySold": "number"
+}
+```
+
+## Services
+
+### authService
 ```typescript
-export default {
-  theme: {
-    extend: {
-      colors: {
-        // Palette de couleurs HSL pour cohérence
-        primary: { DEFAULT: "hsl(var(--primary))", foreground: "hsl(var(--primary-foreground))" },
-        // Système de couleurs sémantiques
-      },
-      animation: {
-        // Animations personnalisées pour l'expérience premium
-        "premium-glow": "premium-glow 2s ease-in-out infinite alternate",
-        "floating": "floating 3s ease-in-out infinite"
-      }
-    }
+// src/service/api.ts
+export const authService = {
+  login: async (credentials: LoginCredentials) => {
+    // Logique de connexion
   },
-  plugins: [require("tailwindcss-animate")]  // Animations fluides
-}
-```
-
-### vite.config.ts
-**Configuration de build moderne**
-```typescript
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    port: 5173,                    // Port de développement
-    proxy: {                       // Proxy vers API backend
-      '/api': 'http://localhost:10000'
-    }
-  },
-  build: {
-    outDir: 'dist',               // Dossier de build
-    sourcemap: true,              // Source maps pour debugging
-    rollupOptions: {
-      output: {
-        manualChunks: {           // Code splitting optimisé
-          vendor: ['react', 'react-dom'],
-          ui: ['@radix-ui/react-dialog', 'lucide-react']
-        }
-      }
-    }
+  
+  register: async (data: RegistrationData) => {
+    // Logique d'inscription
   }
-})
+};
 ```
 
-Cette documentation couvre l'architecture complète du code avec tous les détails techniques nécessaires pour comprendre et maintenir l'application.
+### productService
+```typescript
+export const productService = {
+  getProducts: async () => {
+    // Récupération des produits
+  },
+  
+  addProduct: async (product: Omit<Product, 'id'>) => {
+    // Ajout d'un produit
+  }
+};
+```
+
+## Composants UI
+
+### Composants Shadcn/UI
+- **Button**: Boutons stylisés
+- **Card**: Cartes de contenu
+- **Dialog**: Modales
+- **Form**: Formulaires
+- **Table**: Tableaux de données
+- **Toast**: Notifications
+
+### Composants personnalisés
+- **StatCard**: Carte de statistiques
+- **ModernButton**: Bouton moderne avec animations
+- **RealtimeStatus**: Indicateur de statut temps réel
+
+## Tests et Validation
+
+### Validation des données
+- Validation côté client avec React Hook Form
+- Validation côté serveur pour tous les endpoints
+- Sanitisation des entrées utilisateur
+
+### Gestion d'erreurs
+- Composant ErrorBoundary pour les erreurs React
+- Middleware de gestion d'erreurs Express
+- Logging structuré des erreurs
+
+## Optimisations
+
+### Performance
+- Lazy loading des composants
+- Mémorisation avec React.memo
+- Debouncing des recherches
+- Pagination des données
+
+### Sécurité
+- Hashage des mots de passe avec bcrypt
+- Tokens JWT avec expiration
+- Validation stricte des données
+- Protection CORS configurée

@@ -1,18 +1,20 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { AuthService, User } from '@/services/AuthService';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { LoginCredentials, PasswordResetData, PasswordResetRequest, RegistrationData, User } from '../types';
+import { authService } from '../service/api';
+import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   token: string | null;
-  login: (email: string, password: string) => Promise<boolean>;
-  register: (user: Omit<User, 'id'>) => Promise<boolean>;
+  login: (credentials: LoginCredentials) => Promise<boolean>;
   logout: () => void;
-  resetPassword: (email: string, newPassword: string) => Promise<boolean>;
-  resetPasswordRequest: (email: string) => Promise<boolean>;
+  register: (data: RegistrationData) => Promise<boolean>;
   checkEmail: (email: string) => Promise<boolean>;
+  resetPasswordRequest: (data: PasswordResetRequest) => Promise<boolean>;
+  resetPassword: (data: PasswordResetData) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -20,115 +22,190 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [token, setToken] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
-    // Vérifier si un utilisateur est déjà connecté au chargement
-    const currentUser = AuthService.getCurrentUser();
-    console.log('Utilisateur actuel au chargement:', currentUser);
-    if (currentUser) {
-      setUser(currentUser);
-    }
+    // Check if user is already logged in
+    const currentUser = authService.getCurrentUser();
+    const storedToken = localStorage.getItem('token');
+    
+    setUser(currentUser);
+    setToken(storedToken);
     setIsLoading(false);
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    console.log('AuthContext: Tentative de connexion pour:', email);
-    setIsLoading(true);
+  const login = async (credentials: LoginCredentials): Promise<boolean> => {
     try {
-      const success = await AuthService.login(email, password);
-      console.log('AuthContext: Résultat de la connexion:', success);
+      setIsLoading(true);
+      const result = await authService.login(credentials);
       
-      if (success) {
-        const currentUser = AuthService.getCurrentUser();
-        console.log('AuthContext: Utilisateur récupéré après connexion:', currentUser);
-        setUser(currentUser);
-        setIsLoading(false);
+      if (result && result.user) {
+        setUser(result.user);
+        setToken(result.token);
+        toast({
+          title: "Connexion réussie",
+          description: `Bienvenue ${result.user.firstName} ${result.user.lastName}`,
+          className: "bg-green-500 text-white",
+        });
         return true;
+      } else {
+        toast({
+          title: "Échec de la connexion",
+          description: "Email ou mot de passe incorrect",
+          variant: "destructive",
+        });
+        return false;
       }
-      setIsLoading(false);
-      return false;
     } catch (error) {
-      console.error('AuthContext: Erreur lors de la connexion:', error);
-      setIsLoading(false);
+      toast({
+        title: "Erreur",
+        description: "Une erreur s'est produite lors de la connexion",
+        variant: "destructive",
+      });
       return false;
-    }
-  };
-
-  const register = async (userData: Omit<User, 'id'>): Promise<boolean> => {
-    setIsLoading(true);
-    try {
-      const result = await AuthService.register(userData);
+    } finally {
       setIsLoading(false);
-      return result;
-    } catch (error) {
-      console.error('AuthContext: Erreur lors de l\'inscription:', error);
-      setIsLoading(false);
-      return false;
     }
   };
 
   const logout = () => {
-    console.log('AuthContext: Déconnexion');
-    AuthService.logout();
     setUser(null);
+    setToken(null);
+    authService.setCurrentUser(null);
+    toast({
+      title: "Déconnexion réussie",
+      description: "Vous avez été déconnecté avec succès",
+    });
+    // Redirect to login page after logout
+    window.location.href = '/login';
   };
 
-  const resetPassword = async (email: string, newPassword: string): Promise<boolean> => {
-    setIsLoading(true);
+  const register = async (data: RegistrationData): Promise<boolean> => {
     try {
-      const result = await AuthService.resetPassword(email, newPassword);
-      setIsLoading(false);
-      return result;
+      setIsLoading(true);
+      const registerData = {
+        email: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        gender: data.gender,
+        address: data.address,
+        phone: data.phone,
+      };
+      
+      const result = await authService.register(registerData);
+      
+      if (result && result.user) {
+        setUser(result.user);
+        setToken(result.token);
+        toast({
+          title: "Inscription réussie",
+          description: `Bienvenue ${result.user.firstName} ${result.user.lastName}`,
+          className: "notification-success",
+        });
+        return true;
+      } else {
+        toast({
+          title: "Échec de l'inscription",
+          description: "Cet email est déjà utilisé",
+          variant: "destructive",
+        });
+        return false;
+      }
     } catch (error) {
-      console.error('AuthContext: Erreur lors de la réinitialisation:', error);
-      setIsLoading(false);
+      toast({
+        title: "Erreur",
+        description: "Une erreur s'est produite lors de l'inscription",
+        variant: "destructive",
+      });
       return false;
-    }
-  };
-
-  const resetPasswordRequest = async (email: string): Promise<boolean> => {
-    setIsLoading(true);
-    try {
-      // Simuler une requête de réinitialisation
-      const result = await AuthService.checkEmail(email);
+    } finally {
       setIsLoading(false);
-      return result;
-    } catch (error) {
-      console.error('AuthContext: Erreur lors de la demande de réinitialisation:', error);
-      setIsLoading(false);
-      return false;
     }
   };
 
   const checkEmail = async (email: string): Promise<boolean> => {
     try {
-      return await AuthService.checkEmail(email);
+      const result = await authService.checkEmail(email);
+      return result.exists;
     } catch (error) {
-      console.error('AuthContext: Erreur lors de la vérification de l\'email:', error);
       return false;
     }
   };
 
-  const value: AuthContextType = {
-    user,
-    isAuthenticated: user !== null,
-    isLoading,
-    token: user ? 'mock-token' : null,
-    login,
-    register,
-    logout,
-    resetPassword,
-    resetPasswordRequest,
-    checkEmail
+  const resetPasswordRequest = async (data: PasswordResetRequest): Promise<boolean> => {
+    try {
+      setIsLoading(true);
+      const exists = await authService.resetPasswordRequest(data);
+      
+      if (!exists) {
+        toast({
+          title: "Échec de la réinitialisation",
+          description: "Cet email n'existe pas dans notre système",
+          variant: "destructive",
+        });
+      }
+      
+      return exists;
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Une erreur s'est produite lors de la réinitialisation",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  console.log('AuthContext: État actuel de l\'utilisateur:', user);
+  const resetPassword = async (data: PasswordResetData): Promise<boolean> => {
+    try {
+      setIsLoading(true);
+      const result = await authService.resetPassword(data.email);
+      
+      if (result.success) {
+        toast({
+          title: "Réinitialisation réussie",
+          description: "Votre mot de passe a été réinitialisé avec succès",
+          className: "notification-success",
+        });
+        return true;
+      } else {
+        toast({
+          title: "Échec de la réinitialisation",
+          description: "Le nouveau mot de passe doit être différent de l'ancien",
+          variant: "destructive",
+        });
+        return false;
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Une erreur s'est produite lors de la réinitialisation",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const value = {
+    user,
+    isAuthenticated: !!user,
+    isLoading,
+    token,
+    login,
+    logout,
+    register,
+    checkEmail,
+    resetPasswordRequest,
+    resetPassword,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = (): AuthContextType => {
