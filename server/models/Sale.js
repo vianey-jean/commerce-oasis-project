@@ -48,16 +48,8 @@ const Sale = {
     try {
       const sales = JSON.parse(fs.readFileSync(salesPath, 'utf8'));
       
-      // Check if this is an advance product (case insensitive)
-      const isAdvanceProduct = saleData.description.toLowerCase().includes('avance');
-      
-      // For advance products, ensure quantity is 0
-      if (isAdvanceProduct) {
-        saleData.quantitySold = 0;
-      }
-      
-      // Don't recalculate profit - use the profit already calculated by AddSaleForm
-      // The profit should already be correctly calculated (V - A) from the frontend
+      // Détecter le format (multi-produits ou single-produit)
+      const isMultiProduct = saleData.products && Array.isArray(saleData.products);
       
       // Create new sale object
       const newSale = {
@@ -65,13 +57,28 @@ const Sale = {
         ...saleData
       };
       
-      // For regular products, update product quantity
-      if (!isAdvanceProduct) {
-        // Update product quantity
-        const productResult = Product.updateQuantity(saleData.productId, -saleData.quantitySold);
-        if (productResult && productResult.error) {
-          return { error: productResult.error };
+      if (isMultiProduct) {
+        // Format multi-produits - la gestion des stocks a déjà été faite dans la route
+        console.log('💾 Sauvegarde vente multi-produits:', newSale);
+      } else {
+        // Format single-produit (ancien format)
+        const isAdvanceProduct = saleData.description.toLowerCase().includes('avance');
+        
+        // For advance products, ensure quantity is 0
+        if (isAdvanceProduct) {
+          newSale.quantitySold = 0;
         }
+        
+        // For regular products, update product quantity
+        if (!isAdvanceProduct) {
+          // Update product quantity
+          const productResult = Product.updateQuantity(saleData.productId, -saleData.quantitySold);
+          if (productResult && productResult.error) {
+            return { error: productResult.error };
+          }
+        }
+        
+        console.log('💾 Sauvegarde vente single-produit:', newSale);
       }
       
       // Add to sales array

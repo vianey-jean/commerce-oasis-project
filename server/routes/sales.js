@@ -46,9 +46,14 @@ router.post('/', authMiddleware, async (req, res) => {
     console.log('📝 SALES API - Création d\'une nouvelle vente');
     console.log('📝 Données reçues:', JSON.stringify(req.body, null, 2));
     
+    // Support pour les deux formats: ancien (single product) et nouveau (multi-products)
     const { 
-      date, productId, description, sellingPrice, 
-      quantitySold, purchasePrice, profit,
+      date, 
+      // Ancien format
+      productId, description, sellingPrice, quantitySold, purchasePrice, profit,
+      // Nouveau format
+      products, totalPurchasePrice, totalSellingPrice, totalProfit,
+      // Client info
       clientName, clientAddress, clientPhone
     } = req.body;
     
@@ -58,94 +63,160 @@ router.post('/', authMiddleware, async (req, res) => {
       return res.status(400).json({ message: 'Date is required' });
     }
     
-    if (!productId) {
-      console.log('❌ ProductId manquant');
-      return res.status(400).json({ message: 'ProductId is required' });
-    }
+    // Déterminer le format (ancien ou nouveau)
+    const isMultiProduct = products && Array.isArray(products) && products.length > 0;
     
-    if (!description) {
-      console.log('❌ Description manquante');
-      return res.status(400).json({ message: 'Description is required' });
-    }
-    
-    if (sellingPrice === undefined || sellingPrice === null || sellingPrice === '') {
-      console.log('❌ SellingPrice manquant ou invalide:', sellingPrice);
-      return res.status(400).json({ message: 'SellingPrice is required' });
-    }
-    
-    if (purchasePrice === undefined || purchasePrice === null || purchasePrice === '') {
-      console.log('❌ PurchasePrice manquant ou invalide:', purchasePrice);
-      return res.status(400).json({ message: 'PurchasePrice is required' });
-    }
-    
-    // Check if product exists
-    const product = Product.getById(productId);
-    if (!product) {
-      console.log('❌ Produit non trouvé:', productId);
-      return res.status(404).json({ message: 'Product not found' });
-    }
-    
-    console.log('✅ Produit trouvé:', {
-      id: product.id,
-      description: product.description,
-      purchasePrice: product.purchasePrice,
-      quantity: product.quantity
-    });
-    
-    // Check if description contains "avance" word (case insensitive)
-    const isAdvanceProduct = description.toLowerCase().includes('avance');
-    console.log('🔍 Type de produit:', isAdvanceProduct ? 'Avance' : 'Normal');
-    
-    // For advance products, we force quantity to 0
-    let finalQuantitySold = isAdvanceProduct ? 0 : Number(quantitySold || 1);
-    console.log('📊 Quantité finale:', finalQuantitySold);
-    
-    // For non-advance products, check stock availability
-    if (!isAdvanceProduct) {
-      const requestedQuantity = Number(quantitySold || 1);
-      if (requestedQuantity <= 0) {
-        console.log('❌ Quantité invalide:', requestedQuantity);
-        return res.status(400).json({ message: 'Quantity must be greater than 0' });
+    if (isMultiProduct) {
+      console.log('🏬 Format multi-produits détecté');
+      
+      // Validation pour le format multi-produits
+      if (!products.every(p => p.productId && p.description && p.sellingPrice !== undefined && p.purchasePrice !== undefined)) {
+        console.log('❌ Données de produit incomplètes');
+        return res.status(400).json({ message: 'Incomplete product data' });
       }
       
-      if (product.quantity < requestedQuantity) {
-        console.log('❌ Stock insuffisant:', { demande: requestedQuantity, disponible: product.quantity });
-        return res.status(400).json({ message: 'Not enough quantity available' });
+      // Validation des stocks pour les produits non-avance
+      for (const productData of products) {
+        const product = Product.getById(productData.productId);
+        if (!product) {
+          console.log('❌ Produit non trouvé:', productData.productId);
+          return res.status(404).json({ message: `Product ${productData.productId} not found` });
+        }
+        
+        const isAdvanceProduct = productData.description.toLowerCase().includes('avance');
+        if (!isAdvanceProduct && product.quantity < productData.quantitySold) {
+          console.log('❌ Stock insuffisant pour:', productData.description);
+          return res.status(400).json({ message: `Not enough stock for ${productData.description}` });
+        }
+      }
+    } else {
+      console.log('🛍️ Format single-produit détecté');
+      
+      // Validation pour le format ancien
+      if (!productId) {
+        console.log('❌ ProductId manquant');
+        return res.status(400).json({ message: 'ProductId is required' });
+      }
+      
+      if (!description) {
+        console.log('❌ Description manquante');
+        return res.status(400).json({ message: 'Description is required' });
+      }
+      
+      if (sellingPrice === undefined || sellingPrice === null || sellingPrice === '') {
+        console.log('❌ SellingPrice manquant ou invalide:', sellingPrice);
+        return res.status(400).json({ message: 'SellingPrice is required' });
+      }
+      
+      if (purchasePrice === undefined || purchasePrice === null || purchasePrice === '') {
+        console.log('❌ PurchasePrice manquant ou invalide:', purchasePrice);
+        return res.status(400).json({ message: 'PurchasePrice is required' });
       }
     }
     
-    // Convert and validate numeric values
-    const numericSellingPrice = Number(sellingPrice);
-    const numericPurchasePrice = Number(purchasePrice);
-    const numericProfit = Number(profit || 0);
+    let newSale;
     
-    if (isNaN(numericSellingPrice) || numericSellingPrice < 0) {
-      console.log('❌ Prix de vente invalide:', sellingPrice);
-      return res.status(400).json({ message: 'Invalid selling price' });
+    if (isMultiProduct) {
+      // Traitement des ventes multi-produits
+      console.log('🏬 Traitement vente multi-produits');
+      
+      // Mettre à jour les stocks pour chaque produit
+      for (const productData of products) {
+        const isAdvanceProduct = productData.description.toLowerCase().includes('avance');
+        if (!isAdvanceProduct && productData.quantitySold > 0) {
+          const productResult = Product.updateQuantity(productData.productId, -productData.quantitySold);
+          if (productResult && productResult.error) {
+            return res.status(400).json({ message: productResult.error });
+          }
+        }
+      }
+      
+      // Créer la vente multi-produits
+      const saleData = {
+        date,
+        products,
+        totalPurchasePrice: Number(totalPurchasePrice),
+        totalSellingPrice: Number(totalSellingPrice),
+        totalProfit: Number(totalProfit),
+        clientName: clientName || null,
+        clientAddress: clientAddress || null,
+        clientPhone: clientPhone || null
+      };
+      
+      console.log('💾 Données de vente multi-produits à créer:', JSON.stringify(saleData, null, 2));
+      newSale = Sale.create(saleData);
+    } else {
+      // Traitement des ventes single-produit (format ancien)
+      console.log('🛍️ Traitement vente single-produit');
+      
+      // Check if product exists
+      const product = Product.getById(productId);
+      if (!product) {
+        console.log('❌ Produit non trouvé:', productId);
+        return res.status(404).json({ message: 'Product not found' });
+      }
+      
+      console.log('✅ Produit trouvé:', {
+        id: product.id,
+        description: product.description,
+        purchasePrice: product.purchasePrice,
+        quantity: product.quantity
+      });
+      
+      // Check if description contains "avance" word (case insensitive)
+      const isAdvanceProduct = description.toLowerCase().includes('avance');
+      console.log('🔍 Type de produit:', isAdvanceProduct ? 'Avance' : 'Normal');
+      
+      // For advance products, we force quantity to 0
+      let finalQuantitySold = isAdvanceProduct ? 0 : Number(quantitySold || 1);
+      console.log('📊 Quantité finale:', finalQuantitySold);
+      
+      // For non-advance products, check stock availability
+      if (!isAdvanceProduct) {
+        const requestedQuantity = Number(quantitySold || 1);
+        if (requestedQuantity <= 0) {
+          console.log('❌ Quantité invalide:', requestedQuantity);
+          return res.status(400).json({ message: 'Quantity must be greater than 0' });
+        }
+        
+        if (product.quantity < requestedQuantity) {
+          console.log('❌ Stock insuffisant:', { demande: requestedQuantity, disponible: product.quantity });
+          return res.status(400).json({ message: 'Not enough quantity available' });
+        }
+      }
+      
+      // Convert and validate numeric values
+      const numericSellingPrice = Number(sellingPrice);
+      const numericPurchasePrice = Number(purchasePrice);
+      const numericProfit = Number(profit || 0);
+      
+      if (isNaN(numericSellingPrice) || numericSellingPrice < 0) {
+        console.log('❌ Prix de vente invalide:', sellingPrice);
+        return res.status(400).json({ message: 'Invalid selling price' });
+      }
+      
+      if (isNaN(numericPurchasePrice) || numericPurchasePrice < 0) {
+        console.log('❌ Prix d\'achat invalide:', purchasePrice);
+        return res.status(400).json({ message: 'Invalid purchase price' });
+      }
+      
+      // Use the profit already calculated by AddSaleForm
+      const saleData = {
+        date,
+        productId,
+        description,
+        sellingPrice: numericSellingPrice,
+        quantitySold: finalQuantitySold,
+        purchasePrice: numericPurchasePrice,
+        profit: numericProfit,
+        clientName: clientName || null,
+        clientAddress: clientAddress || null,
+        clientPhone: clientPhone || null
+      };
+      
+      console.log('💾 Données de vente à créer:', JSON.stringify(saleData, null, 2));
+      newSale = Sale.create(saleData);
     }
-    
-    if (isNaN(numericPurchasePrice) || numericPurchasePrice < 0) {
-      console.log('❌ Prix d\'achat invalide:', purchasePrice);
-      return res.status(400).json({ message: 'Invalid purchase price' });
-    }
-    
-    // Use the profit already calculated by AddSaleForm
-    const saleData = {
-      date,
-      productId,
-      description,
-      sellingPrice: numericSellingPrice,
-      quantitySold: finalQuantitySold,
-      purchasePrice: numericPurchasePrice,
-      profit: numericProfit,
-      clientName: clientName || null,
-      clientAddress: clientAddress || null,
-      clientPhone: clientPhone || null
-    };
-    
-    console.log('💾 Données de vente à créer:', JSON.stringify(saleData, null, 2));
-    
-    const newSale = Sale.create(saleData);
     
     if (!newSale) {
       console.log('❌ Erreur lors de la création de la vente');
