@@ -7,11 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useApp } from '@/contexts/AppContext';
 import { Product, SaleProduct, Sale } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Trash2, Package, Euro } from 'lucide-react';
+import { Plus, Trash2, Package, Euro, Edit3 } from 'lucide-react';
 import ProductSearchInput from '../ProductSearchInput';
 import SaleQuantityInput from './SaleQuantityInput';
 import ClientSearchInput from '../ClientSearchInput';
 import { calculateSaleProfit } from './utils/saleCalculations';
+import ConfirmDeleteDialog from './ConfirmDeleteDialog';
 import axios from 'axios';
 
 interface MultiProductSaleFormProps {
@@ -52,6 +53,8 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
     isAdvanceProduct: false
   }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'sale' | 'product', index?: number } | null>(null);
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:10000';
 
@@ -136,10 +139,56 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
     }]);
   };
 
-  // Supprimer un produit
-  const removeProduct = (index: number) => {
-    if (formProducts.length > 1) {
-      setFormProducts(prev => prev.filter((_, i) => i !== index));
+  // Confirmer suppression d'un produit
+  const handleDeleteProduct = (index: number) => {
+    setDeleteTarget({ type: 'product', index });
+    setDeleteDialogOpen(true);
+  };
+
+  // Confirmer suppression de toute la vente
+  const handleDeleteSale = () => {
+    setDeleteTarget({ type: 'sale' });
+    setDeleteDialogOpen(true);
+  };
+
+  // Exécuter la suppression confirmée
+  const executeDelete = async () => {
+    if (!deleteTarget) return;
+
+    setIsSubmitting(true);
+    try {
+      if (deleteTarget.type === 'product' && deleteTarget.index !== undefined) {
+        // Supprimer un produit individuel
+        if (formProducts.length > 1) {
+          setFormProducts(prev => prev.filter((_, i) => i !== deleteTarget.index));
+          toast({
+            title: "Produit supprimé",
+            description: "Le produit a été retiré de la vente",
+            className: "notification-success",
+          });
+        }
+      } else if (deleteTarget.type === 'sale' && editSale && deleteSale) {
+        // Supprimer toute la vente
+        const success = await deleteSale(editSale.id);
+        if (success) {
+          toast({
+            title: "Succès",
+            description: "La vente a été supprimée avec succès",
+            className: "notification-success",
+          });
+          onClose();
+        }
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Une erreur est survenue lors de la suppression",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+      setDeleteDialogOpen(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -387,278 +436,315 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
   const totals = getTotals();
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{editSale ? 'Modifier la vente multi-produits' : 'Ajouter une vente multi-produits'}</DialogTitle>
-          <DialogDescription>
-            {editSale ? 'Modifiez les détails de cette vente avec plusieurs produits.' : 'Enregistrez une vente avec un ou plusieurs produits.'}
-          </DialogDescription>
-        </DialogHeader>
-        
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Date et client */}
+<Dialog open={isOpen} onOpenChange={onClose}>
+  <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+    <DialogHeader>
+      <DialogTitle>
+        {editSale ? 'Modifier la vente multi-produits' : 'Ajouter une vente multi-produits'}
+      </DialogTitle>
+      <DialogDescription>
+        {editSale
+          ? 'Modifiez les détails de cette vente avec plusieurs produits.'
+          : 'Enregistrez une vente avec un ou plusieurs produits.'}
+      </DialogDescription>
+    </DialogHeader>
+
+    <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Date et client */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label htmlFor="date">Date de vente</Label>
+          <Input
+            id="date"
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {/* Informations client */}
+      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800">
+        <CardHeader>
+          <CardTitle className="text-sm text-blue-700 dark:text-blue-300">
+            Informations Client
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <ClientSearchInput
+            value={clientName}
+            onChange={setClientName}
+            onClientSelect={handleClientSelect}
+            disabled={isSubmitting}
+          />
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="date">Date de vente</Label>
+              <Label htmlFor="clientPhone">Numéro de téléphone</Label>
               <Input
-                id="date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
+                id="clientPhone"
+                value={clientPhone}
+                onChange={(e) => setClientPhone(e.target.value)}
+                placeholder="Ex: 0692123456"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="clientAddress">Adresse</Label>
+              <Input
+                id="clientAddress"
+                value={clientAddress}
+                onChange={(e) => setClientAddress(e.target.value)}
+                placeholder="Adresse complète du client"
               />
             </div>
           </div>
+        </CardContent>
+      </Card>
 
-          {/* Informations client */}
-          <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800">
-            <CardHeader>
-              <CardTitle className="text-sm text-blue-700 dark:text-blue-300">Informations Client</CardTitle>
+      {/* Produits */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Produits</h3>
+          {/* <Button
+            type="button"
+            onClick={addNewProduct}
+            className="bg-green-600 hover:bg-green-700"
+            size="sm"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Ajouter un produit
+          </Button> */}
+        </div>
+
+        {formProducts.map((product, index) => (
+          <Card
+            key={index}
+            className="border-2 border-gray-200 dark:border-gray-700"
+          >
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Package className="h-4 w-4" />
+                  Produit {index + 1}
+                  {product.isAdvanceProduct && (
+                    <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full">
+                      Avance
+                    </span>
+                  )}
+                </CardTitle>
+                {formProducts.length > 1 && (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => handleDeleteProduct(index)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <ClientSearchInput
-                value={clientName}
-                onChange={setClientName}
-                onClientSelect={handleClientSelect}
-                disabled={isSubmitting}
-              />
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="clientPhone">Numéro de téléphone</Label>
-                  <Input
-                    id="clientPhone"
-                    value={clientPhone}
-                    onChange={(e) => setClientPhone(e.target.value)}
-                    placeholder="Ex: 0692123456"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="clientAddress">Adresse</Label>
-                  <Input
-                    id="clientAddress"
-                    value={clientAddress}
-                    onChange={(e) => setClientAddress(e.target.value)}
-                    placeholder="Adresse complète du client"
-                  />
-                </div>
+              {/* Sélection produit */}
+              <div className="space-y-2">
+                <Label>Produit</Label>
+                <ProductSearchInput
+                  onProductSelect={(prod) => handleProductSelect(prod, index)}
+                  selectedProduct={product.selectedProduct}
+                />
               </div>
-            </CardContent>
-          </Card>
 
-          {/* Produits */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Produits</h3>
-              <Button
-                type="button"
-                onClick={addNewProduct}
-                className="bg-green-600 hover:bg-green-700"
-                size="sm"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Ajouter un produit
-              </Button>
-            </div>
-
-            {formProducts.map((product, index) => (
-              <Card key={index} className="border-2 border-gray-200 dark:border-gray-700">
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <Package className="h-4 w-4" />
-                      Produit {index + 1}
-                      {product.isAdvanceProduct && (
-                        <span className="text-xs bg-amber-100 text-amber-800 px-2 py-1 rounded-full">
-                          Avance
-                        </span>
-                      )}
-                    </CardTitle>
-                    {formProducts.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => removeProduct(index)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Sélection produit */}
+              {product.selectedProduct && (
+                <div className="grid grid-cols-2 gap-4">
+                  {/* Prix d'achat unitaire */}
                   <div className="space-y-2">
-                    <Label>Produit</Label>
-                    <ProductSearchInput 
-                      onProductSelect={(prod) => handleProductSelect(prod, index)}
-                      selectedProduct={product.selectedProduct}
+                    <Label>Prix d'achat unitaire (€)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={product.purchasePriceUnit}
+                      readOnly
+                      disabled
                     />
                   </div>
-                  
-                  {product.selectedProduct && (
-                    <div className="grid grid-cols-2 gap-4">
-                      {/* Prix d'achat unitaire */}
-                      <div className="space-y-2">
-                        <Label>Prix d'achat unitaire (€)</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={product.purchasePriceUnit}
-                          readOnly
-                          disabled
-                        />
-                      </div>
-                      
-                      {/* Prix de vente unitaire */}
-                      <div className="space-y-2">
-                        <Label>Prix de vente unitaire (€)</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={product.sellingPriceUnit}
-                          onChange={(e) => handleSellingPriceChange(e.target.value, index)}
-                          disabled={isSubmitting}
-                          className={Number(product.profit) < 0 ? "border-red-500" : ""}
-                        />
-                      </div>
-                      
-                      {/* Quantité */}
-                      <SaleQuantityInput
-                        quantity={product.quantitySold}
-                        maxQuantity={product.maxQuantity}
-                        onChange={(value) => handleQuantityChange(value, index)}
-                        disabled={isSubmitting || product.isAdvanceProduct}
-                        showAvailableStock={!product.isAdvanceProduct}
-                      />
-                      
-                      {/* Bénéfice */}
-                      <div className="space-y-2">
-                        <Label>Bénéfice (€)</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={product.profit}
-                          readOnly
-                          disabled
-                          className={Number(product.profit) < 0 ? "border-red-500 bg-red-50" : ""}
-                        />
-                      </div>
-                    </div>
-                  )}
-                  
-                  {!product.selectedProduct && index < formProducts.length - 1 && (
-                    <div className="text-center py-4">
-                      <Button
-                        type="button"
-                        onClick={addNewProduct}
-                        variant="outline"
-                        className="text-green-600 border-green-600 hover:bg-green-50"
-                      >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Ajouter un autre produit
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
 
-          {/* Totaux */}
-          {formProducts.some(p => p.selectedProduct) && (
-            <Card className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800">
-              <CardHeader>
-                <CardTitle className="text-sm text-green-700 dark:text-green-300 flex items-center gap-2">
-                  <Euro className="h-4 w-4" />
-                  Totaux de la vente
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Prix d'achat total</p>
-                    <p className="text-lg font-bold text-gray-800 dark:text-gray-200">
-                      {totals.totalPurchasePrice.toFixed(2)} €
-                    </p>
+                  {/* Prix de vente unitaire */}
+                  <div className="space-y-2">
+                    <Label>Prix de vente unitaire (€)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={product.sellingPriceUnit}
+                      onChange={(e) =>
+                        handleSellingPriceChange(e.target.value, index)
+                      }
+                      disabled={isSubmitting}
+                      className={
+                        Number(product.profit) < 0 ? 'border-red-500' : ''
+                      }
+                    />
                   </div>
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Prix de vente total</p>
-                    <p className="text-lg font-bold text-green-600">
-                      {totals.totalSellingPrice.toFixed(2)} €
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">Bénéfice total</p>
-                    <p className={`text-lg font-bold ${totals.totalProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {totals.totalProfit.toFixed(2)} €
-                    </p>
+
+                  {/* Quantité */}
+                  <SaleQuantityInput
+                    quantity={product.quantitySold}
+                    maxQuantity={product.maxQuantity}
+                    onChange={(value) =>
+                      handleQuantityChange(value, index)
+                    }
+                    disabled={isSubmitting || product.isAdvanceProduct}
+                    showAvailableStock={!product.isAdvanceProduct}
+                  />
+
+                  {/* Bénéfice */}
+                  <div className="space-y-2">
+                    <Label>Bénéfice (€)</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={product.profit}
+                      readOnly
+                      disabled
+                      className={
+                        Number(product.profit) < 0
+                          ? 'border-red-500 bg-red-50'
+                          : ''
+                      }
+                    />
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          )}
-          
-          <DialogFooter>
-            {editSale && (
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={async () => {
-                  if (deleteSale && editSale) {
-                    setIsSubmitting(true);
-                    try {
-                      const success = await deleteSale(editSale.id);
-                      if (success) {
-                        toast({
-                          title: "Succès",
-                          description: "La vente a été supprimée avec succès",
-                          variant: "default",
-                          className: "notification-success",
-                        });
-                        onClose();
-                      }
-                    } catch (error) {
-                      toast({
-                        title: "Erreur",
-                        description: "Une erreur est survenue lors de la suppression",
-                        variant: "destructive",
-                      });
-                    } finally {
-                      setIsSubmitting(false);
-                    }
-                  }
-                }}
-                disabled={isSubmitting}
-                className="mr-auto"
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Supprimer
-              </Button>
-            )}
-            
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={isSubmitting}
-            >
-              Annuler
-            </Button>
-            
-            <Button
-              type="submit"
-              className="bg-app-green hover:bg-opacity-90"
-              disabled={isSubmitting || formProducts.filter(p => p.selectedProduct && p.sellingPriceUnit).length === 0}
-            >
-              {isSubmitting ? "Enregistrement..." : (editSale ? "Mettre à jour" : "Ajouter la vente")}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Bouton ajouté juste avant les totaux */}
+      <div className="text-center py-4">
+        <Button
+          type="button"
+          onClick={addNewProduct}
+          variant="outline"
+          className="text-green-600 border-green-600 hover:bg-green-50"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Ajouter un autre produit
+        </Button>
+      </div>
+
+      {/* Totaux */}
+      {formProducts.some((p) => p.selectedProduct) && (
+        <Card className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 border-green-200 dark:border-green-800">
+          <CardHeader>
+            <CardTitle className="text-sm text-green-700 dark:text-green-300 flex items-center gap-2">
+              <Euro className="h-4 w-4" />
+              Totaux de la vente
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Prix d'achat total
+                </p>
+                <p className="text-lg font-bold text-gray-800 dark:text-gray-200">
+                  {totals.totalPurchasePrice.toFixed(2)} €
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Prix de vente total
+                </p>
+                <p className="text-lg font-bold text-green-600">
+                  {totals.totalSellingPrice.toFixed(2)} €
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Bénéfice total
+                </p>
+                <p
+                  className={`text-lg font-bold ${
+                    totals.totalProfit >= 0
+                      ? 'text-green-600'
+                      : 'text-red-600'
+                  }`}
+                >
+                  {totals.totalProfit.toFixed(2)} €
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      <DialogFooter>
+        {editSale && (
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={handleDeleteSale}
+            disabled={isSubmitting}
+            className="mr-auto"
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Supprimer toute la vente
+          </Button>
+        )}
+
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onClose}
+          disabled={isSubmitting}
+        >
+          Annuler
+        </Button>
+
+        <Button
+          type="submit"
+          className="bg-app-green hover:bg-opacity-90"
+          disabled={
+            isSubmitting ||
+            formProducts.filter(
+              (p) => p.selectedProduct && p.sellingPriceUnit
+            ).length === 0
+          }
+        >
+          {isSubmitting
+            ? 'Enregistrement...'
+            : editSale
+            ? 'Mettre à jour'
+            : 'Ajouter la vente'}
+        </Button>
+      </DialogFooter>
+    </form>
+  </DialogContent>
+
+  {/* Dialog de confirmation de suppression */}
+  <ConfirmDeleteDialog
+    isOpen={deleteDialogOpen}
+    onClose={() => {
+      setDeleteDialogOpen(false);
+      setDeleteTarget(null);
+    }}
+    onConfirm={executeDelete}
+    title={
+      deleteTarget?.type === 'sale'
+        ? 'Supprimer toute la vente'
+        : 'Supprimer ce produit'
+    }
+    description={
+      deleteTarget?.type === 'sale'
+        ? 'Êtes-vous sûr de vouloir supprimer définitivement cette vente complète ? Cette action est irréversible.'
+        : 'Êtes-vous sûr de vouloir supprimer ce produit de la vente ? Cette action est irréversible.'
+    }
+    isSubmitting={isSubmitting}
+  />
+</Dialog>
+
   );
 };
 

@@ -239,49 +239,95 @@ router.post('/', authMiddleware, async (req, res) => {
 // Update sale
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
+    console.log('📝 SALES API - Mise à jour d\'une vente');
+    console.log('📝 Données reçues:', JSON.stringify(req.body, null, 2));
+    
     const { 
+      // Ancien format
       date, productId, description, sellingPrice, 
       quantitySold, purchasePrice, profit,
+      // Nouveau format multi-produits
+      products, totalPurchasePrice, totalSellingPrice, totalProfit,
+      // Client info
       clientName, clientAddress, clientPhone
     } = req.body;
     
-    if (!date || !productId || !description || !sellingPrice || purchasePrice === undefined) {
-      return res.status(400).json({ message: 'All fields are required' });
+    if (!date) {
+      console.log('❌ Date manquante');
+      return res.status(400).json({ message: 'Date is required' });
     }
     
-    // Check if description contains "avance" word (case insensitive)
-    const isAdvanceProduct = description.toLowerCase().includes('avance');
+    // Déterminer le format (ancien ou nouveau)
+    const isMultiProduct = products && Array.isArray(products) && products.length > 0;
     
-    // For advance products, we force quantity to 0
-    let finalQuantitySold = isAdvanceProduct ? 0 : Number(quantitySold);
+    let saleData;
     
-    // Use the profit already calculated by AddSaleForm
-    const saleData = {
-      date,
-      productId,
-      description,
-      sellingPrice: Number(sellingPrice),
-      quantitySold: finalQuantitySold,
-      purchasePrice: Number(purchasePrice),
-      profit: Number(profit), // Use the profit directly from frontend calculation
-      clientName: clientName || null,
-      clientAddress: clientAddress || null,
-      clientPhone: clientPhone || null
-    };
+    if (isMultiProduct) {
+      console.log('🏬 Mise à jour vente multi-produits');
+      
+      // Validation pour le format multi-produits
+      if (!products.every(p => p.productId && p.description && p.sellingPrice !== undefined && p.purchasePrice !== undefined)) {
+        console.log('❌ Données de produit incomplètes');
+        return res.status(400).json({ message: 'Incomplete product data' });
+      }
+      
+      // Préparer les données pour la vente multi-produits
+      saleData = {
+        date,
+        products,
+        totalPurchasePrice: Number(totalPurchasePrice),
+        totalSellingPrice: Number(totalSellingPrice),
+        totalProfit: Number(totalProfit),
+        clientName: clientName || null,
+        clientAddress: clientAddress || null,
+        clientPhone: clientPhone || null
+      };
+    } else {
+      console.log('🛍️ Mise à jour vente single-produit');
+      
+      // Validation pour le format ancien
+      if (!productId || !description || sellingPrice === undefined || purchasePrice === undefined) {
+        return res.status(400).json({ message: 'All fields are required for single product sale' });
+      }
+      
+      // Check if description contains "avance" word (case insensitive)
+      const isAdvanceProduct = description.toLowerCase().includes('avance');
+      
+      // For advance products, we force quantity to 0
+      let finalQuantitySold = isAdvanceProduct ? 0 : Number(quantitySold);
+      
+      // Use the profit already calculated by AddSaleForm
+      saleData = {
+        date,
+        productId,
+        description,
+        sellingPrice: Number(sellingPrice),
+        quantitySold: finalQuantitySold,
+        purchasePrice: Number(purchasePrice),
+        profit: Number(profit), // Use the profit directly from frontend calculation
+        clientName: clientName || null,
+        clientAddress: clientAddress || null,
+        clientPhone: clientPhone || null
+      };
+    }
     
+    console.log('💾 Données de vente à mettre à jour:', JSON.stringify(saleData, null, 2));
     const updatedSale = Sale.update(req.params.id, saleData);
     
     if (!updatedSale) {
+      console.log('❌ Vente non trouvée:', req.params.id);
       return res.status(404).json({ message: 'Sale not found' });
     }
     
     if (updatedSale.error) {
+      console.log('❌ Erreur retournée:', updatedSale.error);
       return res.status(400).json({ message: updatedSale.error });
     }
     
+    console.log('✅ Vente mise à jour avec succès:', updatedSale);
     res.json(updatedSale);
   } catch (error) {
-    console.error('Error updating sale:', error);
+    console.error('❌ Error updating sale:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });

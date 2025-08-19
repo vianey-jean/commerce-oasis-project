@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -7,12 +6,14 @@ import { TrendingUp, TrendingDown, Calculator, FileText, Eye, EyeOff } from 'luc
 import { useApp } from '@/contexts/AppContext';
 import useCurrencyFormatter from '@/hooks/use-currency-formatter';
 import { Button } from '@/components/ui/button';
+import { Sale } from '@/types';
 
 interface PeriodData {
   revenue: number;
   cost: number;
   profit: number;
   salesCount: number;
+  totalProductsSold: number;
   avgOrderValue: number;
 }
 
@@ -21,6 +22,31 @@ const ProfitLossStatement: React.FC = () => {
   const { formatEuro } = useCurrencyFormatter();
   const [selectedPeriod, setSelectedPeriod] = useState<string>('current-month');
   const [showDetails, setShowDetails] = useState(false);
+
+  // Fonction utilitaire pour calculer les valeurs d'une vente
+  const getSaleValues = (sale: Sale) => {
+    // Nouveau format multi-produits
+    if (sale.products && Array.isArray(sale.products) && sale.products.length > 0) {
+      // Pour les ventes multi-produits, utiliser les totaux pré-calculés ou calculer
+      const revenue = sale.totalSellingPrice || sale.products.reduce((sum, p) => sum + (p.sellingPrice || 0), 0);
+      const cost = sale.totalPurchasePrice || sale.products.reduce((sum, p) => sum + ((p.purchasePrice || 0)), 0);
+      const profit = sale.totalProfit || sale.products.reduce((sum, p) => sum + (p.profit || 0), 0);
+      const totalProductsSold = sale.products.reduce((sum, p) => sum + (p.quantitySold || 0), 0);
+      
+      return { revenue, cost, profit, totalProductsSold };
+    }
+    // Ancien format single-produit
+    else if (sale.sellingPrice !== undefined && sale.quantitySold !== undefined && sale.purchasePrice !== undefined) {
+      const revenue = (sale.sellingPrice || 0) ;
+      const cost = (sale.purchasePrice || 0) ;
+      const profit = sale.profit || (revenue - cost);
+      const totalProductsSold = sale.quantitySold || 0;
+      
+      return { revenue, cost, profit, totalProductsSold };
+    }
+    // Fallback
+    return { revenue: 0, cost: 0, profit: 0, totalProductsSold: 0 };
+  };
 
   const calculatePeriodData = (period: string): PeriodData => {
     const now = new Date();
@@ -51,13 +77,30 @@ const ProfitLossStatement: React.FC = () => {
       return saleDate >= startDate && saleDate <= endDate;
     });
 
-    const revenue = periodSales.reduce((sum, sale) => sum + sale.sellingPrice, 0);
-    const cost = periodSales.reduce((sum, sale) => sum + sale.purchasePrice, 0);
-    const profit = periodSales.reduce((sum, sale) => sum + sale.profit, 0);
-    const salesCount = periodSales.length;
-    const avgOrderValue = salesCount > 0 ? revenue / salesCount : 0;
+    let totalRevenue = 0;
+    let totalCost = 0;
+    let totalProfit = 0;
+    let totalProductsSold = 0;
 
-    return { revenue, cost, profit, salesCount, avgOrderValue };
+    periodSales.forEach(sale => {
+      const saleValues = getSaleValues(sale);
+      totalRevenue += saleValues.revenue;
+      totalCost += saleValues.cost;
+      totalProfit += saleValues.profit;
+      totalProductsSold += saleValues.totalProductsSold;
+    });
+
+    const salesCount = periodSales.length;
+    const avgOrderValue = salesCount > 0 ? totalRevenue / salesCount : 0;
+
+    return { 
+      revenue: totalRevenue, 
+      cost: totalCost, 
+      profit: totalProfit, 
+      salesCount, 
+      totalProductsSold,
+      avgOrderValue 
+    };
   };
 
   const currentData = calculatePeriodData(selectedPeriod);
@@ -143,7 +186,7 @@ const ProfitLossStatement: React.FC = () => {
               {formatChange(revenueChange)}
             </div>
             <p className="text-2xl font-bold text-blue-900">{formatEuro(currentData.revenue)}</p>
-            <p className="text-xs text-blue-600">{currentData.salesCount} ventes</p>
+            <p className="text-xs text-blue-600">{currentData.totalProductsSold} produits vendus</p>
           </div>
 
           <div className="bg-red-50 p-4 rounded-lg">
@@ -181,10 +224,8 @@ const ProfitLossStatement: React.FC = () => {
                   <p className="text-lg font-semibold">{profitMargin.toFixed(1)}%</p>
                 </div>
                 <div className="text-center p-3 bg-gray-50 rounded">
-                  <p className="text-sm text-gray-600">Coût/Vente</p>
-                  <p className="text-lg font-semibold">
-                    {formatEuro(currentData.salesCount > 0 ? currentData.cost / currentData.salesCount : 0)}
-                  </p>
+                  <p className="text-sm text-gray-600">Nombre de Ventes</p>
+                  <p className="text-lg font-semibold">{currentData.salesCount}</p>
                 </div>
                 <div className="text-center p-3 bg-gray-50 rounded">
                   <p className="text-sm text-gray-600">Profit/Vente</p>

@@ -107,35 +107,57 @@ const Sale = {
       
       const oldSale = sales[saleIndex];
       
-      // Check if this is an advance product (case insensitive)
-      const isAdvanceProduct = saleData.description.toLowerCase().includes('avance');
+      // Détecter le format (multi-produits ou single-produit)
+      const isMultiProduct = saleData.products && Array.isArray(saleData.products);
+      const isOldSaleMultiProduct = oldSale.products && Array.isArray(oldSale.products);
       
-      // For advance products, force quantity to 0
-      if (isAdvanceProduct) {
-        saleData.quantitySold = 0;
-      }
-      
-      // Don't recalculate profit - use the profit already calculated by AddSaleForm
-      
-      // Handle product quantity update only for non-advance products
-      if (!isAdvanceProduct) {
-        // Calculate quantity difference
-        const quantityDifference = oldSale.quantitySold - saleData.quantitySold;
+      if (isMultiProduct || isOldSaleMultiProduct) {
+        console.log('💾 Mise à jour vente multi-produits');
         
-        // Update product quantity
-        const productResult = Product.updateQuantity(oldSale.productId, quantityDifference);
-        if (productResult && productResult.error) {
-          return { error: productResult.error };
+        // Pour les ventes multi-produits, on remplace complètement les données
+        // La gestion des stocks est déjà faite côté frontend
+        const updatedSale = { ...oldSale, ...saleData };
+        
+        // Update sale data
+        sales[saleIndex] = updatedSale;
+        
+        // Write back to file
+        fs.writeFileSync(salesPath, JSON.stringify(sales, null, 2));
+        
+        console.log('✅ Vente multi-produits mise à jour:', updatedSale);
+        return updatedSale;
+      } else {
+        console.log('💾 Mise à jour vente single-produit');
+        
+        // Check if this is an advance product (case insensitive)
+        const isAdvanceProduct = saleData.description.toLowerCase().includes('avance');
+        
+        // For advance products, force quantity to 0
+        if (isAdvanceProduct) {
+          saleData.quantitySold = 0;
         }
+        
+        // Handle product quantity update only for non-advance products
+        if (!isAdvanceProduct) {
+          // Calculate quantity difference
+          const quantityDifference = oldSale.quantitySold - saleData.quantitySold;
+          
+          // Update product quantity
+          const productResult = Product.updateQuantity(oldSale.productId, quantityDifference);
+          if (productResult && productResult.error) {
+            return { error: productResult.error };
+          }
+        }
+        
+        // Update sale data
+        sales[saleIndex] = { ...oldSale, ...saleData };
+        
+        // Write back to file
+        fs.writeFileSync(salesPath, JSON.stringify(sales, null, 2));
+        
+        console.log('✅ Vente single-produit mise à jour:', sales[saleIndex]);
+        return sales[saleIndex];
       }
-      
-      // Update sale data
-      sales[saleIndex] = { ...oldSale, ...saleData };
-      
-      // Write back to file
-      fs.writeFileSync(salesPath, JSON.stringify(sales, null, 2));
-      
-      return sales[saleIndex];
     } catch (error) {
       console.error("Error updating sale:", error);
       return null;
@@ -150,18 +172,38 @@ const Sale = {
       // Find sale index
       const saleIndex = sales.findIndex(sale => sale.id === id);
       if (saleIndex === -1) {
+        console.log('❌ Vente non trouvée pour suppression:', id);
         return false;
       }
       
       const sale = sales[saleIndex];
+      console.log('🗑️ Suppression de la vente:', sale);
       
-      // Check if this is an advance product (case insensitive)
-      const isAdvanceProduct = sale.description.toLowerCase().includes('avance');
+      // Détecter le format (multi-produits ou single-produit)
+      const isMultiProduct = sale.products && Array.isArray(sale.products);
       
-      // Only return quantity to product inventory if it's not an advance product
-      if (!isAdvanceProduct) {
-        // Return quantity to product
-        Product.updateQuantity(sale.productId, sale.quantitySold);
+      if (isMultiProduct) {
+        console.log('🗑️ Suppression vente multi-produits');
+        
+        // Pour les ventes multi-produits, restaurer le stock pour chaque produit non-avance
+        sale.products.forEach(productData => {
+          const isAdvanceProduct = productData.description.toLowerCase().includes('avance');
+          if (!isAdvanceProduct && productData.quantitySold > 0) {
+            console.log(`🔄 Restauration stock pour ${productData.description}: +${productData.quantitySold}`);
+            Product.updateQuantity(productData.productId, productData.quantitySold);
+          }
+        });
+      } else {
+        console.log('🗑️ Suppression vente single-produit');
+        
+        // Check if this is an advance product (case insensitive)
+        const isAdvanceProduct = sale.description.toLowerCase().includes('avance');
+        
+        // Only return quantity to product inventory if it's not an advance product
+        if (!isAdvanceProduct) {
+          console.log(`🔄 Restauration stock pour ${sale.description}: +${sale.quantitySold}`);
+          Product.updateQuantity(sale.productId, sale.quantitySold);
+        }
       }
       
       // Remove from sales array
@@ -170,6 +212,7 @@ const Sale = {
       // Write back to file
       fs.writeFileSync(salesPath, JSON.stringify(sales, null, 2));
       
+      console.log('✅ Vente supprimée avec succès');
       return true;
     } catch (error) {
       console.error("Error deleting sale:", error);

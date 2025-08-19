@@ -1,15 +1,15 @@
 
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Toaster } from '@/components/ui/toaster';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from '@/contexts/AuthContext';
-import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AppProvider } from '@/contexts/AppContext';
-import { ErrorBoundary } from '@/components/common/ErrorBoundary';
-import { RealtimeWrapper } from '@/components/common/RealtimeWrapper';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 import { AccessibilityProvider } from '@/components/accessibility/AccessibilityProvider';
-import { ErrorBoundaryProvider } from '@/hooks/use-error-boundary';
+import ProtectedRoute from './components/auth/ProtectedRoute';
+import { ErrorBoundary } from '@/components/common/ErrorBoundary';
+import { Toaster } from '@/components/ui/toaster';
 
+// Pages
 import HomePage from '@/pages/HomePage';
 import AboutPage from '@/pages/AboutPage';
 import ContactPage from '@/pages/ContactPage';
@@ -19,60 +19,61 @@ import ResetPasswordPage from '@/pages/ResetPasswordPage';
 import DashboardPage from '@/pages/DashboardPage';
 import TendancesPage from '@/pages/TendancesPage';
 import ClientsPage from '@/pages/ClientsPage';
+import MessagesPage from '@/pages/MessagesPage';
 import NotFound from '@/pages/NotFound';
-
-import './App.css';
-
-// Create a client with optimized settings
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 2,
-      refetchOnWindowFocus: false,
-      staleTime: 5 * 60 * 1000, // 5 minutes
-      gcTime: 10 * 60 * 1000, // 10 minutes (renamed from cacheTime)
-    },
-    mutations: {
-      retry: 1,
-    },
-  },
-});
 
 function App() {
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <ErrorBoundaryProvider>
-          <AccessibilityProvider>
-            <ThemeProvider>
-              <AuthProvider>
-                <AppProvider>
-                  <RealtimeWrapper>
-                    <div className="App min-h-screen bg-background text-foreground">
-                      <Router>
-                        <Routes>
-                          <Route path="/" element={<HomePage />} />
-                          <Route path="/about" element={<AboutPage />} />
-                          <Route path="/contact" element={<ContactPage />} />
-                          <Route path="/login" element={<LoginPage />} />
-                          <Route path="/register" element={<RegisterPage />} />
-                          <Route path="/reset-password" element={<ResetPasswordPage />} />
-                          <Route path="/dashboard" element={<DashboardPage />} />
-                          <Route path="/tendances" element={<TendancesPage />} />
-                          <Route path="/clients" element={<ClientsPage />} />
-                          <Route path="/404" element={<NotFound />} />
-                          <Route path="*" element={<Navigate to="/404" replace />} />
-                        </Routes>
-                      </Router>
-                      <Toaster />
-                    </div>
-                  </RealtimeWrapper>
-                </AppProvider>
-              </AuthProvider>
-            </ThemeProvider>
-          </AccessibilityProvider>
-        </ErrorBoundaryProvider>
-      </QueryClientProvider>
+      <ThemeProvider>
+        <AccessibilityProvider>
+          <AuthProvider>
+            <AppProvider>
+              <Router>
+                <Routes>
+                  {/* Routes publiques avec Layout standard */}
+                  
+                    <Route index element={<HomePage />} />
+                    <Route path="about" element={<AboutPage />} />
+                    <Route path="login" element={<LoginPage />} />
+                    <Route path="register" element={<RegisterPage />} />
+                    <Route path="reset-password" element={<ResetPasswordPage />} />
+
+                  {/* Page Contact sans navbar */}
+                  <Route path="/contact" element={<ContactPage />} />
+
+                  {/* Routes protégées avec Layout d'authentification */}
+               
+                   <Route path="/dashboard" element={
+                      <ProtectedRoute>
+                        <DashboardPage />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/tendances" element={
+                      <ProtectedRoute>
+                        <TendancesPage />
+                      </ProtectedRoute>
+                    } />
+                    <Route path="/clients" element={
+                      <ProtectedRoute>
+                        <ClientsPage />
+                      </ProtectedRoute>
+                    } /> 
+                    <Route path="/messages" element={
+                      <ProtectedRoute>
+                        <MessagesPage />
+                      </ProtectedRoute>
+                    } /> 
+                   
+                  {/* Route 404 */}
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Router>
+              <Toaster />
+            </AppProvider>
+          </AuthProvider>
+        </AccessibilityProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }
