@@ -2,6 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
+const EncryptionService = require('../utils/encryption');
 
 const usersPath = path.join(__dirname, '../db/users.json');
 
@@ -10,7 +11,16 @@ const User = {
   getAll: () => {
     try {
       const users = JSON.parse(fs.readFileSync(usersPath, 'utf8'));
-      return users;
+      // Décrypter les données sensibles pour utilisation
+      return users.map(user => {
+        if (user.address) {
+          user.address = EncryptionService.decrypt(user.address);
+        }
+        if (user.phone) {
+          user.phone = EncryptionService.decrypt(user.phone);
+        }
+        return user;
+      });
     } catch (error) {
       console.error("Error reading users:", error);
       return [];
@@ -21,7 +31,17 @@ const User = {
   getByEmail: (email) => {
     try {
       const users = JSON.parse(fs.readFileSync(usersPath, 'utf8'));
-      return users.find(user => user.email.toLowerCase() === email.toLowerCase()) || null;
+      const user = users.find(user => user.email.toLowerCase() === email.toLowerCase()) || null;
+      if (user) {
+        // Décrypter les données sensibles
+        if (user.address) {
+          user.address = EncryptionService.decrypt(user.address);
+        }
+        if (user.phone) {
+          user.phone = EncryptionService.decrypt(user.phone);
+        }
+      }
+      return user;
     } catch (error) {
       console.error("Error finding user by email:", error);
       return null;
@@ -32,7 +52,17 @@ const User = {
   getById: (id) => {
     try {
       const users = JSON.parse(fs.readFileSync(usersPath, 'utf8'));
-      return users.find(user => user.id === id) || null;
+      const user = users.find(user => user.id === id) || null;
+      if (user) {
+        // Décrypter les données sensibles
+        if (user.address) {
+          user.address = EncryptionService.decrypt(user.address);
+        }
+        if (user.phone) {
+          user.phone = EncryptionService.decrypt(user.phone);
+        }
+      }
+      return user;
     } catch (error) {
       console.error("Error finding user by id:", error);
       return null;
@@ -54,11 +84,14 @@ const User = {
       const salt = bcrypt.genSaltSync(10);
       const hashedPassword = bcrypt.hashSync(userData.password, salt);
       
-      // Create new user object with hashed password
+      // Create new user object with hashed password and encrypted sensitive data
       const newUser = {
         id: Date.now().toString(),
         ...userData,
-        password: hashedPassword
+        password: hashedPassword,
+        address: EncryptionService.encrypt(userData.address),
+        phone: EncryptionService.encrypt(userData.phone),
+        role: userData.role || 'user' // Ajouter le rôle par défaut
       };
       
       // Add to users array

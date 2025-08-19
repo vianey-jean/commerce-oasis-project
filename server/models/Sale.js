@@ -1,6 +1,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const EncryptionService = require('../utils/encryption');
 
 const salesPath = path.join(__dirname, '../db/sales.json');
 const Product = require('./Product');
@@ -10,7 +11,29 @@ const Sale = {
   getAll: () => {
     try {
       const sales = JSON.parse(fs.readFileSync(salesPath, 'utf8'));
-      return sales;
+      // Décrypter les données sensibles
+      return sales.map(sale => {
+        const decryptedSale = { ...sale };
+        
+        if (sale.products && Array.isArray(sale.products)) {
+          // Multi-produit
+          decryptedSale.products = sale.products.map(product => ({
+            ...product,
+            description: EncryptionService.decrypt(product.description),
+            sellingPrice: EncryptionService.decrypt(product.sellingPrice),
+            purchasePrice: EncryptionService.decrypt(product.purchasePrice),
+            profit: EncryptionService.decrypt(product.profit)
+          }));
+        } else {
+          // Single-produit
+          if (sale.description) decryptedSale.description = EncryptionService.decrypt(sale.description);
+          if (sale.sellingPrice) decryptedSale.sellingPrice = EncryptionService.decrypt(sale.sellingPrice);
+          if (sale.purchasePrice) decryptedSale.purchasePrice = EncryptionService.decrypt(sale.purchasePrice);
+          if (sale.profit) decryptedSale.profit = EncryptionService.decrypt(sale.profit);
+        }
+        
+        return decryptedSale;
+      });
     } catch (error) {
       console.error("Error reading sales:", error);
       return [];
@@ -23,19 +46,58 @@ const Sale = {
       const sales = JSON.parse(fs.readFileSync(salesPath, 'utf8'));
       
       if (month === undefined || year === undefined) {
-        return sales;
+        // Décrypter toutes les ventes
+        return sales.map(sale => {
+          const decryptedSale = { ...sale };
+          
+          if (sale.products && Array.isArray(sale.products)) {
+            decryptedSale.products = sale.products.map(product => ({
+              ...product,
+              description: EncryptionService.decrypt(product.description),
+              sellingPrice: EncryptionService.decrypt(product.sellingPrice),
+              purchasePrice: EncryptionService.decrypt(product.purchasePrice),
+              profit: EncryptionService.decrypt(product.profit)
+            }));
+          } else {
+            if (sale.description) decryptedSale.description = EncryptionService.decrypt(sale.description);
+            if (sale.sellingPrice) decryptedSale.sellingPrice = EncryptionService.decrypt(sale.sellingPrice);
+            if (sale.purchasePrice) decryptedSale.purchasePrice = EncryptionService.decrypt(sale.purchasePrice);
+            if (sale.profit) decryptedSale.profit = EncryptionService.decrypt(sale.profit);
+          }
+          
+          return decryptedSale;
+        });
       }
       
       // Make sure month is treated as a number
       const monthNum = Number(month);
       const yearNum = Number(year);
 
-      return sales.filter(sale => {
+      const filteredSales = sales.filter(sale => {
         const saleDate = new Date(sale.date);
-        // JavaScript months are 0-based, DB months are 1-based
-        // saleDate.getMonth() returns 0-11, but our parameter is 1-12
-        // So we add 1 to getMonth() for comparison
         return (saleDate.getMonth() + 1) === monthNum && saleDate.getFullYear() === yearNum;
+      });
+      
+      // Décrypter les ventes filtrées
+      return filteredSales.map(sale => {
+        const decryptedSale = { ...sale };
+        
+        if (sale.products && Array.isArray(sale.products)) {
+          decryptedSale.products = sale.products.map(product => ({
+            ...product,
+            description: EncryptionService.decrypt(product.description),
+            sellingPrice: EncryptionService.decrypt(product.sellingPrice),
+            purchasePrice: EncryptionService.decrypt(product.purchasePrice),
+            profit: EncryptionService.decrypt(product.profit)
+          }));
+        } else {
+          if (sale.description) decryptedSale.description = EncryptionService.decrypt(sale.description);
+          if (sale.sellingPrice) decryptedSale.sellingPrice = EncryptionService.decrypt(sale.sellingPrice);
+          if (sale.purchasePrice) decryptedSale.purchasePrice = EncryptionService.decrypt(sale.purchasePrice);
+          if (sale.profit) decryptedSale.profit = EncryptionService.decrypt(sale.profit);
+        }
+        
+        return decryptedSale;
       });
     } catch (error) {
       console.error("Error filtering sales by month/year:", error);
@@ -51,34 +113,30 @@ const Sale = {
       // Détecter le format (multi-produits ou single-produit)
       const isMultiProduct = saleData.products && Array.isArray(saleData.products);
       
-      // Create new sale object
+      // Create new sale object with encrypted sensitive data
       const newSale = {
         id: Date.now().toString(),
         ...saleData
       };
       
       if (isMultiProduct) {
-        // Format multi-produits - la gestion des stocks a déjà été faite dans la route
-        console.log('💾 Sauvegarde vente multi-produits:', newSale);
+        // Crypter les données des produits multiples
+        newSale.products = saleData.products.map(product => ({
+          ...product,
+          description: EncryptionService.encrypt(product.description),
+          sellingPrice: EncryptionService.encrypt(product.sellingPrice.toString()),
+          purchasePrice: EncryptionService.encrypt(product.purchasePrice.toString()),
+          profit: EncryptionService.encrypt(product.profit.toString())
+        }));
+        console.log('💾 Sauvegarde vente multi-produits cryptée:', newSale);
       } else {
-        // Format single-produit (ancien format)
-        const isAdvanceProduct = saleData.description.toLowerCase().includes('avance');
+        // Crypter les données du produit unique
+        if (newSale.description) newSale.description = EncryptionService.encrypt(newSale.description);
+        if (newSale.sellingPrice) newSale.sellingPrice = EncryptionService.encrypt(newSale.sellingPrice.toString());
+        if (newSale.purchasePrice) newSale.purchasePrice = EncryptionService.encrypt(newSale.purchasePrice.toString());
+        if (newSale.profit) newSale.profit = EncryptionService.encrypt(newSale.profit.toString());
         
-        // For advance products, ensure quantity is 0
-        if (isAdvanceProduct) {
-          newSale.quantitySold = 0;
-        }
-        
-        // For regular products, update product quantity
-        if (!isAdvanceProduct) {
-          // Update product quantity
-          const productResult = Product.updateQuantity(saleData.productId, -saleData.quantitySold);
-          if (productResult && productResult.error) {
-            return { error: productResult.error };
-          }
-        }
-        
-        console.log('💾 Sauvegarde vente single-produit:', newSale);
+        console.log('💾 Sauvegarde vente single-produit cryptée:', newSale);
       }
       
       // Add to sales array

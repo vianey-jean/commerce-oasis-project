@@ -1,6 +1,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const EncryptionService = require('../utils/encryption');
 
 const productsPath = path.join(__dirname, '../db/products.json');
 
@@ -11,7 +12,13 @@ const Product = {
       const data = fs.readFileSync(productsPath, 'utf8');
       const products = JSON.parse(data);
       console.log(`📦 Retrieved ${products.length} products from database`);
-      return products;
+      // Décrypter les données sensibles
+      return products.map(product => ({
+        ...product,
+        description: EncryptionService.decrypt(product.description),
+        purchasePrice: EncryptionService.decrypt(product.purchasePrice),
+        quantity: EncryptionService.decrypt(product.quantity)
+      }));
     } catch (error) {
       console.error("❌ Error reading products:", error);
       return [];
@@ -25,6 +32,12 @@ const Product = {
       const products = JSON.parse(data);
       const product = products.find(product => product.id === id) || null;
       console.log(`🔍 Retrieved product by ID ${id}:`, product ? 'Found' : 'Not found');
+      if (product) {
+        // Décrypter les données sensibles
+        product.description = EncryptionService.decrypt(product.description);
+        product.purchasePrice = EncryptionService.decrypt(product.purchasePrice);
+        product.quantity = EncryptionService.decrypt(product.quantity);
+      }
       return product;
     } catch (error) {
       console.error("❌ Error finding product by id:", error);
@@ -39,7 +52,15 @@ const Product = {
       const products = JSON.parse(data);
       if (!query || query.length < 3) return [];
       
-      const results = products.filter(product => 
+      // Décrypter les descriptions pour la recherche
+      const decryptedProducts = products.map(product => ({
+        ...product,
+        description: EncryptionService.decrypt(product.description),
+        purchasePrice: EncryptionService.decrypt(product.purchasePrice),
+        quantity: EncryptionService.decrypt(product.quantity)
+      }));
+      
+      const results = decryptedProducts.filter(product => 
         product.description.toLowerCase().includes(query.toLowerCase())
       );
       
@@ -59,10 +80,13 @@ const Product = {
       const data = fs.readFileSync(productsPath, 'utf8');
       const products = JSON.parse(data);
       
-      // Create new product object
+      // Create new product object with encrypted sensitive data
       const newProduct = {
         id: Date.now().toString(),
-        ...productData
+        ...productData,
+        description: EncryptionService.encrypt(productData.description),
+        purchasePrice: EncryptionService.encrypt(productData.purchasePrice.toString()),
+        quantity: EncryptionService.encrypt(productData.quantity.toString())
       };
       
       // Add to products array

@@ -20,6 +20,7 @@ import DashboardPage from '@/pages/DashboardPage';
 import TendancesPage from '@/pages/TendancesPage';
 import ClientsPage from '@/pages/ClientsPage';
 import MessagesPage from '@/pages/MessagesPage';
+import AdminPage from '@/pages/AdminPage';
 import NotFound from '@/pages/NotFound';
 
 function App() {
@@ -59,11 +60,16 @@ function App() {
                         <ClientsPage />
                       </ProtectedRoute>
                     } /> 
-                    <Route path="/messages" element={
-                      <ProtectedRoute>
-                        <MessagesPage />
-                      </ProtectedRoute>
-                    } /> 
+                     <Route path="/messages" element={
+                       <ProtectedRoute>
+                         <MessagesPage />
+                       </ProtectedRoute>
+                     } /> 
+                     <Route path="/admin" element={
+                       <ProtectedRoute>
+                         <AdminPage />
+                       </ProtectedRoute>
+                     } />
                    
                   {/* Route 404 */}
                   <Route path="*" element={<NotFound />} />

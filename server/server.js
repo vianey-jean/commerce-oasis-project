@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
 const bcrypt = require('bcryptjs');
+const session = require('express-session');
 
 // Load environment variables
 dotenv.config();
@@ -35,6 +36,18 @@ app.use(cors(corsOptions));
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+// Configuration des sessions pour les codes de confirmation
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'gestion_vente_session_secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000 // 24 heures
+  }
+}));
 
 // Create db directory if it doesn't exist
 const dbPath = path.join(__dirname, 'db');
@@ -161,9 +174,11 @@ const depensesRoutes = require('./routes/depenses');
 const syncRoutes = require('./routes/sync');
 const beneficesRoutes = require('./routes/benefices');
 const messagesRoutes = require('./routes/messages');
+const confirmationRoutes = require('./routes/confirmation');
 
 // Use routes
 app.use('/api/auth', authRoutes);
+app.use('/api/confirmation', confirmationRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/sales', salesRoutes);
 app.use('/api/clients', clientRoutes);
@@ -192,4 +207,8 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`CORS enabled for all origins in development`);
   console.log(`Sync events available at http://localhost:${PORT}/api/sync/events`);
+  
+  // Créer l'administrateur par défaut au démarrage
+  const createAdmin = require('./scripts/createAdmin');
+  createAdmin();
 });
