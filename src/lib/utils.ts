@@ -1,6 +1,9 @@
-import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
 
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
-}
+// Export de la compatibilité avec l'ancien système
+export { 
+  cn,
+  formatEuropeanPrice as formatPrice,
+  formatEuropeanDate as formatDate,
+  getOrderStatusDisplayColor as getStatusColor,
+  getOrderStatusIcon as getStatusIcon
+} from './ecommerce-utils';
