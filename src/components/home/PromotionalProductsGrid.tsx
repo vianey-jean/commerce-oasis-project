@@ -51,7 +51,7 @@ const PromotionalProductsGrid: React.FC<PromotionalProductsGridProps> = ({ produ
     }
     
     // Vérifier si le produit est en stock
-    if (product.isSold || (product.stock !== undefined && product.stock <= 0)) {
+    if (product.stock !== undefined && product.stock <= 0) {
       toast.error("Ce produit n'est plus en stock");
       return;
     }
@@ -103,7 +103,7 @@ const PromotionalProductsGrid: React.FC<PromotionalProductsGridProps> = ({ produ
               const timeRemaining = product.promotionEnd ? calculatePromotionTimeRemaining(product.promotionEnd) : null;
               const isUrgent = timeRemaining && timeRemaining !== "Expirée" && 
                                (timeRemaining.includes('h') && parseInt(timeRemaining) < 24);
-              const isOutOfStock = product.isSold || (product.stock !== undefined && product.stock <= 0);
+              const isOutOfStock = (product.stock !== undefined && product.stock <= 0);
 
               return (
                 <Card key={product.id} className="group overflow-hidden border-0 shadow-xl hover:shadow-2xl transition-all duration-500 hover:scale-105 bg-gradient-to-br from-white to-red-50 dark:from-neutral-800 dark:to-red-900/20 relative">

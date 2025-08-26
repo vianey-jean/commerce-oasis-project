@@ -52,7 +52,7 @@ const FeaturedProductsCarousel: React.FC<FeaturedProductsCarouselProps> = ({ pro
     }
     
     // Vérifier si le produit est en stock
-    if (product.isSold || (product.stock !== undefined && product.stock <= 0)) {
+    if (product.stock !== undefined && product.stock <= 0) {
       toast.error("Ce produit n'est plus en stock");
       return;
     }
@@ -101,7 +101,7 @@ const FeaturedProductsCarousel: React.FC<FeaturedProductsCarouselProps> = ({ pro
         <Carousel className="relative z-10">
           <CarouselContent className="-ml-2 md:-ml-4">
             {products.map(product => {
-              const isOutOfStock = product.isSold || (product.stock !== undefined && product.stock <= 0);
+              const isOutOfStock = (product.stock !== undefined && product.stock <= 0);
               
               return (
                 <CarouselItem key={product.id} className="pl-2 md:pl-4 md:basis-1/2 lg:basis-1/4">
