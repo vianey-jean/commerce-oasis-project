@@ -50,11 +50,6 @@ const PromotionalProductsGrid: React.FC<PromotionalProductsGridProps> = ({ produ
       return;
     }
     
-    if (product.stock === 0 || product.isSold) {
-      toast.error("Ce produit est en rupture de stock");
-      return;
-    }
-    
     addToCart(product);
     toast.success("Produit ajouté au panier");
   };
@@ -146,13 +141,8 @@ const PromotionalProductsGrid: React.FC<PromotionalProductsGridProps> = ({ produ
                             <Heart className={`h-5 w-5 ${isFavorite(product.id) ? 'text-red-500 fill-red-500' : 'text-red-500'}`} />
                           </button>
                           <button 
-                            className={`bg-white/90 dark:bg-neutral-800/90 backdrop-blur-sm p-3 rounded-full shadow-lg transition-transform ${
-                              product.stock === 0 || product.isSold 
-                                ? 'opacity-50 cursor-not-allowed' 
-                                : 'hover:scale-110'
-                            }`}
+                            className="bg-white/90 dark:bg-neutral-800/90 backdrop-blur-sm p-3 rounded-full shadow-lg hover:scale-110 transition-transform"
                             onClick={(e) => handleAddToCart(e, product)}
-                            disabled={product.stock === 0 || product.isSold}
                           >
                             <ShoppingCart className="h-5 w-5 text-blue-500" />
                           </button>
@@ -213,20 +203,14 @@ const PromotionalProductsGrid: React.FC<PromotionalProductsGridProps> = ({ produ
                         </div>
                       </div>
 
-                      {/* Add to cart button or out of stock */}
-                      {product.stock === 0 || product.isSold ? (
-                        <div className="w-full mt-6 bg-gray-400 text-white font-bold py-4 px-6 rounded-xl flex items-center justify-center space-x-2 cursor-not-allowed">
-                          <span>❌ Rupture de stock</span>
-                        </div>
-                      ) : (
-                        <button 
-                          className="w-full mt-6 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 hover:shadow-lg hover:scale-105 flex items-center justify-center space-x-2 shadow-lg"
-                          onClick={(e) => handleAddToCart(e, product)}
-                        >
-                          <ShoppingCart className="h-5 w-5" />
-                          <span>Profiter de l'offre</span>
-                        </button>
-                      )}
+                      {/* Add to cart button */}
+                      <button 
+                        className="w-full mt-6 bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-700 hover:to-orange-700 text-white font-bold py-4 px-6 rounded-xl transition-all duration-300 hover:shadow-lg hover:scale-105 flex items-center justify-center space-x-2 shadow-lg"
+                        onClick={(e) => handleAddToCart(e, product)}
+                      >
+                        <ShoppingCart className="h-5 w-5" />
+                        <span>Profiter de l'offre</span>
+                      </button>
                     </div>
                   </CardContent>
 
