@@ -51,6 +51,11 @@ const FeaturedProductsCarousel: React.FC<FeaturedProductsCarouselProps> = ({ pro
       return;
     }
     
+    if (product.stock === 0 || product.isSold) {
+      toast.error("Ce produit est en rupture de stock");
+      return;
+    }
+    
     addToCart(product);
     toast.success("Produit ajouté au panier");
   };
@@ -128,8 +133,12 @@ const FeaturedProductsCarousel: React.FC<FeaturedProductsCarouselProps> = ({ pro
                             <Heart className={`h-4 w-4 transition-colors ${isFavorite(product.id) ? 'text-red-500 fill-red-500' : 'text-gray-600 dark:text-gray-300 hover:text-red-500'}`} />
                           </div>
                           <div 
-                            className="bg-white/90 dark:bg-neutral-800/90 backdrop-blur-sm p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 hover:scale-110 cursor-pointer"
-                            onClick={(e) => handleAddToCart(e, product)}
+                            className={`bg-white/90 dark:bg-neutral-800/90 backdrop-blur-sm p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-all duration-300 ${
+                              product.stock === 0 || product.isSold 
+                                ? 'cursor-not-allowed opacity-50' 
+                                : 'hover:scale-110 cursor-pointer'
+                            }`}
+                            onClick={(e) => product.stock === 0 || product.isSold ? e.preventDefault() : handleAddToCart(e, product)}
                           >
                             <ShoppingCart className="h-4 w-4 text-gray-600 dark:text-gray-300 hover:text-blue-500 transition-colors" />
                           </div>
@@ -184,14 +193,20 @@ const FeaturedProductsCarousel: React.FC<FeaturedProductsCarouselProps> = ({ pro
                         )}
                       </div>
 
-                      {/* Quick add button */}
-                      <button 
-                        className="w-full mt-4 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white font-medium py-3 px-4 rounded-xl transition-all duration-300 hover:shadow-lg hover:scale-105 flex items-center justify-center space-x-2"
-                        onClick={(e) => handleAddToCart(e, product)}
-                      >
-                        <ShoppingCart className="h-4 w-4" />
-                        <span>Ajouter au panier</span>
-                      </button>
+                      {/* Quick add button or out of stock */}
+                      {product.stock === 0 || product.isSold ? (
+                        <div className="w-full mt-4 bg-gray-400 text-white font-medium py-3 px-4 rounded-xl flex items-center justify-center space-x-2 cursor-not-allowed">
+                          <span>❌ Rupture de stock</span>
+                        </div>
+                      ) : (
+                        <button 
+                          className="w-full mt-4 bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700 text-white font-medium py-3 px-4 rounded-xl transition-all duration-300 hover:shadow-lg hover:scale-105 flex items-center justify-center space-x-2"
+                          onClick={(e) => handleAddToCart(e, product)}
+                        >
+                          <ShoppingCart className="h-4 w-4" />
+                          <span>Ajouter au panier</span>
+                        </button>
+                      )}
                     </CardContent>
                   </Card>
                 </div>
