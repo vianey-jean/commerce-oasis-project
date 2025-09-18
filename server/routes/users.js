@@ -2,10 +2,12 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const path = require('path');
+const bcrypt = require('bcrypt');
 const { isAuthenticated, isAdmin } = require('../middlewares/auth');
 
 const usersFilePath = path.join(__dirname, '../data/users.json');
 const preferencesFilePath = path.join(__dirname, '../data/preferences.json');
+const saltRounds = 10; // Nombre de rounds pour le hashage bcrypt
 
 // S'assurer que le fichier preferences.json existe
 if (!fs.existsSync(preferencesFilePath)) {
@@ -158,8 +160,82 @@ router.delete('/:id', isAuthenticated, isAdmin, (req, res) => {
   }
 });
 
+// Supprimer son propre profil avec vérification du mot de passe
+router.delete('/:id/profile', isAuthenticated, async (req, res) => {
+  try {
+    const { password } = req.body;
+    
+    if (!password) {
+      return res.status(400).json({ message: 'Mot de passe requis pour supprimer le profil' });
+    }
+    
+    // Vérifier que l'utilisateur supprime son propre profil
+    if (req.user.id !== req.params.id) {
+      return res.status(403).json({ message: 'Vous ne pouvez supprimer que votre propre profil' });
+    }
+    
+    const users = JSON.parse(fs.readFileSync(usersFilePath));
+    const user = users.find(u => u.id === req.params.id);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'Utilisateur non trouvé' });
+    }
+    
+    // Vérifier le mot de passe
+    let isPasswordValid;
+    
+    if (user.password.startsWith('$2')) {
+      isPasswordValid = await bcrypt.compare(password, user.password);
+    } else {
+      isPasswordValid = (user.password === password);
+    }
+    
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: 'Mot de passe incorrect' });
+    }
+    
+    // Supprimer toutes les données liées à l'utilisateur
+    const userId = req.params.id;
+    
+    // Chemins des fichiers de données
+    const dataFiles = [
+      { path: path.join(__dirname, '../data/favorites.json'), filterKey: 'userId' },
+      { path: path.join(__dirname, '../data/panier.json'), filterKey: 'userId' },
+      { path: path.join(__dirname, '../data/orders.json'), filterKey: 'userId' },
+      { path: path.join(__dirname, '../data/commandes.json'), filterKey: 'userId' },
+      { path: path.join(__dirname, '../data/reviews.json'), filterKey: 'userId' },
+      { path: path.join(__dirname, '../data/preferences.json'), filterKey: 'userId' },
+      { path: path.join(__dirname, '../data/contacts.json'), filterKey: 'userId' },
+      { path: path.join(__dirname, '../data/client-chat.json'), filterKey: 'userId' },
+      { path: path.join(__dirname, '../data/cartes-bancaires.json'), filterKey: 'userId' }
+    ];
+    
+    // Supprimer les données de chaque fichier
+    for (const dataFile of dataFiles) {
+      try {
+        if (fs.existsSync(dataFile.path)) {
+          const data = JSON.parse(fs.readFileSync(dataFile.path));
+          const filteredData = data.filter(item => item[dataFile.filterKey] !== userId);
+          fs.writeFileSync(dataFile.path, JSON.stringify(filteredData, null, 2));
+        }
+      } catch (fileError) {
+        console.error(`Erreur lors de la suppression des données dans ${dataFile.path}:`, fileError);
+      }
+    }
+    
+    // Supprimer l'utilisateur lui-même
+    const filteredUsers = users.filter(u => u.id !== userId);
+    fs.writeFileSync(usersFilePath, JSON.stringify(filteredUsers, null, 2));
+    
+    res.json({ message: 'Profil et toutes les données associées supprimés avec succès' });
+  } catch (error) {
+    console.error('Erreur lors de la suppression du profil:', error);
+    res.status(500).json({ message: 'Erreur lors de la suppression du profil' });
+  }
+});
+
 // Vérifier le mot de passe d'un utilisateur
-router.post('/:id/verify-password', (req, res) => {
+router.post('/:id/verify-password', async (req, res) => {
   try {
     const { password } = req.body;
     if (!password) {
@@ -173,8 +249,24 @@ router.post('/:id/verify-password', (req, res) => {
       return res.status(404).json({ message: 'Utilisateur non trouvé' });
     }
     
-    // Vérification simple du mot de passe
-    const isValid = user.password === password;
+    // Vérification du mot de passe avec bcrypt (même logique que le login)
+    let isValid;
+    
+    if (user.password.startsWith('$2')) {
+      // Le mot de passe est déjà hashé avec bcrypt
+      isValid = await bcrypt.compare(password, user.password);
+    } else {
+      // Mot de passe en clair (pour rétrocompatibilité)
+      isValid = (user.password === password);
+      
+      // Mise à jour du mot de passe avec hashage si correct
+      if (isValid) {
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+        const userIndex = users.findIndex(u => u.id === user.id);
+        users[userIndex].password = hashedPassword;
+        fs.writeFileSync(usersFilePath, JSON.stringify(users, null, 2));
+      }
+    }
     
     res.json({ valid: isValid });
   } catch (error) {
@@ -184,7 +276,7 @@ router.post('/:id/verify-password', (req, res) => {
 });
 
 // Mettre à jour le mot de passe d'un utilisateur
-router.put('/:id/password', (req, res) => {
+router.put('/:id/password', async (req, res) => {
   try {
     const { currentPassword, newPassword, passwordUnique } = req.body;
     
@@ -201,31 +293,63 @@ router.put('/:id/password', (req, res) => {
     
     // Cas 1: Utilisation du mot de passe à usage unique
     if (passwordUnique) {
-      if (users[index].passwordUnique && users[index].passwordUnique === passwordUnique) {
-        // Mettre à jour le mot de passe et supprimer le mot de passe à usage unique
-        users[index].password = newPassword;
-        users[index].passwordUnique = ""; // Réinitialiser le mot de passe à usage unique
-        
-        fs.writeFileSync(usersFilePath, JSON.stringify(users, null, 2));
-        return res.json({ message: 'Mot de passe mis à jour avec succès' });
+      let isCodeValid = false;
+      if (users[index].passwordUnique && users[index].passwordUnique.startsWith('$2')) {
+        // Si le code est hashé
+        isCodeValid = await bcrypt.compare(passwordUnique, users[index].passwordUnique);
       } else {
-        return res.status(401).json({ message: 'Mot de passe à usage unique incorrect' });
+        // Pour la rétrocompatibilité
+        isCodeValid = (users[index].passwordUnique === passwordUnique);
       }
+      
+      if (!isCodeValid) {
+        return res.status(401).json({ message: 'Code temporaire invalide' });
+      }
+      
+      // Hasher le nouveau mot de passe (même logique que l'inscription)
+      const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+      
+      // Mettre à jour le mot de passe et supprimer le mot de passe à usage unique
+      users[index].password = hashedPassword;
+      users[index].passwordUnique = "";
+      
+      fs.writeFileSync(usersFilePath, JSON.stringify(users, null, 2));
+      return res.json({ message: 'Mot de passe mis à jour avec succès' });
     }
     // Cas 2: Utilisation du mot de passe actuel
     else if (currentPassword) {
-      // Vérifier le mot de passe actuel
-      if (users[index].password !== currentPassword) {
+      // Vérifier le mot de passe actuel avec bcrypt (même logique que le login)
+      let isCurrentPasswordValid;
+      
+      if (users[index].password.startsWith('$2')) {
+        // Le mot de passe est déjà hashé avec bcrypt
+        isCurrentPasswordValid = await bcrypt.compare(currentPassword, users[index].password);
+      } else {
+        // Mot de passe en clair (pour rétrocompatibilité)
+        isCurrentPasswordValid = (users[index].password === currentPassword);
+        
+        // Mise à jour du mot de passe avec hashage si correct
+        if (isCurrentPasswordValid) {
+          const hashedCurrentPassword = await bcrypt.hash(currentPassword, saltRounds);
+          users[index].password = hashedCurrentPassword;
+        }
+      }
+      
+      if (!isCurrentPasswordValid) {
         return res.status(401).json({ message: 'Mot de passe actuel incorrect' });
       }
       
       // Vérifier si le nouveau mot de passe est différent de l'ancien
-      if (currentPassword === newPassword) {
+      const isSamePassword = await bcrypt.compare(newPassword, users[index].password);
+      if (isSamePassword) {
         return res.status(400).json({ message: 'Le nouveau mot de passe doit être différent de l\'ancien' });
       }
       
+      // Hasher le nouveau mot de passe (même logique que l'inscription)
+      const hashedNewPassword = await bcrypt.hash(newPassword, saltRounds);
+      
       // Mettre à jour le mot de passe
-      users[index].password = newPassword;
+      users[index].password = hashedNewPassword;
       
       fs.writeFileSync(usersFilePath, JSON.stringify(users, null, 2));
       return res.json({ message: 'Mot de passe mis à jour avec succès' });
