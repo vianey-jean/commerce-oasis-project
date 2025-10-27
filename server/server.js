@@ -1,138 +1,195 @@
 
-/**
- * 🚀 server.js
- *
- * ✅ Version combinée et améliorée :
- * - Intègre sécurité, CORS, routes API, sockets, gestion d'erreurs.
- * - Création automatique des dossiers uploads/profile-images.
- * - Ajout d'une route pour upload d'images avec Multer.
- */
-
-require('dotenv').config();
 const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const fs = require('fs');
 const bodyParser = require('body-parser');
-const { createServer } = require('http');
-const multer = require('multer');
+const cors = require('cors');
+const fs = require('fs');
+const path = require('path');
+const dotenv = require('dotenv');
+const bcrypt = require('bcryptjs');
 
-// Configurations
-const corsOptions = require('./config/cors');
-const { securityMiddlewares, additionalCorsHeaders, sanitizeMiddleware } = require('./config/security');
-const { initializeDataFiles } = require('./config/dataFiles');
-const { notFoundHandler, globalErrorHandler } = require('./config/errorHandlers');
-const initializeSocket = require('./socket/socketConfig');
+// Load environment variables
+dotenv.config();
 
-// Initialiser l'application Express
+// Initialize express app
 const app = express();
-const server = createServer(app);
+const PORT = process.env.PORT || 10000;
 
-// 📂 Préparer les dossiers d'uploads
-const uploadsDir = path.join(__dirname, 'uploads');
-const profileImagesDir = path.join(uploadsDir, 'profile-images');
-const chatFilesDir = path.join(uploadsDir, 'chat-files');
-const chatAudioDir = path.join(uploadsDir, 'chat-audio');
-const chatVideoDir = path.join(uploadsDir, 'chat-video');
+// Configuration CORS simplifiée pour le développement
+const corsOptions = {
+  origin: true, // Permet toutes les origines en développement
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: [
+    'Content-Type', 
+    'Authorization', 
+    'Cache-Control',
+    'X-Requested-With',
+    'Accept',
+    'Origin'
+  ],
+  optionsSuccessStatus: 200
+};
 
-[uploadsDir, profileImagesDir, chatFilesDir, chatAudioDir, chatVideoDir].forEach(dir => {
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-});
-
-// ⚙️ Multer configuration (pour upload photos)
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, profileImagesDir); // Sauvegarde dans /uploads/profile-images
-  },
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
-  }
-});
-const upload = multer({ storage });
-
-// 🔐 Sécurité
-securityMiddlewares.forEach(middleware => app.use(middleware));
-
-// 🌍 CORS
+// Middleware CORS global
 app.use(cors(corsOptions));
-app.use(additionalCorsHeaders);
 
-// 📦 Body parsers
-app.use(bodyParser.json({ limit: '10mb' }));
-app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
-// 📂 Initialisation des fichiers de données
-app.use(initializeDataFiles);
+// Create db directory if it doesn't exist
+const dbPath = path.join(__dirname, 'db');
+if (!fs.existsSync(dbPath)) {
+  fs.mkdirSync(dbPath);
+}
 
-// 📁 Servir les fichiers statiques
-app.use('/uploads', (req, res, next) => {
-  res.set('Cross-Origin-Resource-Policy', 'cross-origin');
-  express.static(uploadsDir)(req, res, next);
-});
+// Create uploads directory if it doesn't exist
+const uploadsPath = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsPath)) {
+  fs.mkdirSync(uploadsPath);
+}
 
-// 🛡️ Protection contre injections
-app.use(sanitizeMiddleware);
+// Hash a password
+const hashPassword = (password) => {
+  const salt = bcrypt.genSaltSync(10);
+  return bcrypt.hashSync(password, salt);
+};
 
-// 📌 Routes API principales
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/users', require('./routes/users'));
-app.use('/api/products', require('./routes/products'));
-app.use('/api/categories', require('./routes/categories'));
-app.use('/api/orders', require('./routes/orders'));
-app.use('/api/panier', require('./routes/panier'));
-app.use('/api/favorites', require('./routes/favorites'));
-app.use('/api/reviews', require('./routes/reviews'));
-app.use('/api/contacts', require('./routes/contacts'));
-app.use('/api/flash-sales', require('./routes/flash-sales'));
-app.use('/api/code-promos', require('./routes/code-promos'));
-app.use('/api/remboursements', require('./routes/remboursements'));
-app.use('/api/sales-notifications', require('./routes/sales-notifications'));
-app.use('/api/visitors', require('./routes/visitors'));
-app.use('/api/pub-layout', require('./routes/pub-layout'));
-app.use('/api/site-settings', require('./routes/site-settings'));
-app.use('/api/data-sync', require('./routes/data-sync'));
-app.use('/api/admin-chat', require('./routes/admin-chat'));
-app.use('/api/client-chat', require('./routes/client-chat'));
-app.use('/api/cards', require('./routes/cards'));
-app.use('/api/profile-images', require('./routes/profile-images'));
-app.use('/api/chat-files', require('./routes/chat-files'));
+const productsPath = path.join(dbPath, 'products.json');
+if (!fs.existsSync(productsPath)) {
+  fs.writeFileSync(productsPath, JSON.stringify([
+    {
+      id: "1",
+      description: "Laptop",
+      purchasePrice: 500,
+      quantity: 10
+    },
+    {
+      id: "2",
+      description: "Smartphone",
+      purchasePrice: 300,
+      quantity: 15
+    },
+    {
+      id: "3",
+      description: "Headphones",
+      purchasePrice: 50,
+      quantity: 30
+    }
+  ], null, 2));
+}
 
-// ✅ Route test
-app.get('/api/test', (req, res) => {
-  res.json({ message: 'Server is running!' });
-});
+const salesPath = path.join(dbPath, 'sales.json');
+if (!fs.existsSync(salesPath)) {
+  fs.writeFileSync(salesPath, JSON.stringify([], null, 2));
+}
 
-// ✅ Route upload photo (ex: /api/upload/profile)
-app.post('/api/upload/profile', upload.single('image'), (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ message: 'Aucune image envoyée' });
-  }
-  res.json({
-    message: 'Image uploadée avec succès',
-    filename: req.file.filename,
-    path: `/uploads/profile-images/${req.file.filename}`
+// Créer le fichier clients.json s'il n'existe pas
+const clientsPath = path.join(dbPath, 'clients.json');
+if (!fs.existsSync(clientsPath)) {
+  fs.writeFileSync(clientsPath, JSON.stringify([
+    {
+      id: "1",
+      nom: "Marie Dupont",
+      phone: "0692123456",
+      adresse: "123 Rue de la Paix, Saint-Denis",
+      dateCreation: "2024-01-15T10:30:00.000Z"
+    },
+    {
+      id: "2", 
+      nom: "Jean Martin",
+      phone: "0693987654",
+      adresse: "45 Avenue des Palmiers, Saint-Paul",
+      dateCreation: "2024-01-20T14:15:00.000Z"
+    }
+  ], null, 2));
+}
+
+// Créer les nouveaux fichiers JSON s'ils n'existent pas
+const pretFamillesPath = path.join(dbPath, 'pretfamilles.json');
+if (!fs.existsSync(pretFamillesPath)) {
+  fs.writeFileSync(pretFamillesPath, JSON.stringify([
+    { id: "1", nom: "Famille Martin", pretTotal: 2000, soldeRestant: 1500, dernierRemboursement: 500, dateRemboursement: "2024-04-15" },
+    { id: "2", nom: "Famille Dupont", pretTotal: 1000, soldeRestant: 500, dernierRemboursement: 200, dateRemboursement: "2024-04-10" },
+    { id: "3", nom: "Famille Bernard", pretTotal: 3000, soldeRestant: 2000, dernierRemboursement: 1000, dateRemboursement: "2024-04-05" }
+  ], null, 2));
+}
+
+const pretProduitsPath = path.join(dbPath, 'pretproduits.json');
+if (!fs.existsSync(pretProduitsPath)) {
+  fs.writeFileSync(pretProduitsPath, JSON.stringify([
+    { id: "1", date: "2023-04-10", description: "Perruque Blonde", prixVente: 450, avanceRecue: 200, reste: 250, estPaye: false },
+    { id: "2", date: "2023-04-15", description: "Perruque Brune", prixVente: 300, avanceRecue: 300, reste: 0, estPaye: true },
+    { id: "3", date: "2023-04-20", description: "Perruque Rousse", prixVente: 500, avanceRecue: 250, reste: 250, estPaye: false }
+  ], null, 2));
+}
+
+const depenseDuMoisPath = path.join(dbPath, 'depensedumois.json');
+if (!fs.existsSync(depenseDuMoisPath)) {
+  fs.writeFileSync(depenseDuMoisPath, JSON.stringify([
+    { id: "1", date: "2023-04-05", description: "Salaire", categorie: "salaire", debit: 0, credit: 2000, solde: 2000 },
+    { id: "2", date: "2023-04-10", description: "Courses Leclerc", categorie: "courses", debit: 150, credit: 0, solde: 1850 },
+    { id: "3", date: "2023-04-15", description: "Restaurant", categorie: "restaurant", debit: 45, credit: 0, solde: 1805 },
+    { id: "4", date: "2023-04-20", description: "Free Mobile", categorie: "free", debit: 19.99, credit: 0, solde: 1785.01 }
+  ], null, 2));
+}
+
+const depenseFixePath = path.join(dbPath, 'depensefixe.json');
+if (!fs.existsSync(depenseFixePath)) {
+  fs.writeFileSync(depenseFixePath, JSON.stringify({
+    free: 19.99,
+    internetZeop: 39.99,
+    assuranceVoiture: 85,
+    autreDepense: 45,
+    assuranceVie: 120,
+    total: 309.98
+  }, null, 2));
+}
+
+const beneficePath = path.join(dbPath, 'benefice.json');
+if (!fs.existsSync(beneficePath)) {
+  fs.writeFileSync(beneficePath, JSON.stringify([], null, 2));
+}
+
+// Import routes
+const authRoutes = require('./routes/auth');
+const productRoutes = require('./routes/products');
+const salesRoutes = require('./routes/sales');
+const clientRoutes = require('./routes/clients');
+const pretFamillesRoutes = require('./routes/pretfamilles');
+const pretProduitsRoutes = require('./routes/pretproduits');
+const depensesRoutes = require('./routes/depenses');
+const syncRoutes = require('./routes/sync');
+const beneficesRoutes = require('./routes/benefices');
+const messagesRoutes = require('./routes/messages');
+
+// Use routes
+app.use('/api/auth', authRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/sales', salesRoutes);
+app.use('/api/clients', clientRoutes);
+app.use('/api/pretfamilles', pretFamillesRoutes);
+app.use('/api/pretproduits', pretProduitsRoutes);
+app.use('/api/depenses', depensesRoutes);
+app.use('/api/sync', syncRoutes);
+app.use('/api/benefices', beneficesRoutes);
+app.use('/api/messages', messagesRoutes);
+
+// Static file serving for uploaded files
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Server error:', err.stack);
+  res.status(500).json({ 
+    error: 'Something broke!', 
+    message: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
   });
 });
 
-// ⚡ Initialiser Socket.io
-const io = initializeSocket(server);
-
-// Rendre io disponible pour les routes
-app.set('io', io);
-
-// ❌ Gestion des erreurs
-app.use(notFoundHandler);
-app.use(globalErrorHandler);
-
-// 🚀 Lancement serveur
-const PORT = process.env.PORT || 10000;
-server.listen(PORT, () => {
-  console.log(`🚀 Serveur démarré sur le port ${PORT}`);
-  console.log(`📂 Uploads directory: ${uploadsDir}`);
-  console.log(`📁 Chat files directory: ${chatFilesDir}`);
-  console.log(`🎵 Chat audio directory: ${chatAudioDir}`);
-  console.log(`🎬 Chat video directory: ${chatVideoDir}`);
+// Start server
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`CORS enabled for all origins in development`);
+  console.log(`Sync events available at http://localhost:${PORT}/api/sync/events`);
 });

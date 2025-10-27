@@ -1,261 +1,217 @@
 
-import React, { createContext, useState, useContext, useEffect, ReactNode } from 'react';
-import { authAPI, User } from '../services/api';
-import { UpdateProfileData } from '@/types/auth';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { LoginCredentials, PasswordResetData, PasswordResetRequest, RegistrationData, User } from '../types';
+import { authService } from '../service/api';
 import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  isAdmin: boolean;
-  loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  isLoading: boolean;
+  token: string | null;
+  login: (credentials: LoginCredentials) => Promise<boolean>;
   logout: () => void;
-  register: (nom: string, email: string, password: string) => Promise<void>;
-  forgotPassword: (email: string) => Promise<void>;
-  resetPassword: (email: string, code: string, newPassword: string) => Promise<void>;
-  updateProfile: (data: UpdateProfileData) => Promise<void>;
-  updatePassword: (currentPassword: string, newPassword: string) => Promise<void>;
-  setRedirectAfterLogin: (path: string) => void;
+  register: (data: RegistrationData) => Promise<boolean>;
+  checkEmail: (email: string) => Promise<boolean>;
+  resetPasswordRequest: (data: PasswordResetRequest) => Promise<boolean>;
+  resetPassword: (data: PasswordResetData) => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [token, setToken] = useState<string | null>(null);
   const { toast } = useToast();
 
-  const validateToken = async () => {
-    const token = localStorage.getItem('authToken');
-    if (!token) {
-      setLoading(false);
-      return false;
-    }
-    
-    try {
-      const response = await authAPI.verifyToken();
-      if (response.data && response.data.valid) {
-        setUser(response.data.user);
-        return true;
-      }
-    } catch (error) {
-      console.error("Erreur de vérification du token:", error);
-      localStorage.removeItem('authToken');
-    }
-    
-    setLoading(false);
-    return false;
-  };
-
   useEffect(() => {
-    const verifyToken = async () => {
-      await validateToken();
-      setLoading(false);
-    };
-
-    verifyToken();
+    // Check if user is already logged in
+    const currentUser = authService.getCurrentUser();
+    const storedToken = localStorage.getItem('token');
+    
+    setUser(currentUser);
+    setToken(storedToken);
+    setIsLoading(false);
   }, []);
 
-  const setRedirectAfterLogin = (path: string) => {
-    localStorage.setItem('redirectAfterLogin', path);
-  };
-
-  const login = async (email: string, password: string): Promise<void> => {
+  const login = async (credentials: LoginCredentials): Promise<boolean> => {
     try {
-      console.log("Tentative de connexion avec:", { email });
-      const response = await authAPI.login({ email, password });
-      localStorage.setItem('authToken', response.data.token);
-      setUser(response.data.user);
-     toast({
-  title: 'Connexion réussie',
-  className: 'bg-green-500 text-white', // fond vert + texte blanc
-  variant: 'default',
-});
-
-      // Vérifier s'il y a une redirection à faire
-      const redirectPath = localStorage.getItem('redirectAfterLogin');
-      if (redirectPath) {
-        localStorage.removeItem('redirectAfterLogin');
-        window.location.href = redirectPath;
-      } else {
-        // Navigation via window.location pour éviter les problèmes de hooks
-        window.location.href = '/';
-      }
-    } catch (error: any) {
-      console.error("Erreur de connexion:", error);
+      setIsLoading(true);
+      const result = await authService.login(credentials);
       
-      const errorMessage = error.response?.data?.message || "Erreur de connexion";
+      if (result && result.user) {
+        setUser(result.user);
+        setToken(result.token);
+        toast({
+          title: "Connexion réussie",
+          description: `Bienvenue ${result.user.firstName} ${result.user.lastName}`,
+          className: "bg-green-500 text-white",
+        });
+        return true;
+      } else {
+        toast({
+          title: "Échec de la connexion",
+          description: "Email ou mot de passe incorrect",
+          variant: "destructive",
+        });
+        return false;
+      }
+    } catch (error) {
       toast({
-        title: errorMessage,
-        variant: 'destructive',
+        title: "Erreur",
+        description: "Une erreur s'est produite lors de la connexion",
+        variant: "destructive",
       });
-
-      throw error;
+      return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('maintenanceAdminBypass'); // Supprimer le marqueur admin
-    localStorage.removeItem('redirectAfterLogin'); // Nettoyer la redirection
     setUser(null);
+    setToken(null);
+    authService.setCurrentUser(null);
     toast({
-      title: 'Vous êtes déconnecté',
-      variant: 'destructive',
+      title: "Déconnexion réussie",
+      description: "Vous avez été déconnecté avec succès",
     });
-
-    // Navigation vers l'accueil lors de la déconnexion
-    window.location.href = '/';
+    // Redirect to login page after logout
+    window.location.href = '/login';
   };
 
-  const register = async (nom: string, email: string, password: string) => {
+  const register = async (data: RegistrationData): Promise<boolean> => {
     try {
-      const response = await authAPI.register({ nom, email, password });
-      localStorage.setItem('authToken', response.data.token);
-      setUser(response.data.user);
-      toast({
-        title: 'Inscription réussie',
-        variant: 'default',
-      });
-
-      // Vérifier s'il y a une redirection à faire
-      const redirectPath = localStorage.getItem('redirectAfterLogin');
-      if (redirectPath) {
-        localStorage.removeItem('redirectAfterLogin');
-        window.location.href = redirectPath;
+      setIsLoading(true);
+      const registerData = {
+        email: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        gender: data.gender,
+        address: data.address,
+        phone: data.phone,
+      };
+      
+      const result = await authService.register(registerData);
+      
+      if (result && result.user) {
+        setUser(result.user);
+        setToken(result.token);
+        toast({
+          title: "Inscription réussie",
+          description: `Bienvenue ${result.user.firstName} ${result.user.lastName}`,
+          className: "notification-success",
+        });
+        return true;
       } else {
-        // Navigation via window.location pour éviter les problèmes de hooks
-        window.location.href = '/';
-      }
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message || 'Erreur lors de l\'inscription';
-      toast({
-        title: errorMessage,
-        variant: 'destructive',
-      });
-      throw error;
-    }
-  };
-
-  const forgotPassword = async (email: string) => {
-    try {
-      await authAPI.forgotPassword(email);
-    } catch (error) {
-      console.error("Erreur de demande de réinitialisation:", error);
-      toast({
-        title: 'Une erreur est survenue',
-        variant: 'destructive',
-      });
-     
-      throw error;
-    }
-  };
-
-  const resetPassword = async (email: string, code: string, newPassword: string) => {
-    try {
-      await authAPI.resetPassword({ email, passwordUnique: code, newPassword });
-    } catch (error) {
-      console.error("Erreur de réinitialisation de mot de passe:", error);
-      toast({
-        title: 'Une erreur est survenue',
-        variant: 'destructive',
-      });
-      
-      throw error;
-    }
-  };
-
-  const updateProfile = async (data: UpdateProfileData) => {
-    try {
-      if (!user) throw new Error('Utilisateur non connecté');
-      
-      const isTokenValid = await validateToken();
-      if (!isTokenValid) {
         toast({
-          title: 'Votre session a expiré, veuillez vous reconnecter',
-          variant: 'destructive',
+          title: "Échec de l'inscription",
+          description: "Cet email est déjà utilisé",
+          variant: "destructive",
         });
-        window.location.href = '/login';
-        throw new Error('Session expirée');
+        return false;
       }
-      
-      const response = await authAPI.updateProfile(user.id, data);
-      setUser(prev => prev ? { ...prev, ...response.data } : null);
+    } catch (error) {
       toast({
-        title: 'Profil mis à jour avec succès',
-        variant: 'default',
+        title: "Erreur",
+        description: "Une erreur s'est produite lors de l'inscription",
+        variant: "destructive",
       });
-     
-    } catch (error: any) {
-      console.error("Erreur de mise à jour du profil:", error);
-      toast({
-        title: error.response?.data?.message || 'Erreur lors de la mise à jour du profil',
-        variant: 'destructive',
-      });
-     
-      throw error;
+      return false;
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const updatePassword = async (currentPassword: string, newPassword: string) => {
+  const checkEmail = async (email: string): Promise<boolean> => {
     try {
-      if (!user) throw new Error('Utilisateur non connecté');
-      
-      const isTokenValid = await validateToken();
-      if (!isTokenValid) {
-        toast({
-          title: 'Votre session a expiré, veuillez vous reconnecter',
-          variant: 'destructive',
-        });
-        window.location.href = '/login';
-        throw new Error('Session expirée');
-      }
-      
-      await authAPI.updatePassword(user.id, currentPassword, newPassword);
-      toast({
-        title: 'Mot de passe mis à jour avec succès',
-        variant: 'default',
-      });
-      
-    } catch (error: any) {
-      console.error("Erreur de mise à jour du mot de passe:", error);
-      toast({
-        title: error.response?.data?.message || 'Erreur lors de la mise à jour du mot de passe',
-        variant: 'destructive',
-      });
-     
-      throw error;
+      const result = await authService.checkEmail(email);
+      return result.exists;
+    } catch (error) {
+      return false;
     }
   };
 
-  const isAuthenticated = !!user;
-  const isAdmin = user?.role === 'admin';
+  const resetPasswordRequest = async (data: PasswordResetRequest): Promise<boolean> => {
+    try {
+      setIsLoading(true);
+      const exists = await authService.resetPasswordRequest(data);
+      
+      if (!exists) {
+        toast({
+          title: "Échec de la réinitialisation",
+          description: "Cet email n'existe pas dans notre système",
+          variant: "destructive",
+        });
+      }
+      
+      return exists;
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Une erreur s'est produite lors de la réinitialisation",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-  const value: AuthContextType = {
+  const resetPassword = async (data: PasswordResetData): Promise<boolean> => {
+    try {
+      setIsLoading(true);
+      const result = await authService.resetPassword(data.email);
+      
+      if (result.success) {
+        toast({
+          title: "Réinitialisation réussie",
+          description: "Votre mot de passe a été réinitialisé avec succès",
+          className: "notification-success",
+        });
+        return true;
+      } else {
+        toast({
+          title: "Échec de la réinitialisation",
+          description: "Le nouveau mot de passe doit être différent de l'ancien",
+          variant: "destructive",
+        });
+        return false;
+      }
+    } catch (error) {
+      toast({
+        title: "Erreur",
+        description: "Une erreur s'est produite lors de la réinitialisation",
+        variant: "destructive",
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const value = {
     user,
-    isAuthenticated,
-    isAdmin,
-    loading,
+    isAuthenticated: !!user,
+    isLoading,
+    token,
     login,
     logout,
     register,
-    forgotPassword,
+    checkEmail,
+    resetPasswordRequest,
     resetPassword,
-    updateProfile,
-    updatePassword,
-    setRedirectAfterLogin,
   };
 
-  return (
-    <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-export const useAuth = () => {
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth doit être utilisé avec AuthProvider');
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };
