@@ -306,16 +306,14 @@ const PretFamilles: React.FC = () => {
       const montantSupprime = remboursements[remboursementIndex].montant;
       
       // Supprimer UNIQUEMENT le remboursement sélectionné à l'index spécifié
-      // Exemple: si on a [100, 300] et qu'on supprime l'index 1 (300), il reste [100]
       remboursements.splice(remboursementIndex, 1);
       
-      // Recalculer le total remboursé = somme de tous les remboursements restants
-      // Exemple: si avant c'était 400 (100+300) et on a supprimé 300, maintenant c'est 100
-      const totalRembourse = remboursements.reduce((sum, r) => sum + r.montant, 0);
-      
-      // Calculer le nouveau solde restant = pretTotal - totalRembourse
-      // Exemple: si pretTotal=1000 et totalRembourse=100, alors soldeRestant=900
-      const nouveauSolde = selectedPretForDetail.pretTotal - totalRembourse;
+      // CORRECTION : On ajoute le montant supprimé au solde restant
+      // Cela préserve les remboursements antérieurs qui ne sont pas dans l'historique
+      // Exemple: pretTotal=465, soldeRestant=200 (déjà remboursé 165 avant + 100 dans historique)
+      // Si on supprime 100€ de l'historique: soldeRestant devient 200 + 100 = 300
+      // Le total remboursé revient à 165€ (les remboursements antérieurs)
+      const nouveauSolde = selectedPretForDetail.soldeRestant + montantSupprime;
       
       const updatedPret: PretFamille = {
         ...selectedPretForDetail,
