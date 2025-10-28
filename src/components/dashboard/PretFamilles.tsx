@@ -643,25 +643,24 @@ const PretFamilles: React.FC = () => {
                           <span className="font-bold text-emerald-600 dark:text-emerald-400">
                             {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(remboursement.montant)}
                           </span>
-                          <div className="flex gap-1 transition-opacity">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 bg-blue-100 dark:bg-blue-900/30"
-                            onClick={() => openEditRemboursementDialog(index)}
-                          >
-                            <Edit2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 bg-red-100 dark:bg-red-900/30"
-                            onClick={() => handleDeleteRemboursement(index)}
-                          >
-                            <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
-                          </Button>
-                        </div>
-
+                          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 hover:bg-blue-100 dark:hover:bg-blue-900/30"
+                              onClick={() => openEditRemboursementDialog(index)}
+                            >
+                              <Edit2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 hover:bg-red-100 dark:hover:bg-red-900/30"
+                              onClick={() => handleDeleteRemboursement(index)}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))}
