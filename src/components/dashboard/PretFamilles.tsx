@@ -236,25 +236,29 @@ const PretFamilles: React.FC = () => {
 
     try {
       setLoading(true);
-      const newMontant = parseFloat(editMontantRemboursement);
+      const nouveauMontant = parseFloat(editMontantRemboursement);
       const remboursements = [...(selectedPretForDetail.remboursements || [])];
-      const oldMontant = remboursements[selectedRemboursementIndex].montant;
       
-      // Mettre à jour le montant du remboursement spécifique
+      // 1. Récupérer l'ancien montant à modifier
+      const ancienMontant = remboursements[selectedRemboursementIndex].montant;
+      
+      // 2. Calculer la différence entre ancien et nouveau montant
+      const difference = ancienMontant - nouveauMontant;
+      
+      // 3. Calculer le nouveau reste à payer
+      // Si différence positive (réduction du remboursement), on augmente le reste à payer
+      // Si différence négative (augmentation du remboursement), on diminue le reste à payer
+      const nouveauResteAPayer = selectedPretForDetail.soldeRestant + difference;
+      
+      // 4. Mettre à jour le montant du remboursement spécifique
       remboursements[selectedRemboursementIndex] = {
         ...remboursements[selectedRemboursementIndex],
-        montant: newMontant
+        montant: nouveauMontant
       };
-      
-      // Recalculer le total remboursé (somme de tous les remboursements)
-      const totalRembourse = remboursements.reduce((sum, r) => sum + r.montant, 0);
-      
-      // Calculer le nouveau solde restant à payer
-      const nouveauSolde = selectedPretForDetail.pretTotal - totalRembourse;
       
       const updatedPret: PretFamille = {
         ...selectedPretForDetail,
-        soldeRestant: nouveauSolde,
+        soldeRestant: nouveauResteAPayer,
         dernierRemboursement: remboursements.length > 0 ? remboursements[remboursements.length - 1].montant : 0,
         remboursements: remboursements
       };
