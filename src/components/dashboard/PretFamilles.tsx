@@ -302,22 +302,24 @@ const PretFamilles: React.FC = () => {
       setLoading(true);
       const remboursements = [...(selectedPretForDetail.remboursements || [])];
       
-      // Récupérer le montant du remboursement à supprimer
-      const montantSupprime = remboursements[remboursementIndex].montant;
+      // 1. Récupérer la valeur à supprimer depuis la base de données
+      const Valeur = remboursements[remboursementIndex].montant;
       
-      // Supprimer UNIQUEMENT le remboursement sélectionné à l'index spécifié
+      // 2. Récupérer le total remboursé actuel depuis la base de données
+      const TotalRembourse = selectedPretForDetail.pretTotal - selectedPretForDetail.soldeRestant;
+      
+      // 3. Calculer le nouveau total remboursé
+      const Rembourse = TotalRembourse - Valeur;
+      
+      // 4. Calculer le nouveau reste à payer
+      const nouveauResteAPayer = selectedPretForDetail.soldeRestant + Valeur;
+      
+      // 5. Supprimer le remboursement de l'historique
       remboursements.splice(remboursementIndex, 1);
-      
-      // CORRECTION : On ajoute le montant supprimé au solde restant
-      // Cela préserve les remboursements antérieurs qui ne sont pas dans l'historique
-      // Exemple: pretTotal=465, soldeRestant=200 (déjà remboursé 165 avant + 100 dans historique)
-      // Si on supprime 100€ de l'historique: soldeRestant devient 200 + 100 = 300
-      // Le total remboursé revient à 165€ (les remboursements antérieurs)
-      const nouveauSolde = selectedPretForDetail.soldeRestant + montantSupprime;
       
       const updatedPret: PretFamille = {
         ...selectedPretForDetail,
-        soldeRestant: nouveauSolde,
+        soldeRestant: nouveauResteAPayer,
         dernierRemboursement: remboursements.length > 0 ? remboursements[remboursements.length - 1].montant : 0,
         remboursements: remboursements
       };
@@ -338,7 +340,7 @@ const PretFamilles: React.FC = () => {
       
       toast({ 
         title: 'Succès', 
-        description: `Remboursement de ${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(montantSupprime)} supprimé avec succès`, 
+        description: `Remboursement de ${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(Valeur)} supprimé avec succès`, 
         variant: 'default',
         className: 'notification-success'
       });
