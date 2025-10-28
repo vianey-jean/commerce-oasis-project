@@ -24,7 +24,8 @@ const Inventaire = () => {
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState<CategoryType>('all');
-  const [sortOrder, setSortOrder] = useState<SortOrder>('asc');
+  const [nameSortOrder, setNameSortOrder] = useState<SortOrder>('asc');
+  const [quantitySortOrder, setQuantitySortOrder] = useState<SortOrder>('asc');
   const [currentPage, setCurrentPage] = useState(1);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -88,14 +89,27 @@ const Inventaire = () => {
     if (category !== 'all') {
       filtered = filtered.filter(product => categorizeProduct(product.description) === category);
     }
+    // Appliquer les deux tris simultanément: d'abord par quantité, puis par nom
     filtered.sort((a, b) => {
-      const aValue = a.description.toLowerCase();
-      const bValue = b.description.toLowerCase();
-      return sortOrder === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
+      // Tri principal par quantité
+      const quantityDiff = quantitySortOrder === 'asc' 
+        ? a.quantity - b.quantity 
+        : b.quantity - a.quantity;
+      
+      // Si les quantités sont égales, trier par nom
+      if (quantityDiff === 0) {
+        const aValue = a.description.toLowerCase();
+        const bValue = b.description.toLowerCase();
+        return nameSortOrder === 'asc' 
+          ? aValue.localeCompare(bValue) 
+          : bValue.localeCompare(aValue);
+      }
+      
+      return quantityDiff;
     });
     setFilteredProducts(filtered);
     setCurrentPage(1);
-  }, [products, searchTerm, category, sortOrder]);
+  }, [products, searchTerm, category, nameSortOrder, quantitySortOrder]);
 
   const getStats = () => {
     const perruques = products.filter(p => categorizeProduct(p.description) === 'perruque').length;
@@ -309,10 +323,21 @@ const Inventaire = () => {
               variant="outline"
               gradient="indigo"
               icon={ArrowUpDown}
-              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+              onClick={() => setNameSortOrder(nameSortOrder === 'asc' ? 'desc' : 'asc')}
               className="bg-gradient-to-r from-white to-gray-50 border-2 border-gray-200 rounded-xl shadow-lg hover:shadow-xl"
             >
-              {sortOrder === 'asc' ? 'A-Z' : 'Z-A'}
+              {nameSortOrder === 'asc' ? 'A-Z' : 'Z-A'}
+            </ModernActionButton>
+
+            {/* Tri par Quantité */}
+            <ModernActionButton
+              variant="outline"
+              gradient="blue"
+              icon={TrendingUp}
+              onClick={() => setQuantitySortOrder(quantitySortOrder === 'asc' ? 'desc' : 'asc')}
+              className="bg-gradient-to-r from-white to-gray-50 border-2 border-gray-200 rounded-xl shadow-lg hover:shadow-xl"
+            >
+              {quantitySortOrder === 'asc' ? '0→9' : '9→0'}
             </ModernActionButton>
           </div>
 

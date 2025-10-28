@@ -11,7 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
-import { PlusCircle, Edit, CalendarIcon, Loader2, Trash2, Plus, CreditCard, TrendingUp, Wallet, CheckCircle, Clock, Search, Phone, ChevronDown, ChevronUp, ArrowRightLeft } from 'lucide-react';
+import { PlusCircle, Edit, CalendarIcon, Loader2, Trash2, Plus, CreditCard, TrendingUp, Wallet, CheckCircle, Clock, Search, Phone, ChevronDown, ChevronUp, ArrowRightLeft, UserPlus, Users, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/contexts/AppContext';
 import { Product, PretProduit } from '@/types';
@@ -40,6 +40,7 @@ const PretProduitsGrouped: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [ajoutAvanceDialogOpen, setAjoutAvanceDialogOpen] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [detailDialogOpen, setDetailDialogOpen] = useState(false);
   const [datePret, setDatePret] = useState<Date>(new Date());
   const [datePaiement, setDatePaiement] = useState<Date | undefined>();
   const [description, setDescription] = useState('');
@@ -54,6 +55,9 @@ const PretProduitsGrouped: React.FC = () => {
   const [selectedGroupForTransfer, setSelectedGroupForTransfer] = useState<GroupedPrets | null>(null);
   const [selectedPretsForTransfer, setSelectedPretsForTransfer] = useState<Set<string>>(new Set());
   const [transferTargetName, setTransferTargetName] = useState('');
+  const [isNewClient, setIsNewClient] = useState(true);
+  const [clientSearchQuery, setClientSearchQuery] = useState('');
+  const [clientSearchResults, setClientSearchResults] = useState<any[]>([]);
   const { products, searchProducts } = useApp();
   const { toast } = useToast();
 
@@ -92,8 +96,18 @@ const PretProduitsGrouped: React.FC = () => {
     try {
       setLoading(true);
       const data = await pretProduitService.getPretProduits();
-      setPrets(data);
-      groupPretsByPerson(data);
+      
+      // Initialiser le champ paiements pour les prêts qui n'en ont pas
+      const dataWithPaiements = data.map(pret => ({
+        ...pret,
+        paiements: pret.paiements || (pret.avanceRecue > 0 ? [{
+          date: pret.date,
+          montant: pret.avanceRecue
+        }] : [])
+      }));
+      
+      setPrets(dataWithPaiements);
+      groupPretsByPerson(dataWithPaiements);
     } catch (error) {
       console.error('Erreur lors du chargement des prêts produits', error);
       toast({
@@ -197,6 +211,19 @@ const PretProduitsGrouped: React.FC = () => {
 
     try {
       setLoading(true);
+      
+      // Créer l'historique des paiements avec la date actuelle du jour
+      const aujourdHui = new Date();
+      const dateAujourdhui = format(aujourdHui, 'yyyy-MM-dd');
+      
+      const paiements = [];
+      if (parseFloat(avanceRecue) > 0) {
+        paiements.push({
+          date: dateAujourdhui,
+          montant: parseFloat(avanceRecue)
+        });
+      }
+      
       const newPret: Omit<PretProduit, 'id'> = {
         date: format(datePret, 'yyyy-MM-dd'),
         datePaiement: datePaiement ? format(datePaiement, 'yyyy-MM-dd') : undefined,
@@ -207,7 +234,8 @@ const PretProduitsGrouped: React.FC = () => {
         avanceRecue: parseFloat(avanceRecue) || 0,
         reste,
         estPaye,
-        productId: selectedProduct?.id
+        productId: selectedProduct?.id,
+        paiements
       };
       await pretProduitService.addPretProduit(newPret);
       await fetchPrets();
@@ -260,15 +288,34 @@ const PretProduitsGrouped: React.FC = () => {
       const nouvelleAvanceRecue = selectedPret.avanceRecue + parseFloat(ajoutAvance);
       const nouveauReste = selectedPret.prixVente - nouvelleAvanceRecue;
       const nouveauEstPaye = nouveauReste <= 0;
+      
+      // Récupérer la date actuelle du jour depuis l'ordinateur
+      const aujourdHui = new Date();
+      const dateAujourdhui = format(aujourdHui, 'yyyy-MM-dd');
+      
+      // Ajouter le nouveau paiement à l'historique avec la date du jour
+      const nouveauPaiement = {
+        date: dateAujourdhui,
+        montant: parseFloat(ajoutAvance)
+      };
+      
+      // Initialiser le tableau de paiements s'il n'existe pas
+      const paiementsExistants = selectedPret.paiements || [];
+      const nouveauxPaiements = [...paiementsExistants, nouveauPaiement];
+      
       const updatedPret: PretProduit = { 
         ...selectedPret, 
         avanceRecue: nouvelleAvanceRecue, 
         reste: nouveauReste, 
-        estPaye: nouveauEstPaye 
+        estPaye: nouveauEstPaye,
+        paiements: nouveauxPaiements
       };
+      
+      console.log('Mise à jour du prêt avec les paiements:', updatedPret);
+      
       await pretProduitService.updatePretProduit(selectedPret.id, updatedPret);
       await fetchPrets();
-      toast({ title: 'Succès', description: 'Avance ajoutée avec succès', variant: 'default', className: 'notification-success' });
+      toast({ title: 'Succès', description: `Avance de ${formatCurrency(parseFloat(ajoutAvance))} ajoutée avec succès`, variant: 'default', className: 'notification-success' });
       setAjoutAvance('');
       setSelectedPret(null);
       setAjoutAvanceDialogOpen(false);
@@ -345,6 +392,44 @@ const PretProduitsGrouped: React.FC = () => {
     setAvanceRecue('');
     setAjoutAvance('');
     setSelectedProduct(null);
+    setIsNewClient(true);
+    setClientSearchQuery('');
+    setClientSearchResults([]);
+  };
+
+  const handleClientSearch = (query: string) => {
+    setClientSearchQuery(query);
+    if (query.length >= 3) {
+      // Chercher dans les prêts produits existants
+      const queryLower = query.toLowerCase();
+      const matchingPrets = prets.filter(pret => 
+        pret.nom.toLowerCase().includes(queryLower)
+      );
+      
+      // Extraire les noms uniques avec leur téléphone
+      const uniqueClients = new Map<string, { id: string; nom: string; phone: string }>();
+      
+      matchingPrets.forEach(pret => {
+        if (!uniqueClients.has(pret.nom)) {
+          uniqueClients.set(pret.nom, {
+            id: pret.nom, // Utiliser le nom comme ID unique
+            nom: pret.nom,
+            phone: pret.phone || ''
+          });
+        }
+      });
+      
+      setClientSearchResults(Array.from(uniqueClients.values()));
+    } else {
+      setClientSearchResults([]);
+    }
+  };
+
+  const selectClient = (client: any) => {
+    setNom(client.nom);
+    setPhone(client.phone || '');
+    setClientSearchQuery('');
+    setClientSearchResults([]);
   };
 
   const resetTransferForm = () => {
@@ -540,26 +625,42 @@ const PretProduitsGrouped: React.FC = () => {
                     
                     {group.phone && (
                       <div className="flex items-center gap-1 text-gray-600 dark:text-gray-300">
-                        <Phone className="h-4 w-4" />
-                        <span className="text-sm">{group.phone}</span>
+                        <Phone className="h-4 w-4 text-blue-600" />
+                        <span className="text-sm font-bold text-blue-600">{group.phone}</span>
                       </div>
                     )}
 
-                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                    <span className="text-sm  font-bold text-orange-500 dark:text-orange-400">
                       {group.prets.length} prêt{group.prets.length > 1 ? 's' : ''}
                     </span>
                   </div>
 
                   <div className="flex items-center gap-6">
-                    <div className="text-right">
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Total à payer</p>
-                      <p className="text-lg font-bold text-orange-600">{formatCurrency(group.totalReste)}</p>
-                    </div>
+                    <motion.div className="text-right">
+                    <p className="text-sm text-gray-500 font-bold dark:text-gray-400">
+                      Total Reste à payer
+                    </p>
+                    <motion.p
+                      key={group.totalReste}
+                      initial={{ opacity: 0, scale: 0.9 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.7, ease: "easeOut" }}
+                      className={`text-lg font-bold ${
+                        group.totalReste === 0
+                          ? 'text-green-600 dark:text-green-400'
+                          : group.totalReste > 0
+                          ? 'text-red-600 dark:text-red-400'
+                          : 'text-orange-600 dark:text-orange-400'
+                      }`}
+                    >
+                      {formatCurrency(group.totalReste)}
+                    </motion.p>
+                  </motion.div>
                     
                     <span className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-semibold ${
                       group.allPaid 
                         ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400' 
-                        : 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400'
+                        : 'bg-red-300 text-red-800 dark:bg-red-900/30 dark:text-red-600'
                     }`}>
                       {group.allPaid ? (
                         <>
@@ -647,6 +748,18 @@ const PretProduitsGrouped: React.FC = () => {
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setSelectedPret(pret);
+                                    setDetailDialogOpen(true);
+                                  }} 
+                                  className="p-2 rounded-lg bg-purple-100 text-purple-600 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:hover:bg-purple-900/50 transition-colors"
+                                  title="Voir détails"
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </button>
+
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedPret(pret);
                                     setAjoutAvance('');
                                     setAjoutAvanceDialogOpen(true);
                                   }} 
@@ -728,13 +841,103 @@ const PretProduitsGrouped: React.FC = () => {
       
       {/* Dialog Nouveau Prêt */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-white/20">
+        <DialogContent className="sm:max-w-[600px] bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-white/20 max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
               Ajouter un prêt de produit
             </DialogTitle>
           </DialogHeader>
           <div className="grid gap-6 py-6">
+            {/* Type de client */}
+            <div className="grid gap-4">
+              <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Type de client</Label>
+              <div className="grid grid-cols-2 gap-4">
+                <Button
+                  type="button"
+                  variant={isNewClient ? "default" : "outline"}
+                  onClick={() => {
+                    setIsNewClient(true);
+                    setNom('');
+                    setPhone('');
+                    setClientSearchQuery('');
+                    setClientSearchResults([]);
+                  }}
+                  className={cn(
+                    "w-full",
+                    isNewClient && "bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white"
+                  )}
+                >
+                  <UserPlus className="mr-2 h-4 w-4" />
+                  Nouveau client
+                </Button>
+                <Button
+                  type="button"
+                  variant={!isNewClient ? "default" : "outline"}
+                  onClick={() => {
+                    setIsNewClient(false);
+                    setNom('');
+                    setPhone('');
+                  }}
+                  className={cn(
+                    "w-full",
+                    !isNewClient && "bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white"
+                  )}
+                >
+                  <Users className="mr-2 h-4 w-4" />
+                  Client existant
+                </Button>
+              </div>
+            </div>
+
+            {/* Recherche client existant */}
+            {!isNewClient && (
+              <div className="grid gap-2">
+                <Label htmlFor="clientSearch" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  Rechercher un client (min. 3 caractères)
+                </Label>
+                <Input
+                  id="clientSearch"
+                  value={clientSearchQuery}
+                  onChange={(e) => handleClientSearch(e.target.value)}
+                  placeholder="Tapez le nom du client..."
+                  className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-gray-300 dark:border-gray-600"
+                />
+                {clientSearchQuery.length >= 3 && (
+                  <>
+                    {clientSearchResults.length > 0 ? (
+                      <div className="border rounded-md max-h-40 overflow-y-auto bg-white dark:bg-gray-800 z-50">
+                        {clientSearchResults.map((client) => (
+                          <div
+                            key={client.id}
+                            className="p-3 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 border-b last:border-b-0"
+                            onClick={() => selectClient(client)}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <div className="text-sm font-medium">{client.nom}</div>
+                                {client.phone && (
+                                  <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 mt-1">
+                                    <Phone className="h-3 w-3" />
+                                    {client.phone}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-4 bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-md">
+                        <p className="text-sm text-orange-700 dark:text-orange-400 text-center">
+                          Aucun client trouvé avec les caractères "{clientSearchQuery}"
+                        </p>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="datePret" className="text-sm font-semibold text-gray-700 dark:text-gray-300">Date de prêt</Label>
@@ -830,7 +1033,8 @@ const PretProduitsGrouped: React.FC = () => {
                   value={nom}
                   onChange={(e) => setNom(e.target.value)}
                   placeholder="Nom du client"
-                  className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-gray-300 dark:border-gray-600"
+                  disabled={!isNewClient && nom !== ''}
+                  className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-gray-300 dark:border-gray-600 disabled:opacity-70"
                 />
               </div>
 
@@ -841,7 +1045,8 @@ const PretProduitsGrouped: React.FC = () => {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+262 692 123 456"
-                  className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-gray-300 dark:border-gray-600"
+                  disabled={!isNewClient && phone !== ''}
+                  className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm border-gray-300 dark:border-gray-600 disabled:opacity-70"
                 />
               </div>
             </div>
@@ -1076,6 +1281,118 @@ const PretProduitsGrouped: React.FC = () => {
             <Button variant="destructive" onClick={handleDelete} disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               Supprimer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Détails du prêt */}
+      <Dialog open={detailDialogOpen} onOpenChange={setDetailDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-white/20">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              <div className="flex items-center gap-2">
+                <Eye className="h-6 w-6 text-purple-600" />
+                Détails du prêt
+              </div>
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedPret && (
+            <div className="py-4 space-y-4">
+              {/* Informations générales */}
+              <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-900/20 dark:to-blue-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Client</p>
+                    <p className="font-semibold text-gray-900 dark:text-gray-100">{selectedPret.nom || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Description</p>
+                    <p className="font-semibold text-gray-900 dark:text-gray-100">{selectedPret.description}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Date du prêt</p>
+                    <p className="font-semibold text-gray-900 dark:text-gray-100">
+                      {format(new Date(selectedPret.date), 'dd/MM/yyyy')}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Date prévue de paiement</p>
+                    <p className={getDatePaiementClass(selectedPret)}>
+                      {selectedPret.datePaiement ? format(new Date(selectedPret.datePaiement), 'dd/MM/yyyy') : '-'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Résumé financier */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 rounded-lg text-center">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Prix total</p>
+                  <p className="text-lg font-bold text-emerald-600">{formatCurrency(selectedPret.prixVente)}</p>
+                </div>
+                <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Total payé</p>
+                  <p className="text-lg font-bold text-blue-600">{formatCurrency(selectedPret.avanceRecue)}</p>
+                </div>
+                <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg text-center">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Reste à payer</p>
+                  <p className="text-lg font-bold text-orange-600">{formatCurrency(selectedPret.reste)}</p>
+                </div>
+              </div>
+
+              {/* Historique des paiements */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    Historique des paiements
+                  </Label>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {selectedPret.paiements?.length || 0} paiement{(selectedPret.paiements?.length || 0) !== 1 ? 's' : ''}
+                  </span>
+                </div>
+                
+                {selectedPret.paiements && selectedPret.paiements.length > 0 ? (
+                  <div className="max-h-60 overflow-y-auto space-y-2 border rounded-lg p-3 bg-gray-50 dark:bg-gray-900/50">
+                    {selectedPret.paiements.map((paiement, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-full">
+                            <Wallet className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                              Avance {index + 1}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {format(new Date(paiement.date), 'dd/MM/yyyy')}
+                            </p>
+                          </div>
+                        </div>
+                        <p className="text-lg font-bold text-emerald-600">
+                          +{formatCurrency(paiement.montant)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-6 bg-gray-50 dark:bg-gray-900/50 rounded-lg border border-dashed border-gray-300 dark:border-gray-700 text-center">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Aucun paiement enregistré pour ce prêt
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDetailDialogOpen(false)}>
+              Fermer
             </Button>
           </DialogFooter>
         </DialogContent>
