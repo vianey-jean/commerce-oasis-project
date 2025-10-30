@@ -159,65 +159,65 @@ const DashboardPage = () => {
                 </TabsContent>
                 
                 <TabsContent value="pret-familles" className="mt-0 animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center">
-                      <Users className="h-5 w-5 text-white" />
+                  <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0">
+                      <Users className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                     </div>
-                    <div>
-                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Prêts aux Familles</h2>
-                      <p className="text-gray-600 dark:text-gray-300">Suivi des prêts et remboursements familiaux</p>
+                    <div className="min-w-0">
+                      <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white truncate">Prêts aux Familles</h2>
+                      <p className="text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-300 truncate">Suivi des prêts et remboursements familiaux</p>
                     </div>
                   </div>
                   <PretFamilles />
                 </TabsContent>
                 
                 <TabsContent value="pret-produits" className="mt-0 animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl flex items-center justify-center">
-                      <Package className="h-5 w-5 text-white" />
+                  <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0">
+                      <Package className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                     </div>
-                    <div>
-                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Prêts de Produits</h2>
-                      <p className="text-gray-600 dark:text-gray-300">Gestion des produits prêtés</p>
+                    <div className="min-w-0">
+                      <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white truncate">Prêts de Produits</h2>
+                      <p className="text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-300 truncate">Gestion des produits prêtés</p>
                     </div>
                   </div>
                   <PretProduits />
                 </TabsContent>
                 
                 <TabsContent value="depenses" className="mt-0 animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl flex items-center justify-center">
-                      <CreditCard className="h-5 w-5 text-white" />
+                  <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-purple-600 to-pink-600 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0">
+                      <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                     </div>
-                    <div>
-                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Dépenses Mensuelles</h2>
-                      <p className="text-gray-600 dark:text-gray-300">Suivi et contrôle de vos dépenses</p>
+                    <div className="min-w-0">
+                      <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white truncate">Dépenses Mensuelles</h2>
+                      <p className="text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-300 truncate">Suivi et contrôle de vos dépenses</p>
                     </div>
                   </div>
                   <DepenseDuMois />
                 </TabsContent>
                 
                 <TabsContent value="inventaire" className="mt-0 animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 bg-gradient-to-r from-green-600 to-emerald-600 rounded-xl flex items-center justify-center">
-                      <Archive className="h-5 w-5 text-white" />
+                  <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-green-600 to-emerald-600 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0">
+                      <Archive className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                     </div>
-                    <div>
-                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Inventaire des Produits</h2>
-                      <p className="text-gray-600 dark:text-gray-300">Gestion complète de votre stock</p>
+                    <div className="min-w-0">
+                      <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white truncate">Inventaire des Produits</h2>
+                      <p className="text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-300 truncate">Gestion complète de votre stock</p>
                     </div>
                   </div>
                   <Inventaire />
                 </TabsContent>
                 
                 <TabsContent value="calcul-benefice" className="mt-0 animate-in fade-in-50 slide-in-from-bottom-4 duration-500">
-                  <div className="flex items-center gap-3 mb-6">
-                    <div className="w-10 h-10 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl flex items-center justify-center">
-                      <Calculator className="h-5 w-5 text-white" />
+                  <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+                    <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-lg sm:rounded-xl flex items-center justify-center shrink-0">
+                      <Calculator className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                     </div>
-                    <div>
-                      <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Calcul de Bénéfices</h2>
-                      <p className="text-gray-600 dark:text-gray-300">Calculez vos marges et prix de vente optimaux</p>
+                    <div className="min-w-0">
+                      <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white truncate">Calcul de Bénéfices</h2>
+                      <p className="text-xs sm:text-sm md:text-base text-gray-600 dark:text-gray-300 truncate">Calculez vos marges et prix de vente optimaux</p>
                     </div>
                   </div>
                   <ProfitCalculator />
