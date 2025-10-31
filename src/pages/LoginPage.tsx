@@ -231,7 +231,9 @@ const LoginPage: React.FC = () => {
                 
                 <div className="text-center">
                   <p className="text-gray-600 dark:text-gray-300">
-                    Nouveau sur notre plateforme?{" "}
+                    Nouveau sur  plateforme?{" "}
+                  </p>
+                  <p>
                     <Link 
                       to="/register" 
                       className="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 font-semibold hover:underline transition-colors"
