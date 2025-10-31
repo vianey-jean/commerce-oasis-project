@@ -33,6 +33,12 @@ const PretFamilles: React.FC = () => {
   const [remboursementIndexToDelete, setRemboursementIndexToDelete] = useState<number>(-1);
   const [selectedPretToDelete, setSelectedPretToDelete] = useState<PretFamille | null>(null);
   const [deletePretDialogOpen, setDeletePretDialogOpen] = useState(false);
+  const [editPretDialogOpen, setEditPretDialogOpen] = useState(false);
+  const [selectedPretIndex, setSelectedPretIndex] = useState<number>(-1);
+  const [editMontantPret, setEditMontantPret] = useState('');
+  const [editDatePret, setEditDatePret] = useState<Date>(new Date());
+  const [confirmDeletePretDialogOpen, setConfirmDeletePretDialogOpen] = useState(false);
+  const [pretIndexToDelete, setPretIndexToDelete] = useState<number>(-1);
   const [searchText, setSearchText] = useState('');
   const [searchResults, setSearchResults] = useState<PretFamille[]>([]);
   const [selectedPret, setSelectedPret] = useState<PretFamille | null>(null);
@@ -55,10 +61,11 @@ const PretFamilles: React.FC = () => {
       try {
         setLoading(true);
         const data = await pretFamilleService.getPretFamilles();
-        // Initialiser remboursements si non présent
+        // Initialiser remboursements et prets si non présent
         const pretsWithRemboursements = data.map(pret => ({
           ...pret,
-          remboursements: pret.remboursements || []
+          remboursements: pret.remboursements || [],
+          prets: pret.prets || []
         }));
         setPrets(pretsWithRemboursements);
       } catch (error) {
@@ -83,7 +90,8 @@ const PretFamilles: React.FC = () => {
         console.log('📡 Mise à jour temps réel des prêts familles:', data.pretFamilles);
         const pretsWithRemboursements = data.pretFamilles.map((pret: PretFamille) => ({
           ...pret,
-          remboursements: pret.remboursements || []
+          remboursements: pret.remboursements || [],
+          prets: pret.prets || []
         }));
         setPrets(pretsWithRemboursements);
         
@@ -214,7 +222,8 @@ const PretFamilles: React.FC = () => {
       const updatedPrets = await pretFamilleService.getPretFamilles();
       const pretsWithRemboursements = updatedPrets.map(pret => ({
         ...pret,
-        remboursements: pret.remboursements || []
+        remboursements: pret.remboursements || [],
+        prets: pret.prets || []
       }));
       setPrets(pretsWithRemboursements);
       toast({ title: 'Succès', description: 'Remboursement enregistré', variant: 'default', className: 'notification-success' });
@@ -271,11 +280,18 @@ const PretFamilles: React.FC = () => {
       // Si une famille existante a été sélectionnée, on ajoute au prêt existant
       if (selectedFamilleForPret) {
         const nouveauMontant = parseFloat(nouvPretTotal);
+        const pretsActuels = selectedFamilleForPret.prets || [];
+        const nouveauPret = {
+          date: dateAujourdhui,
+          montant: nouveauMontant
+        };
+        
         const updatedPret: PretFamille = {
           ...selectedFamilleForPret,
           pretTotal: selectedFamilleForPret.pretTotal + nouveauMontant,
           soldeRestant: selectedFamilleForPret.soldeRestant + nouveauMontant,
-          dateRemboursement: dateAujourdhui
+          dateRemboursement: dateAujourdhui,
+          prets: [...pretsActuels, nouveauPret]
         };
         await pretFamilleService.updatePretFamille(selectedFamilleForPret.id, updatedPret);
         toast({ title: 'Succès', description: `Prêt de ${nouveauMontant}€ ajouté à ${selectedFamilleForPret.nom}`, variant: 'default', className: 'notification-success' });
@@ -287,7 +303,11 @@ const PretFamilles: React.FC = () => {
           soldeRestant: parseFloat(nouvPretTotal),
           dernierRemboursement: 0,
           dateRemboursement: dateAujourdhui,
-          remboursements: []
+          remboursements: [],
+          prets: [{
+            date: dateAujourdhui,
+            montant: parseFloat(nouvPretTotal)
+          }]
         };
         await pretFamilleService.addPretFamille(newPret);
         toast({ title: 'Succès', description: 'Nouveau prêt créé', variant: 'default', className: 'notification-success' });
@@ -296,7 +316,8 @@ const PretFamilles: React.FC = () => {
       const updatedPrets = await pretFamilleService.getPretFamilles();
       const pretsWithRemboursements = updatedPrets.map(pret => ({
         ...pret,
-        remboursements: pret.remboursements || []
+        remboursements: pret.remboursements || [],
+        prets: pret.prets || []
       }));
       setPrets(pretsWithRemboursements);
       setNouvNom('');
@@ -369,7 +390,8 @@ const PretFamilles: React.FC = () => {
       const updatedPrets = await pretFamilleService.getPretFamilles();
       const pretsWithRemboursements = updatedPrets.map(pret => ({
         ...pret,
-        remboursements: pret.remboursements || []
+        remboursements: pret.remboursements || [],
+        prets: pret.prets || []
       }));
       setPrets(pretsWithRemboursements);
       
@@ -440,7 +462,8 @@ const PretFamilles: React.FC = () => {
       const updatedPrets = await pretFamilleService.getPretFamilles();
       const pretsWithRemboursements = updatedPrets.map(pret => ({
         ...pret,
-        remboursements: pret.remboursements || []
+        remboursements: pret.remboursements || [],
+        prets: pret.prets || []
       }));
       setPrets(pretsWithRemboursements);
       
@@ -486,7 +509,8 @@ const PretFamilles: React.FC = () => {
       const updatedPrets = await pretFamilleService.getPretFamilles();
       const pretsWithRemboursements = updatedPrets.map(pret => ({
         ...pret,
-        remboursements: pret.remboursements || []
+        remboursements: pret.remboursements || [],
+        prets: pret.prets || []
       }));
       setPrets(pretsWithRemboursements);
       
@@ -505,6 +529,152 @@ const PretFamilles: React.FC = () => {
         setDetailDialogOpen(false);
         setSelectedPretForDetail(null);
       }
+    } catch (error) {
+      console.error('Erreur lors de la suppression du prêt', error);
+      toast({ 
+        title: 'Erreur', 
+        description: 'Impossible de supprimer le prêt', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Ouvrir le dialogue pour modifier un prêt de l'historique
+  const openEditPretDialog = (pretIndex: number) => {
+    if (!selectedPretForDetail) return;
+    
+    setSelectedPretIndex(pretIndex);
+    const pret = selectedPretForDetail.prets?.[pretIndex];
+    if (pret) {
+      setEditMontantPret(pret.montant.toString());
+      setEditDatePret(new Date(pret.date));
+    }
+    setEditPretDialogOpen(true);
+  };
+
+  // Modifier un prêt de l'historique
+  const handleEditPret = async () => {
+    if (!selectedPretForDetail || selectedPretIndex < 0) return;
+    if (!editMontantPret || parseFloat(editMontantPret) <= 0) {
+      toast({ title: 'Erreur', description: 'Veuillez saisir un montant valide', variant: 'destructive' });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const nouveauMontant = parseFloat(editMontantPret);
+      const prets = [...(selectedPretForDetail.prets || [])];
+      
+      // Récupérer l'ancien montant
+      const ancienMontant = prets[selectedPretIndex].montant;
+      
+      // Calculer la différence
+      const difference = nouveauMontant - ancienMontant;
+      
+      // Mettre à jour le montant et la date du prêt spécifique
+      prets[selectedPretIndex] = {
+        montant: nouveauMontant,
+        date: format(editDatePret, 'yyyy-MM-dd')
+      };
+      
+      const updatedPret: PretFamille = {
+        ...selectedPretForDetail,
+        pretTotal: selectedPretForDetail.pretTotal + difference,
+        soldeRestant: selectedPretForDetail.soldeRestant + difference,
+        prets: prets
+      };
+      
+      await pretFamilleService.updatePretFamille(selectedPretForDetail.id, updatedPret);
+      const updatedPrets = await pretFamilleService.getPretFamilles();
+      const pretsWithRemboursements = updatedPrets.map(pret => ({
+        ...pret,
+        remboursements: pret.remboursements || [],
+        prets: pret.prets || []
+      }));
+      setPrets(pretsWithRemboursements);
+      
+      // Mettre à jour le prêt sélectionné pour les détails
+      const updatedSelectedPret = pretsWithRemboursements.find(p => p.id === selectedPretForDetail.id);
+      if (updatedSelectedPret) {
+        setSelectedPretForDetail(updatedSelectedPret);
+      }
+      
+      toast({ 
+        title: 'Succès', 
+        description: 'Prêt modifié avec succès', 
+        variant: 'default',
+        className: 'notification-success'
+      });
+      
+      setEditPretDialogOpen(false);
+      setEditMontantPret('');
+      setEditDatePret(new Date());
+      setSelectedPretIndex(-1);
+    } catch (error) {
+      console.error('Erreur lors de la modification du prêt', error);
+      toast({ 
+        title: 'Erreur', 
+        description: 'Impossible de modifier le prêt', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Ouvrir le dialogue de confirmation de suppression d'un prêt
+  const openDeletePretFromHistoryDialog = (pretIndex: number) => {
+    setPretIndexToDelete(pretIndex);
+    setConfirmDeletePretDialogOpen(true);
+  };
+
+  // Supprimer un prêt de l'historique
+  const handleDeletePretFromHistory = async () => {
+    if (!selectedPretForDetail || pretIndexToDelete < 0) return;
+
+    try {
+      setLoading(true);
+      const prets = [...(selectedPretForDetail.prets || [])];
+      
+      // Récupérer le montant à supprimer
+      const montantSuppr = prets[pretIndexToDelete].montant;
+      
+      // Supprimer le prêt de l'historique
+      prets.splice(pretIndexToDelete, 1);
+      
+      const updatedPret: PretFamille = {
+        ...selectedPretForDetail,
+        pretTotal: selectedPretForDetail.pretTotal - montantSuppr,
+        soldeRestant: selectedPretForDetail.soldeRestant - montantSuppr,
+        prets: prets
+      };
+      
+      await pretFamilleService.updatePretFamille(selectedPretForDetail.id, updatedPret);
+      const updatedPrets = await pretFamilleService.getPretFamilles();
+      const pretsWithRemboursements = updatedPrets.map(pret => ({
+        ...pret,
+        remboursements: pret.remboursements || [],
+        prets: pret.prets || []
+      }));
+      setPrets(pretsWithRemboursements);
+      
+      // Mettre à jour le prêt sélectionné pour les détails
+      const updatedSelectedPret = pretsWithRemboursements.find(p => p.id === selectedPretForDetail.id);
+      if (updatedSelectedPret) {
+        setSelectedPretForDetail(updatedSelectedPret);
+      }
+      
+      toast({ 
+        title: 'Succès', 
+        description: `Prêt de ${new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(montantSuppr)} supprimé avec succès`, 
+        variant: 'default',
+        className: 'notification-success'
+      });
+
+      setConfirmDeletePretDialogOpen(false);
+      setPretIndexToDelete(-1);
     } catch (error) {
       console.error('Erreur lors de la suppression du prêt', error);
       toast({ 
@@ -800,51 +970,99 @@ const PretFamilles: React.FC = () => {
                 </div>
               </div>
 
+              {/* Historique des prêts */}
+              <div className="bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-blue-200/50">
+                <h3 className="font-bold text-base sm:text-lg text-gray-800 dark:text-gray-200 mb-3 sm:mb-4">Historique des prêts</h3>
+                {selectedPretForDetail.prets && selectedPretForDetail.prets.length > 0 ? (
+                  <div className="max-h-48 sm:max-h-64 overflow-y-auto space-y-2">
+                    {selectedPretForDetail.prets.map((pret, index) => (
+                      <div 
+                        key={index}
+                        className="flex flex-col xs:flex-row justify-between items-start xs:items-center bg-white/50 dark:bg-gray-800/50 p-2 sm:p-3 rounded-lg group hover:bg-white/70 dark:hover:bg-gray-800/70 transition-all gap-2 xs:gap-0"
+                      >
+                        <div className="flex items-center gap-2">
+                          <CalendarIcon className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                          <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
+                            {pret.date}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 sm:gap-3 ml-auto xs:ml-0">
+                          <span className="font-bold text-blue-600 dark:text-blue-400 text-xs sm:text-base">
+                            {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(pret.montant)}
+                          </span>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 sm:h-8 sm:w-8 hover:bg-blue-100 dark:hover:bg-blue-900/30"
+                              onClick={() => openEditPretDialog(index)}
+                            >
+                              <Edit2 className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 dark:text-blue-400" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 sm:h-8 sm:w-8 hover:bg-red-100 dark:hover:bg-red-900/30"
+                              onClick={() => openDeletePretFromHistoryDialog(index)}
+                            >
+                              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-600 dark:text-red-400" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 dark:text-gray-400 text-center py-4 text-xs sm:text-sm">
+                    Aucun prêt enregistré
+                  </p>
+                )}
+              </div>
+
               {/* Historique des remboursements */}
-              <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-6 rounded-2xl border border-purple-200/50">
-                <h3 className="font-bold text-lg text-gray-800 dark:text-gray-200 mb-4">Historique des remboursements</h3>
+              <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-4 sm:p-6 rounded-xl sm:rounded-2xl border border-purple-200/50">
+                <h3 className="font-bold text-base sm:text-lg text-gray-800 dark:text-gray-200 mb-3 sm:mb-4">Historique des remboursements</h3>
                 {selectedPretForDetail.remboursements && selectedPretForDetail.remboursements.length > 0 ? (
-                  <div className="max-h-64 overflow-y-auto space-y-2">
+                  <div className="max-h-48 sm:max-h-64 overflow-y-auto space-y-2">
                     {selectedPretForDetail.remboursements.map((remboursement, index) => (
                       <div 
                         key={index}
-                        className="flex justify-between items-center bg-white/50 dark:bg-gray-800/50 p-3 rounded-lg group hover:bg-white/70 dark:hover:bg-gray-800/70 transition-all"
+                        className="flex flex-col xs:flex-row justify-between items-start xs:items-center bg-white/50 dark:bg-gray-800/50 p-2 sm:p-3 rounded-lg group hover:bg-white/70 dark:hover:bg-gray-800/70 transition-all gap-2 xs:gap-0"
                       >
                         <div className="flex items-center gap-2">
-                          <CalendarIcon className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          <CalendarIcon className="h-3 w-3 sm:h-4 sm:w-4 text-purple-600 dark:text-purple-400 flex-shrink-0" />
+                          <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
                             {remboursement.date}
                           </span>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                        <div className="flex items-center gap-2 sm:gap-3 ml-auto xs:ml-0">
+                          <span className="font-bold text-emerald-600 dark:text-emerald-400 text-xs sm:text-base">
                             {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }).format(remboursement.montant)}
                           </span>
                           <div className="flex gap-1">
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 hover:bg-blue-100 dark:hover:bg-blue-900/30"
+                              className="h-6 w-6 sm:h-8 sm:w-8 hover:bg-blue-100 dark:hover:bg-blue-900/30"
                               onClick={() => openEditRemboursementDialog(index)}
                             >
-                              <Edit2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                              <Edit2 className="h-3 w-3 sm:h-4 sm:w-4 text-blue-600 dark:text-blue-400" />
                             </Button>
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 hover:bg-red-100 dark:hover:bg-red-900/30"
+                              className="h-6 w-6 sm:h-8 sm:w-8 hover:bg-red-100 dark:hover:bg-red-900/30"
                               onClick={() => openDeleteRemboursementDialog(index)}
                             >
-                              <Trash2 className="h-4 w-4 text-red-600 dark:text-red-400" />
+                              <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 text-red-600 dark:text-red-400" />
                             </Button>
                           </div>
-
                         </div>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500 dark:text-gray-400 text-center py-4">
+                  <p className="text-gray-500 dark:text-gray-400 text-center py-4 text-xs sm:text-sm">
                     Aucun remboursement enregistré
                   </p>
                 )}
@@ -1084,6 +1302,97 @@ const PretFamilles: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog pour modifier un prêt de l'historique */}
+      <Dialog open={editPretDialogOpen} onOpenChange={setEditPretDialogOpen}>
+        <DialogContent className="sm:max-w-[95vw] md:max-w-[500px] bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 border border-white/20 shadow-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl">
+              <div className="bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full p-2">
+                <Edit2 className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+              </div>
+              Modifier le prêt
+            </DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-4 sm:gap-6 py-4 sm:py-6">
+            <div className="grid gap-3">
+              <Label htmlFor="editMontantPret" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Montant du prêt
+              </Label>
+              <div className="relative">
+                <DollarSign className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-blue-500" />
+                <Input 
+                  id="editMontantPret" 
+                  type="number" 
+                  value={editMontantPret} 
+                  onChange={(e) => setEditMontantPret(e.target.value)}
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                  className="pl-10 sm:pl-12 bg-white/50 backdrop-blur-sm border border-gray-200/50 rounded-xl px-3 sm:px-4 py-2 sm:py-3 focus:ring-2 focus:ring-blue-500/20 transition-all duration-200 text-sm sm:text-base"
+                />
+              </div>
+            </div>
+            
+            <div className="grid gap-3">
+              <Label htmlFor="editDatePret" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Date du prêt
+              </Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "justify-start text-left font-normal bg-white/50 backdrop-blur-sm border border-gray-200/50 rounded-xl px-3 sm:px-4 py-2 sm:py-3 hover:bg-white/70 text-sm sm:text-base",
+                      !editDatePret && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {editDatePret ? format(editDatePret, 'dd MMMM yyyy', { locale: fr }) : <span>Choisir une date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={editDatePret}
+                    onSelect={(date) => date && setEditDatePret(date)}
+                    initialFocus
+                    locale={fr}
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+            
+            <Button 
+              onClick={handleEditPret} 
+              disabled={loading || !editMontantPret || parseFloat(editMontantPret) <= 0}
+              className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white font-semibold py-2 sm:py-3 px-4 sm:px-6 rounded-xl transition-all duration-300 hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 text-sm sm:text-base"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin mr-2" />
+                  Traitement...
+                </>
+              ) : (
+                <>
+                  <Edit2 className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
+                  Modifier le prêt
+                </>
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog de confirmation de suppression d'un prêt de l'historique */}
+      <ConfirmDeleteDialog
+        isOpen={confirmDeletePretDialogOpen}
+        onClose={() => setConfirmDeletePretDialogOpen(false)}
+        onConfirm={handleDeletePretFromHistory}
+        title="Supprimer le prêt"
+        description="Êtes-vous sûr de vouloir supprimer ce prêt de l'historique ? Cette action est irréversible et ajustera automatiquement le montant total du prêt."
+        isSubmitting={loading}
+      />
       
       {/* Formulaire de demande de prêt */}
       <Dialog open={demandePretDialogOpen} onOpenChange={setDemandePretDialogOpen}>
