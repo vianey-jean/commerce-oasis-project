@@ -45,6 +45,7 @@ const PretFamilles: React.FC = () => {
   const [selectedPretForDetail, setSelectedPretForDetail] = useState<PretFamille | null>(null);
   const [selectedRemboursementIndex, setSelectedRemboursementIndex] = useState<number>(-1);
   const [editMontantRemboursement, setEditMontantRemboursement] = useState('');
+  const [editDateRemboursement, setEditDateRemboursement] = useState<Date>(new Date());
   const [montantRemboursement, setMontantRemboursement] = useState('');
   const [montantRemboursementError, setMontantRemboursementError] = useState('');
   const [editMontantError, setEditMontantError] = useState('');
@@ -341,6 +342,7 @@ const PretFamilles: React.FC = () => {
     const remboursement = selectedPretForDetail.remboursements?.[remboursementIndex];
     if (remboursement) {
       setEditMontantRemboursement(remboursement.montant.toString());
+      setEditDateRemboursement(new Date(remboursement.date));
     }
     setEditMontantError('');
     setEditRemboursementDialogOpen(true);
@@ -373,10 +375,11 @@ const PretFamilles: React.FC = () => {
       // Si différence négative (augmentation du remboursement), on diminue le reste à payer
       const nouveauResteAPayer = selectedPretForDetail.soldeRestant + difference;
       
-      // 4. Mettre à jour le montant du remboursement spécifique
+      // 4. Mettre à jour le montant et la date du remboursement spécifique
       remboursements[selectedRemboursementIndex] = {
         ...remboursements[selectedRemboursementIndex],
-        montant: nouveauMontant
+        montant: nouveauMontant,
+        date: format(editDateRemboursement, 'yyyy-MM-dd')
       };
       
       const updatedPret: PretFamille = {
@@ -410,6 +413,7 @@ const PretFamilles: React.FC = () => {
       
       setEditRemboursementDialogOpen(false);
       setEditMontantRemboursement('');
+      setEditDateRemboursement(new Date());
       setEditMontantError('');
       setSelectedRemboursementIndex(-1);
     } catch (error) {
@@ -1237,6 +1241,35 @@ const PretFamilles: React.FC = () => {
                   {editMontantError}
                 </p>
               )}
+            </div>
+
+            <div className="grid gap-3">
+              <Label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                Date du remboursement
+              </Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "w-full justify-start text-left font-normal bg-white/50 backdrop-blur-sm border border-gray-200/50 rounded-xl px-4 py-3 hover:bg-white/80 transition-all duration-200",
+                      !editDateRemboursement && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {editDateRemboursement ? format(editDateRemboursement, 'PPP', { locale: fr }) : <span>Sélectionner une date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={editDateRemboursement}
+                    onSelect={(date) => setEditDateRemboursement(date || new Date())}
+                    initialFocus
+                    locale={fr}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
             
             {selectedPretForDetail && selectedRemboursementIndex >= 0 && (
