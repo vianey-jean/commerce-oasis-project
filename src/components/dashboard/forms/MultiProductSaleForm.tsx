@@ -13,6 +13,7 @@ import SaleQuantityInput from './SaleQuantityInput';
 import ClientSearchInput from '../ClientSearchInput';
 import { calculateSaleProfit } from './utils/saleCalculations';
 import ConfirmDeleteDialog from './ConfirmDeleteDialog';
+import AdvancePaymentModal from './AdvancePaymentModal';
 import axios from 'axios';
 
 interface MultiProductSaleFormProps {
@@ -31,6 +32,8 @@ interface FormProduct {
   selectedProduct: Product | null;
   maxQuantity: number;
   isAdvanceProduct: boolean;
+  deliveryLocation: string;
+  deliveryFee: string;
 }
 
 const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onClose, editSale }) => {
@@ -50,7 +53,9 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
     profit: '',
     selectedProduct: null,
     maxQuantity: 0,
-    isAdvanceProduct: false
+    isAdvanceProduct: false,
+    deliveryLocation: 'Saint-Denis',
+    deliveryFee: '0'
   }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -61,6 +66,10 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
   const [avancePrice, setAvancePrice] = useState('');
   const [reste, setReste] = useState('');
   const [nextPaymentDate, setNextPaymentDate] = useState('');
+  
+  // États pour la modale de paiement d'avance sur prêts existants
+  const [advancePaymentModalOpen, setAdvancePaymentModalOpen] = useState(false);
+  const [currentAdvanceProductIndex, setCurrentAdvanceProductIndex] = useState<number | null>(null);
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:10000';
 
@@ -125,7 +134,9 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
                 profit: saleProduct.profit.toString(),
                 selectedProduct: product || null,
                 maxQuantity: product ? (product.quantity || 0) + saleProduct.quantitySold : 0,
-                isAdvanceProduct: isAdvance
+                isAdvanceProduct: isAdvance,
+                deliveryLocation: saleProduct.deliveryLocation || 'Saint-Denis',
+                deliveryFee: (saleProduct.deliveryFee || 0).toString()
               };
             });
             setFormProducts(loadedProducts);
@@ -145,7 +156,9 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
             profit: '',
             selectedProduct: null,
             maxQuantity: 0,
-            isAdvanceProduct: false
+            isAdvanceProduct: false,
+            deliveryLocation: 'Saint-Denis',
+            deliveryFee: '0'
           }]);
           // Réinitialiser les champs avance
           setShowAdvanceSection(false);
@@ -182,7 +195,9 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
       profit: '',
       selectedProduct: null,
       maxQuantity: 0,
-      isAdvanceProduct: false
+      isAdvanceProduct: false,
+      deliveryLocation: 'Saint-Denis',
+      deliveryFee: '0'
     }]);
   };
 
@@ -231,6 +246,7 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
         title: "Erreur",
         description: "Une erreur est survenue lors de la suppression",
         variant: "destructive",
+         className: "notification-erreur",
       });
     } finally {
       setIsSubmitting(false);
@@ -245,6 +261,36 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
     const productQuantity = product.quantity !== undefined ? product.quantity : 0;
     const purchasePriceUnit = product.purchasePrice;
     const suggestedSellingPrice = isAdvance ? '' : (product.purchasePrice * 1.2).toFixed(2);
+
+    // Vérifier si c'est "Avance Perruque ou Tissages"
+    const isAdvancePerruqueOuTissages = product.description.toLowerCase().includes('avance') && 
+                                         (product.description.toLowerCase().includes('perruque') || 
+                                          product.description.toLowerCase().includes('tissage'));
+
+    if (isAdvancePerruqueOuTissages) {
+      // Ouvrir la modale pour sélectionner les prêts existants
+      setCurrentAdvanceProductIndex(index);
+      setAdvancePaymentModalOpen(true);
+      
+      // Préremplir les données de base du produit
+      setFormProducts(prev => {
+        const newProducts = [...prev];
+        newProducts[index] = {
+          ...newProducts[index],
+          productId: String(product.id),
+          description: product.description,
+          selectedProduct: product,
+          maxQuantity: productQuantity,
+          isAdvanceProduct: true,
+          purchasePriceUnit: purchasePriceUnit.toString(),
+          sellingPriceUnit: '', // Sera rempli après la modale
+          quantitySold: '0',
+          profit: '0',
+        };
+        return newProducts;
+      });
+      return;
+    }
 
     setFormProducts(prev => {
       const newProducts = [...prev];
@@ -275,6 +321,27 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
       
       return newProducts;
     });
+  };
+
+  // Gérer la confirmation de la modale d'avance sur prêts existants
+  const handleAdvancePaymentConfirm = (totalAdvance: number) => {
+    if (currentAdvanceProductIndex !== null) {
+      setFormProducts(prev => {
+        const newProducts = [...prev];
+        newProducts[currentAdvanceProductIndex] = {
+          ...newProducts[currentAdvanceProductIndex],
+          sellingPriceUnit: totalAdvance.toString(),
+          profit: '0', // Les avances n'ont pas de bénéfice
+        };
+        return newProducts;
+      });
+      
+      setCurrentAdvanceProductIndex(null);
+      toast({
+        title: 'Succès',
+        description: `Avance de ${totalAdvance.toLocaleString('fr-FR')} € ajoutée au produit`,
+      });
+    }
   };
 
   // Mise à jour du profit
@@ -371,6 +438,7 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
       const quantity = product.isAdvanceProduct ? 0 : Number(product.quantitySold || 0);
       const purchasePriceUnit = Number(product.purchasePriceUnit || 0);
       const sellingPriceUnit = Number(product.sellingPriceUnit || 0);
+      const deliveryFee = Number(product.deliveryFee || 0);
       
       let purchasePrice, sellingPrice;
       
@@ -384,10 +452,11 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
       
       return {
         totalPurchasePrice: totals.totalPurchasePrice + purchasePrice,
-        totalSellingPrice: totals.totalSellingPrice + sellingPrice,
-        totalProfit: totals.totalProfit + Number(product.profit || 0)
+        totalSellingPrice: totals.totalSellingPrice + sellingPrice + deliveryFee,
+        totalProfit: totals.totalProfit + Number(product.profit || 0),
+        totalDeliveryFee: totals.totalDeliveryFee + deliveryFee
       };
-    }, { totalPurchasePrice: 0, totalSellingPrice: 0, totalProfit: 0 });
+    }, { totalPurchasePrice: 0, totalSellingPrice: 0, totalProfit: 0, totalDeliveryFee: 0 });
   };
 
   // Calculer automatiquement le reste quand l'avance change
@@ -408,7 +477,7 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
       toast({
         title: "Erreur",
         description: "Veuillez ajouter au moins un produit avec un prix de vente.",
-        variant: "destructive",
+        variant: "destructive", className: "notification-erreur",
       });
       return;
     }
@@ -426,6 +495,7 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
         const quantity = product.isAdvanceProduct ? 0 : Number(product.quantitySold);
         const purchasePriceUnit = Number(product.purchasePriceUnit);
         const sellingPriceUnit = Number(product.sellingPriceUnit);
+        const deliveryFee = Number(product.deliveryFee || 0);
         
         let purchasePrice, sellingPrice;
         
@@ -443,7 +513,9 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
           quantitySold: quantity,
           purchasePrice: purchasePrice,
           sellingPrice: sellingPrice,
-          profit: Number(product.profit)
+          profit: Number(product.profit),
+          deliveryFee: deliveryFee,
+          deliveryLocation: product.deliveryLocation
         };
       });
 
@@ -460,6 +532,7 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
         totalPurchasePrice: totals.totalPurchasePrice,
         totalSellingPrice: finalSellingPrice,
         totalProfit: totals.totalProfit,
+        totalDeliveryFee: totals.totalDeliveryFee,
         clientName: clientName || null,
         clientAddress: clientAddress || null,
         clientPhone: clientPhone || null,
@@ -579,7 +652,7 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
       toast({
         title: "Erreur",
         description: "Une erreur est survenue lors de l'enregistrement",
-        variant: "destructive",
+        variant: "destructive", className: "notification-erreur",
       });
     } finally {
       setIsSubmitting(false);
@@ -751,8 +824,82 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
                     showAvailableStock={!product.isAdvanceProduct}
                   />
 
+                  {/* Frais de livraison */}
+                  <div className="space-y-2 col-span-2">
+                    <Label>Frais de livraison</Label>
+                    <select
+                      value={product.deliveryLocation}
+                      onChange={(e) => {
+                        const location = e.target.value;
+                        let fee = '0';
+                        
+                        if (['Saint-Suzanne', 'Sainte-Marie', 'Saint-Denis', 'La Possession', 'Le Port', 'Saint-Paul'].includes(location)) {
+                          fee = '0';
+                        } else if (['Saint-André', 'Saint-Benoît', 'Saint-Leu'].includes(location)) {
+                          fee = '10';
+                        } else if (['Saint-Louis', 'Saint-Pierre', 'Le Tampon', 'Saint-Joseph'].includes(location)) {
+                          fee = '20';
+                        } else if (location === 'Exonération') {
+                          fee = '0';
+                        }
+                        
+                        setFormProducts(prev => {
+                          const newProducts = [...prev];
+                          newProducts[index] = {
+                            ...newProducts[index],
+                            deliveryLocation: location,
+                            deliveryFee: fee
+                          };
+                          return newProducts;
+                        });
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      disabled={isSubmitting}
+                    >
+                      <option value="Saint-Suzanne">Saint-Suzanne: gratuit</option>
+                      <option value="Sainte-Marie">Sainte-Marie: gratuit</option>
+                      <option value="Saint-Denis">Saint-Denis: gratuit</option>
+                      <option value="La Possession">La Possession: gratuit</option>
+                      <option value="Le Port">Le Port: gratuit</option>
+                      <option value="Saint-Paul">Saint-Paul: gratuit</option>
+                      <option value="Saint-André">Saint-André: 10€</option>
+                      <option value="Saint-Benoît">Saint-Benoît: 10€</option>
+                      <option value="Saint-Leu">Saint-Leu: 10€</option>
+                      <option value="Saint-Louis">Saint-Louis: 20€</option>
+                      <option value="Saint-Pierre">Saint-Pierre: 20€</option>
+                      <option value="Le Tampon">Le Tampon: 20€</option>
+                      <option value="Saint-Joseph">Saint-Joseph: 20€</option>
+                      <option value="Autres">Autres: montant personnalisé</option>
+                      <option value="Exonération">Exonération: 0€</option>
+                    </select>
+                    {product.deliveryLocation === 'Autres' && (
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={product.deliveryFee}
+                        onChange={(e) => {
+                          setFormProducts(prev => {
+                            const newProducts = [...prev];
+                            newProducts[index] = {
+                              ...newProducts[index],
+                              deliveryFee: e.target.value
+                            };
+                            return newProducts;
+                          });
+                        }}
+                        placeholder="Montant personnalisé"
+                        className="mt-2"
+                        disabled={isSubmitting}
+                      />
+                    )}
+                    <p className="text-sm text-gray-500">
+                      Frais: {Number(product.deliveryFee).toFixed(2)} €
+                    </p>
+                  </div>
+
                   {/* Bénéfice */}
-                  <div className="space-y-2">
+                  <div className="space-y-2 col-span-2">
                     <Label>Bénéfice (€)</Label>
                     <Input
                       type="number"
@@ -798,13 +945,21 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-3 gap-4 text-center">
+              <div className="grid grid-cols-4 gap-4 text-center">
                 <div>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     Prix d'achat total
                   </p>
                   <p className="text-lg font-bold text-gray-800 dark:text-gray-200">
                     {totals.totalPurchasePrice.toFixed(2)} €
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Frais de livraison
+                  </p>
+                  <p className="text-lg font-bold text-blue-600">
+                    {totals.totalDeliveryFee.toFixed(2)} €
                   </p>
                 </div>
                 <div>
@@ -953,6 +1108,16 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
       </DialogFooter>
     </form>
   </DialogContent>
+
+  {/* Modale de paiement d'avance sur prêts existants */}
+  <AdvancePaymentModal
+    isOpen={advancePaymentModalOpen}
+    onClose={() => {
+      setAdvancePaymentModalOpen(false);
+      setCurrentAdvanceProductIndex(null);
+    }}
+    onConfirm={handleAdvancePaymentConfirm}
+  />
 
   {/* Dialog de confirmation de suppression */}
   <ConfirmDeleteDialog

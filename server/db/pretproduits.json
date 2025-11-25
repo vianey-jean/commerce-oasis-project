@@ -91,8 +91,8 @@
     "description": "Perruque bouclé marron 22 pouces",
     "nom": "Cliente Ma warren Chaudron",
     "prixVente": 160,
-    "avanceRecue": 120,
-    "reste": 40,
+    "avanceRecue": 150,
+    "reste": 10,
     "estPaye": false,
     "productId": "1745415790700",
     "paiements": [
@@ -103,6 +103,10 @@
       {
         "date": "2025-11-07",
         "montant": 20
+      },
+      {
+        "date": "2025-11-23",
+        "montant": 30
       }
     ]
   },
@@ -285,9 +289,19 @@
     "nom": "Cya Météo",
     "phone": "+262 692 345 678",
     "prixVente": 160,
-    "avanceRecue": 70,
-    "reste": 90,
-    "estPaye": false
+    "avanceRecue": 160,
+    "reste": 0,
+    "estPaye": true,
+    "paiements": [
+      {
+        "date": "2025-10-20",
+        "montant": 70
+      },
+      {
+        "date": "2025-11-12",
+        "montant": 90
+      }
+    ]
   },
   {
     "id": "20",
@@ -297,13 +311,17 @@
     "nom": "Copine Emilienne Vaubon",
     "phone": "",
     "prixVente": 130,
-    "avanceRecue": 70,
-    "reste": 60,
-    "estPaye": false,
+    "avanceRecue": 130,
+    "reste": 0,
+    "estPaye": true,
     "paiements": [
       {
         "date": "2025-10-21",
         "montant": 70
+      },
+      {
+        "date": "2025-11-18",
+        "montant": 60
       }
     ]
   },
@@ -319,6 +337,20 @@
     "reste": 110,
     "estPaye": false,
     "productId": "1762441427899",
+    "paiements": []
+  },
+  {
+    "id": "22",
+    "date": "2025-02-07",
+    "datePaiement": "2025-12-06",
+    "description": "Perruque bouclé noir bandeau 20 pouces",
+    "nom": "Cliente Naomie Vaubon",
+    "phone": "",
+    "prixVente": 130,
+    "avanceRecue": 0,
+    "reste": 130,
+    "estPaye": false,
+    "productId": "1747071198367",
     "paiements": []
   }
 ]

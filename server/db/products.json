@@ -21,7 +21,7 @@
     "id": "5",
     "description": "Tissages bouclé noir 20 pouces 12 A",
     "purchasePrice": 14.91,
-    "quantity": 5
+    "quantity": 3
   },
   {
     "id": "6",
@@ -339,7 +339,7 @@
     "id": "1749141142855",
     "description": "Perruque bouclé marron et noir court 8 pouces",
     "purchasePrice": 16.92,
-    "quantity": 1
+    "quantity": 0
   },
   {
     "id": "1749141425560",
@@ -477,7 +477,7 @@
     "id": "1752297246613",
     "description": "Tissages bouclé mèche blonde miel 20 pouces",
     "purchasePrice": 18.75,
-    "quantity": 3
+    "quantity": 1
   },
   {
     "id": "1752675976940",
@@ -495,7 +495,7 @@
     "id": "1753186907720",
     "description": "Tissages bouclé noir 16 poucess",
     "purchasePrice": 11.02,
-    "quantity": 2
+    "quantity": 0
   },
   {
     "id": "1753187017537",
@@ -519,7 +519,7 @@
     "id": "1753356496899",
     "description": "Tissages bouclé blonde miel 16 pouces",
     "purchasePrice": 10.9,
-    "quantity": 1
+    "quantity": 0
   },
   {
     "id": "1753356640667",

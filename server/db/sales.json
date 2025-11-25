@@ -1925,7 +1925,9 @@
         "quantitySold": 3,
         "purchasePrice": 58.38,
         "sellingPrice": 170.01,
-        "profit": 111.63
+        "profit": 111.63,
+        "deliveryFee": 0,
+        "deliveryLocation": "Le Port"
       }
     ],
     "totalPurchasePrice": 58.38,
@@ -1933,7 +1935,9 @@
     "totalProfit": 111.63,
     "clientName": "Analia Adrien",
     "clientAddress": "2 Allée Viencent d'Indy",
-    "clientPhone": "0692226220"
+    "clientPhone": "0692226220",
+    "reste": 0,
+    "nextPaymentDate": null
   },
   {
     "id": "1762013160570",
@@ -1965,7 +1969,9 @@
         "quantitySold": 1,
         "purchasePrice": 42.24,
         "sellingPrice": 170,
-        "profit": 127.76
+        "profit": 127.76,
+        "deliveryFee": 0,
+        "deliveryLocation": "Autres"
       }
     ],
     "totalPurchasePrice": 42.24,
@@ -1973,7 +1979,9 @@
     "totalProfit": 127.76,
     "clientName": "Vina Tiven",
     "clientAddress": "Gifi saint André",
-    "clientPhone": "0693 861544"
+    "clientPhone": "0693 861544",
+    "reste": 0,
+    "nextPaymentDate": null
   },
   {
     "id": "1762354924080",
@@ -2005,7 +2013,9 @@
         "quantitySold": 1,
         "purchasePrice": 84.4,
         "sellingPrice": 170,
-        "profit": 85.6
+        "profit": 85.6,
+        "deliveryFee": 0,
+        "deliveryLocation": "Le Port"
       }
     ],
     "totalPurchasePrice": 84.4,
@@ -2013,7 +2023,9 @@
     "totalProfit": 85.6,
     "clientName": "Naellyah Bgd",
     "clientAddress": "La banque postale le port",
-    "clientPhone": "0692509767"
+    "clientPhone": "0692509767",
+    "reste": 0,
+    "nextPaymentDate": null
   },
   {
     "id": "1762441289913",
@@ -2072,13 +2084,15 @@
         "description": "Perruque bouclé blonde miel 18 pouces",
         "quantitySold": 1,
         "purchasePrice": 38.6,
-        "sellingPrice": 110,
-        "profit": 71.4
+        "sellingPrice": 100,
+        "profit": 61.4,
+        "deliveryFee": 10,
+        "deliveryLocation": "Saint-André"
       }
     ],
     "totalPurchasePrice": 38.6,
     "totalSellingPrice": 110,
-    "totalProfit": 71.4,
+    "totalProfit": 61.4,
     "clientName": "Vina Tiven",
     "clientAddress": "Gifi saint André",
     "clientPhone": "0693 861544",
@@ -2205,7 +2219,9 @@
         "quantitySold": 1,
         "purchasePrice": 67.43,
         "sellingPrice": 150,
-        "profit": 82.57
+        "profit": 82.57,
+        "deliveryFee": 0,
+        "deliveryLocation": "Autres"
       }
     ],
     "totalPurchasePrice": 67.43,
@@ -2214,6 +2230,194 @@
     "clientName": "Enna Mayl",
     "clientAddress": "43 rue Eugene Dayot Sainbt André",
     "clientPhone": "0693484601",
+    "reste": 0,
+    "nextPaymentDate": null
+  },
+  {
+    "id": "1762957076343",
+    "date": "2025-11-12",
+    "products": [
+      {
+        "productId": "1746811570529",
+        "description": "Avance Perruque ou Tissages",
+        "quantitySold": 0,
+        "purchasePrice": 0,
+        "sellingPrice": 90,
+        "profit": 0
+      }
+    ],
+    "totalPurchasePrice": 0,
+    "totalSellingPrice": 90,
+    "totalProfit": 0,
+    "clientName": "Cya Bea",
+    "clientAddress": "A coté météo Caudron saint-denis",
+    "clientPhone": "0693535338",
+    "reste": 0,
+    "nextPaymentDate": null
+  },
+  {
+    "id": "1763048856683",
+    "date": "2025-11-13",
+    "products": [
+      {
+        "productId": "1753356496899",
+        "description": "Tissages bouclé blonde miel 16 pouces",
+        "quantitySold": 2,
+        "purchasePrice": 21.8,
+        "sellingPrice": 70,
+        "profit": 48.2
+      }
+    ],
+    "totalPurchasePrice": 21.8,
+    "totalSellingPrice": 70,
+    "totalProfit": 48.2,
+    "clientName": "Davina Métissa",
+    "clientAddress": "Devant Atlas",
+    "clientPhone": "0693601522",
+    "reste": 0,
+    "nextPaymentDate": null
+  },
+  {
+    "id": "1763048938194",
+    "date": "2025-11-13",
+    "products": [
+      {
+        "productId": "1746811570529",
+        "description": "Avance Perruque ou Tissages",
+        "quantitySold": 0,
+        "purchasePrice": 0,
+        "sellingPrice": 120,
+        "profit": 0
+      }
+    ],
+    "totalPurchasePrice": 0,
+    "totalSellingPrice": 120,
+    "totalProfit": 0,
+    "clientName": "Toufahat Gharibe Chaibati",
+    "clientAddress": "250D Route Montgaillard, Res Terrass, St Denis",
+    "clientPhone": "0693835958",
+    "reste": 0,
+    "nextPaymentDate": null
+  },
+  {
+    "id": "1763131521251",
+    "date": "2025-11-14",
+    "products": [
+      {
+        "productId": "1753186907720",
+        "description": "Tissages bouclé noir 16 poucess",
+        "quantitySold": 3,
+        "purchasePrice": 33.06,
+        "sellingPrice": 100.02000000000001,
+        "profit": 66.96
+      }
+    ],
+    "totalPurchasePrice": 33.06,
+    "totalSellingPrice": 100.02000000000001,
+    "totalProfit": 66.96,
+    "clientName": "Annah Annah",
+    "clientAddress": "125 Allée des spinelles Bellepierre",
+    "clientPhone": "0693321689",
+    "reste": 0,
+    "nextPaymentDate": null
+  },
+  {
+    "id": "1763310256050",
+    "date": "2025-11-16",
+    "products": [
+      {
+        "productId": "1746811570529",
+        "description": "Avance Perruque ou Tissages",
+        "quantitySold": 0,
+        "purchasePrice": 0,
+        "sellingPrice": 60,
+        "profit": 0
+      }
+    ],
+    "totalPurchasePrice": 0,
+    "totalSellingPrice": 60,
+    "totalProfit": 0,
+    "clientName": "Copine Emilienne",
+    "clientAddress": "Vaubon",
+    "clientPhone": "06",
+    "reste": 0,
+    "nextPaymentDate": null
+  },
+  {
+    "id": "1763861952620",
+    "date": "2025-11-22",
+    "products": [
+      {
+        "productId": "5",
+        "description": "Tissages bouclé noir 20 pouces 12 A",
+        "quantitySold": 2,
+        "purchasePrice": 29.82,
+        "sellingPrice": 110,
+        "profit": 80.18
+      },
+      {
+        "productId": "1752297246613",
+        "description": "Tissages bouclé mèche blonde miel 20 pouces",
+        "quantitySold": 2,
+        "purchasePrice": 37.5,
+        "sellingPrice": 110,
+        "profit": 72.5
+      }
+    ],
+    "totalPurchasePrice": 67.32,
+    "totalSellingPrice": 220,
+    "totalProfit": 152.68,
+    "clientName": "Anfou Pamal",
+    "clientAddress": "79 rue de la gare",
+    "clientPhone": "0693870610",
+    "reste": 0,
+    "nextPaymentDate": null
+  },
+  {
+    "id": "1764070400406",
+    "date": "2025-11-25",
+    "products": [
+      {
+        "productId": "1749141142855",
+        "description": "Perruque bouclé marron et noir court 8 pouces",
+        "quantitySold": 1,
+        "purchasePrice": 16.92,
+        "sellingPrice": 50,
+        "profit": 33.08,
+        "deliveryFee": 10,
+        "deliveryLocation": "Saint-André"
+      }
+    ],
+    "totalPurchasePrice": 16.92,
+    "totalSellingPrice": 60,
+    "totalProfit": 33.08,
+    "clientName": "Clara Miandry",
+    "clientAddress": "La Marie Saint-André",
+    "clientPhone": "0693818716",
+    "reste": 0,
+    "nextPaymentDate": null
+  },
+  {
+    "id": "1764078620957",
+    "date": "2025-11-23",
+    "products": [
+      {
+        "productId": "1746811570529",
+        "description": "Avance Perruque ou Tissages",
+        "quantitySold": 0,
+        "purchasePrice": 0,
+        "sellingPrice": 30,
+        "profit": 0,
+        "deliveryFee": 0,
+        "deliveryLocation": "Saint-Denis"
+      }
+    ],
+    "totalPurchasePrice": 0,
+    "totalSellingPrice": 30,
+    "totalProfit": 0,
+    "clientName": "Ma Warren Chaudron",
+    "clientAddress": "Mail Chaudron",
+    "clientPhone": "0693647609",
     "reste": 0,
     "nextPaymentDate": null
   }

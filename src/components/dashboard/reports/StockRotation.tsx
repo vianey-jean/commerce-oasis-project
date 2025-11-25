@@ -218,24 +218,12 @@ const StockRotation: React.FC = () => {
                   outerRadius={100}
                   paddingAngle={5}
                   dataKey="value"
-                  label={(entry) => `${entry.value}`}
-                  labelLine={false}
                 >
                   {rotationData.categoryData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} stroke={entry.color} strokeWidth={2} />
+                    <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: 'hsl(var(--background))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '12px',
-                    boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
-                  }}
-                  labelStyle={{ color: 'hsl(var(--foreground))' }}
-                  itemStyle={{ color: 'hsl(var(--foreground))' }}
-                  formatter={(value, name) => [`${value} produits`, name]} 
-                />
+                <Tooltip formatter={(value, name) => [`${value} produits`, name]} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -264,31 +252,24 @@ const StockRotation: React.FC = () => {
           <div className="h-64">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={rotationData.products.slice(0, 10)}>
-                <defs>
-                  <linearGradient id="rotationGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
-                    <stop offset="95%" stopColor="#10B981" stopOpacity={0.3}/>
-                  </linearGradient>
-                </defs>
                 <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
                 <XAxis 
                   dataKey="name" 
-                  tick={{ fontSize: 10, fill: 'currentColor' }}
+                  className="text-xs"
+                  tick={{ fontSize: 10 }}
                   interval={0}
                   angle={-45}
                   textAnchor="end"
                   height={60}
                 />
-                <YAxis tick={{ fontSize: 12, fill: 'currentColor' }} />
+                <YAxis className="text-xs" />
                 <Tooltip 
                   contentStyle={{ 
-                    backgroundColor: 'hsl(var(--background))',
-                    border: '1px solid hsl(var(--border))',
+                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                    border: 'none',
                     borderRadius: '12px',
                     boxShadow: '0 10px 25px rgba(0,0,0,0.1)'
                   }}
-                  labelStyle={{ color: 'hsl(var(--foreground))' }}
-                  itemStyle={{ color: 'hsl(var(--foreground))' }}
                   formatter={(value) => [`${(value as number).toFixed(2)}x/an`, 'Rotation']}
                   labelFormatter={(label) => `${(label as string).substring(0, 20)}...`}
                 />
@@ -297,6 +278,12 @@ const StockRotation: React.FC = () => {
                   fill="url(#rotationGradient)"
                   radius={[4, 4, 0, 0]}
                 />
+                <defs>
+                  <linearGradient id="rotationGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
+                    <stop offset="95%" stopColor="#10B981" stopOpacity={0.3}/>
+                  </linearGradient>
+                </defs>
               </BarChart>
             </ResponsiveContainer>
           </div>

@@ -1,4 +1,3 @@
-
 // Résumé :
 // Ce composant React affiche une interface moderne pour générer des factures PDF à partir des ventes historiques.
 // Il permet de filtrer les ventes par année et par nom de client, d'afficher les détails d'une vente sélectionnée,
@@ -66,6 +65,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ isOpen, onClose }) 
         title: 'Erreur',
         description: 'Nom du client manquant.',
         variant: 'destructive',
+         className: "notification-erreur",
       });
       return;
     }
@@ -100,9 +100,14 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ isOpen, onClose }) 
     const rightX = pageWidth - 80;
     const infoY = 65;
     const date = new Date(sale.date);
+
     const invoiceNumber = `${date.getFullYear()}-${sale.id.toString().padStart(3, '0')}`;
+
+    // *** MODIFICATION DEMANDÉE ***
     const dueDate = new Date(date);
-    dueDate.setDate(dueDate.getDate() + 30);
+    dueDate.setFullYear(dueDate.getFullYear() + 1);
+    dueDate.setDate(dueDate.getDate() - 1);
+    // ******************************
 
     doc.setFontSize(11).setTextColor(...darkGray).setFont('helvetica', 'bold');
     doc.text('Riziky Beauté', leftX, infoY);
@@ -124,8 +129,10 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ isOpen, onClose }) 
 
     doc.setFont('helvetica', 'bold');
     doc.text('Échéance :', rightX, infoY + 30);
-    doc.setFont('helvetica', 'normal');
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(0, 128, 0); // vert
     doc.text(dueDate.toLocaleDateString('fr-FR'), rightX + 25, infoY + 30);
+    
 
     // === INFOS CLIENT ===
     const clientY = 120;
@@ -134,14 +141,22 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ isOpen, onClose }) 
     doc.rect(20, clientY, pageWidth - 40, 35, 'S');
 
     doc.setTextColor(...primaryBlue).setFontSize(12).setFont('helvetica', 'bold');
-    doc.text('Expédier à:', 25, clientY + 12);
+    doc.text('Expédier à :', 25, clientY + 12);
 
     doc.setTextColor(...darkGray).setFontSize(11).setFont('helvetica', 'bold');
     doc.text(sale.clientName || '', 25, clientY + 22);
 
     doc.setFont('helvetica', 'normal').setFontSize(10);
     if (sale.clientAddress) doc.text(sale.clientAddress, 25, clientY + 30);
-    if (sale.clientPhone) doc.text(`Tél: ${sale.clientPhone}`, 120, clientY + 30);
+    if (sale.clientPhone) {
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 0, 0); // rouge
+  doc.text(`Tél: ${sale.clientPhone}`, 120, clientY + 30);
+
+  // Réinitialisation des styles pour ne pas affecter la suite
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...darkGray);
+}
 
     // === PRODUITS ===
     const products: SaleProduct[] =
@@ -150,19 +165,21 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ isOpen, onClose }) 
         : [{
             description: sale.description || '',
             quantitySold: sale.quantitySold || 0,
-            sellingPrice: sale.sellingPrice || 0
+            sellingPrice: sale.sellingPrice || 0,
+            deliveryFee: sale.deliveryFee || 0
           } as SaleProduct];
 
     const tableData = products.map(prod => [
       prod.description || '',
       (prod.quantitySold || 0).toString(),
       formatEuro(prod.quantitySold ? (prod.sellingPrice || 0) / prod.quantitySold : 0),
-      formatEuro(prod.sellingPrice || 0)
+      formatEuro(prod.sellingPrice || 0),
+      formatEuro(prod.deliveryFee || 0)
     ]);
 
     autoTable(doc, {
       startY: 170,
-      head: [['DESCRIPTION', 'QTÉ', 'PRIX UNIT.', 'MONTANT EUR']],
+      head: [['DESCRIPTION', 'QTÉ', 'PRIX UNIT.', 'MONTANT EUR', 'FRAIS LIVR.']],
       body: tableData,
       theme: 'grid',
       headStyles: { fillColor: primaryBlue, textColor: 255, fontStyle: 'bold', halign: 'center' },
@@ -170,46 +187,47 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ isOpen, onClose }) 
       alternateRowStyles: { fillColor: [245, 245, 245] },
       styles: { overflow: 'linebreak', cellWidth: 'wrap', halign: 'center' },
       columnStyles: {
-        0: { halign: 'left', cellWidth: 80 }
+        0: { halign: 'left', cellWidth: 60 }
       }
     });
 
     const finalY = (doc as any).lastAutoTable.finalY + 10;
 
-    // Calcul du total correctement typé
-    const totalAmount = products.reduce((sum: number, product: SaleProduct) => sum + (product.sellingPrice || 0), 0);
+    const totalAmount = products.reduce((sum: number, product: SaleProduct) =>
+      sum + (product.sellingPrice || 0), 0);
+    
+    const totalDeliveryFee = products.reduce((sum: number, product: SaleProduct) =>
+      sum + (product.deliveryFee || 0), 0);
 
     // === TOTAUX ===
     const totalsX = pageWidth - 100;
     doc.setFontSize(10).setTextColor(...darkGray);
     doc.text('Sous-total HT:', totalsX - 30, finalY);
     doc.text(formatEuro(totalAmount), totalsX + 15, finalY);
-    doc.text('TVA (0%):', totalsX - 30, finalY + 10);
-    doc.text('0,00 €', totalsX + 15, finalY + 10);
+    doc.text('Frais livraison:', totalsX - 30, finalY + 10);
+    doc.text(formatEuro(totalDeliveryFee), totalsX + 15, finalY + 10);
+    doc.text('TVA (0%):', totalsX - 30, finalY + 20);
+    doc.text('0,00 €', totalsX + 15, finalY + 20);
 
-    doc.setFillColor(...primaryBlue).rect(totalsX - 35, finalY + 15, 75, 12, 'F');
+    doc.setFillColor(...primaryBlue).rect(totalsX - 35, finalY + 25, 75, 12, 'F');
     doc.setTextColor(255, 0, 0).setFontSize(12).setFont('helvetica', 'bold');
-    doc.text('Total TTC:', totalsX - 30, finalY + 23);
-    doc.text(formatEuro(totalAmount), totalsX + 15, finalY + 23);
+    doc.text('Total TTC:', totalsX - 30, finalY + 33);
+    doc.text(formatEuro(totalAmount + totalDeliveryFee), totalsX + 15, finalY + 33);
 
-    // === PIED DE PAGE EN 2 COLONNES ===
+    // === PIED DE PAGE ===
     const footerStartY = pageHeight - 40;
     doc.setDrawColor(...primaryBlue).setLineWidth(1);
     doc.line(20, footerStartY, pageWidth - 20, footerStartY);
 
-    // Colonne gauche
     doc.setTextColor(...darkGray).setFont('helvetica', 'bold').setFontSize(10);
     doc.text('Informations de paiement :', 20, footerStartY + 10);
-
     doc.setFont('helvetica', 'normal').setFontSize(9);
     doc.text(`Date de paiement : ${date.toLocaleDateString('fr-FR')}`, 20, footerStartY + 18);
     doc.text('Mode de paiement : Espèces', 20, footerStartY + 26);
     doc.text('Paiement à réception de facture', 20, footerStartY + 34);
 
-    // Colonne droite
     doc.setFont('helvetica', 'bold').setTextColor(...primaryBlue).setFontSize(10);
     doc.text('Merci de votre confiance !', pageWidth - 20, footerStartY + 10, { align: 'right' });
-
     doc.setFont('helvetica', 'normal').setFontSize(8).setTextColor(120, 120, 120);
     doc.text('Riziky Beauté - Votre partenaire beauté à La Réunion', pageWidth - 20, footerStartY + 18, { align: 'right' });
     doc.text('TVA non applicable - Article 293B du CGI', pageWidth - 20, footerStartY + 26, { align: 'right' });
