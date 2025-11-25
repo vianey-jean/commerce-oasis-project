@@ -16,7 +16,6 @@ export interface Commande {
 
 export interface CommandeProduit {
   nom: string;
-  description: string;
   prixUnitaire: number;
   quantite: number;
   prixVente: number;
