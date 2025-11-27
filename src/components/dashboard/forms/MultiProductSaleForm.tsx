@@ -33,6 +33,7 @@ interface FormProduct {
   selectedProduct: Product | null;
   maxQuantity: number;
   isAdvanceProduct: boolean;
+  isPretProduit: boolean;
   deliveryLocation: string;
   deliveryFee: string;
 }
@@ -55,6 +56,7 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
     selectedProduct: null,
     maxQuantity: 0,
     isAdvanceProduct: false,
+    isPretProduit: false,
     deliveryLocation: 'Saint-Denis',
     deliveryFee: '0'
   }]);
@@ -130,6 +132,9 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
               const purchasePriceUnit = isAdvance ? saleProduct.purchasePrice : (saleProduct.purchasePrice / saleProduct.quantitySold);
               const sellingPriceUnit = isAdvance ? saleProduct.sellingPrice : (saleProduct.sellingPrice / saleProduct.quantitySold);
               
+              const isPret = saleProduct.description.toLowerCase().includes('prêt') || 
+                             saleProduct.description.toLowerCase().includes('pret');
+              
               return {
                 productId: saleProduct.productId,
                 description: saleProduct.description,
@@ -140,6 +145,7 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
                 selectedProduct: product || null,
                 maxQuantity: product ? (product.quantity || 0) + saleProduct.quantitySold : 0,
                 isAdvanceProduct: isAdvance,
+                isPretProduit: isPret,
                 deliveryLocation: saleProduct.deliveryLocation || 'Saint-Denis',
                 deliveryFee: (saleProduct.deliveryFee || 0).toString()
               };
@@ -162,6 +168,7 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
             selectedProduct: null,
             maxQuantity: 0,
             isAdvanceProduct: false,
+            isPretProduit: false,
             deliveryLocation: 'Saint-Denis',
             deliveryFee: '0'
           }]);
@@ -201,6 +208,7 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
       selectedProduct: null,
       maxQuantity: 0,
       isAdvanceProduct: false,
+      isPretProduit: false,
       deliveryLocation: 'Saint-Denis',
       deliveryFee: '0'
     }]);
@@ -298,6 +306,7 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
           selectedProduct: product,
           maxQuantity: productQuantity,
           isAdvanceProduct: true,
+          isPretProduit: false,
           purchasePriceUnit: purchasePriceUnit.toString(),
           sellingPriceUnit: '', // Sera rempli après la modale
           quantitySold: '0',
@@ -329,6 +338,7 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
         selectedProduct: product,
         maxQuantity: productQuantity,
         isAdvanceProduct: isAdvance,
+        isPretProduit: false,
         purchasePriceUnit: newPurchasePriceUnit,
         sellingPriceUnit: newSellingPriceUnit,
         quantitySold: newQuantity,
@@ -372,10 +382,11 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
           selectedProduct: product,
           maxQuantity: product.quantity || 0,
           isAdvanceProduct: false,
+          isPretProduit: true,
           purchasePriceUnit: product.purchasePrice.toString(),
-          sellingPriceUnit: pretProduit.prixVente.toString(),
+          sellingPriceUnit: '',
           quantitySold: '1',
-          profit: (pretProduit.prixVente - product.purchasePrice).toString(),
+          profit: '0',
         };
         return newProducts;
       });
@@ -383,7 +394,7 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
       setCurrentPretProductIndex(null);
       toast({
         title: 'Succès',
-        description: `Prêt produit créé et ajouté à la vente`,
+        description: `Prêt produit ajouté - veuillez entrer le prix de vente`,
         className: "notification-success",
       });
     }
@@ -547,6 +558,10 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
         if (product.isAdvanceProduct) {
           purchasePrice = purchasePriceUnit;
           sellingPrice = sellingPriceUnit;
+        } else if (product.isPretProduit) {
+          // Pour les prêts produits, sellingPrice = 0 dans la DB
+          purchasePrice = purchasePriceUnit * quantity;
+          sellingPrice = 0;
         } else {
           purchasePrice = purchasePriceUnit * quantity;
           sellingPrice = sellingPriceUnit * quantity;
