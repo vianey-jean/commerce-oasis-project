@@ -572,8 +572,9 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
         } else if (isPretProduit) {
           // Pour les prêts produits, sellingPrice = avance si rempli, sinon 0
           purchasePrice = purchasePriceUnit * quantity;
-          const avancePretProduit = Number(product.avancePretProduit) || 0;
-          sellingPrice = avancePretProduit;
+          // Si avance est vide ou 0, sellingPrice = 0, sinon sellingPrice = montant avance
+          const avanceValue = product.avancePretProduit?.trim();
+          sellingPrice = avanceValue && Number(avanceValue) > 0 ? Number(avanceValue) : 0;
         } else {
           purchasePrice = purchasePriceUnit * quantity;
           sellingPrice = sellingPriceUnit * quantity;
