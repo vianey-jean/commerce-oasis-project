@@ -150,6 +150,11 @@ if (!fs.existsSync(beneficePath)) {
   fs.writeFileSync(beneficePath, JSON.stringify([], null, 2));
 }
 
+const commandesPath = path.join(dbPath, 'commandes.json');
+if (!fs.existsSync(commandesPath)) {
+  fs.writeFileSync(commandesPath, JSON.stringify([], null, 2));
+}
+
 // Import routes
 const authRoutes = require('./routes/auth');
 const productRoutes = require('./routes/products');

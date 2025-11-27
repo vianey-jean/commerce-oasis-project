@@ -3,15 +3,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ModernTable, ModernTableHeader, ModernTableRow, ModernTableHead, ModernTableCell, TableBody } from '@/components/dashboard/forms/ModernTable';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Package, Plus, Trash2, Edit } from 'lucide-react';
+import { Package, Plus, Trash2, Edit, ShoppingCart, TrendingUp, Sparkles, Crown, Star, Gift, Award, Zap, Diamond, ArrowUp, ArrowDown } from 'lucide-react';
 import { Commande, CommandeProduit } from '@/types/commande';
 import api from '@/service/api';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import Layout from '@/components/Layout';
+import PremiumLoading from '@/components/ui/premium-loading';
+import SaleQuantityInput from '@/components/dashboard/forms/SaleQuantityInput';
+import { motion } from 'framer-motion';
 
 interface Client {
   id: string;
@@ -30,6 +34,7 @@ export default function CommandesPage() {
   const [commandes, setCommandes] = useState<Commande[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCommande, setEditingCommande] = useState<Commande | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -41,21 +46,40 @@ export default function CommandesPage() {
   const [type, setType] = useState<'commande' | 'reservation'>('commande');
   const [produitNom, setProduitNom] = useState('');
   const [prixUnitaire, setPrixUnitaire] = useState('');
-  const [quantite, setQuantite] = useState('');
+  const [quantite, setQuantite] = useState('1');
   const [prixVente, setPrixVente] = useState('');
   const [dateArrivagePrevue, setDateArrivagePrevue] = useState('');
   const [dateEcheance, setDateEcheance] = useState('');
+  
+  // Liste des produits ajoutés au panier
+  const [produitsListe, setProduitsListe] = useState<CommandeProduit[]>([]);
+  
+  // État pour gérer l'édition d'un produit dans le panier
+  const [editingProductIndex, setEditingProductIndex] = useState<number | null>(null);
   
   // Autocomplete state
   const [clientSearch, setClientSearch] = useState('');
   const [productSearch, setProductSearch] = useState('');
   const [showClientSuggestions, setShowClientSuggestions] = useState(false);
   const [showProductSuggestions, setShowProductSuggestions] = useState(false);
+  
+  // État pour gérer l'ordre de tri par date
+  const [sortDateAsc, setSortDateAsc] = useState(true); // true = du plus proche au plus loin
+  
+  // État pour la recherche de commandes
+  const [commandeSearch, setCommandeSearch] = useState('');
+  
+  // État pour la confirmation de validation
+  const [validatingId, setValidatingId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchCommandes();
-    fetchClients();
-    fetchProducts();
+    const loadData = async () => {
+      setIsLoading(true);
+      await Promise.all([fetchCommandes(), fetchClients(), fetchProducts()]);
+      setIsLoading(false);
+    };
+    
+    loadData();
     
     // Check for notifications
     const interval = setInterval(checkNotifications, 60000); // Check every minute
@@ -64,21 +88,55 @@ export default function CommandesPage() {
 
   const fetchCommandes = async () => {
     try {
-      const response = await api.get('/commandes');
+      const response = await api.get('/api/commandes');
       setCommandes(response.data);
     } catch (error) {
       console.error('Error fetching commandes:', error);
       toast({
         title: 'Erreur',
         description: 'Impossible de charger les commandes',
+        className: "bg-app-red text-white",
         variant: 'destructive',
       });
     }
   };
 
+  // Filtrer et trier les commandes selon la recherche
+  const filteredCommandes = useMemo(() => {
+    // Si recherche active (3+ caractères), montrer TOUTES les commandes (même validées)
+    const commandesToFilter = commandeSearch.length >= 3 
+      ? commandes 
+      : commandes.filter(c => c.statut !== 'valide');
+    
+    // Appliquer la recherche si >= 3 caractères
+    let filtered = commandesToFilter;
+    if (commandeSearch.length >= 3) {
+      const searchLower = commandeSearch.toLowerCase();
+      filtered = commandesToFilter.filter(commande => 
+        commande.clientNom.toLowerCase().includes(searchLower) ||
+        commande.clientPhone.includes(searchLower) ||
+        commande.produits.some(p => p.nom.toLowerCase().includes(searchLower))
+      );
+    }
+    
+    // Trier par date (échéance ou arrivage)
+    return [...filtered].sort((a, b) => {
+      const dateA = new Date(a.type === 'commande' ? a.dateArrivagePrevue || '' : a.dateEcheance || '');
+      const dateB = new Date(b.type === 'commande' ? b.dateArrivagePrevue || '' : b.dateEcheance || '');
+      
+      if (sortDateAsc) {
+        // Du plus proche au plus loin
+        return dateA.getTime() - dateB.getTime();
+      } else {
+        // Du plus loin au plus proche
+        return dateB.getTime() - dateA.getTime();
+      }
+    });
+  }, [commandes, commandeSearch, sortDateAsc]);
+
   const fetchClients = async () => {
     try {
-      const response = await api.get('/clients');
+      const response = await api.get('/api/clients');
       setClients(response.data);
     } catch (error) {
       console.error('Error fetching clients:', error);
@@ -87,7 +145,7 @@ export default function CommandesPage() {
 
   const fetchProducts = async () => {
     try {
-      const response = await api.get('/products');
+      const response = await api.get('/api/products');
       setProducts(response.data);
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -120,7 +178,7 @@ export default function CommandesPage() {
 
   const updateNotificationStatus = async (id: string) => {
     try {
-      await api.put(`/commandes/${id}`, { notificationEnvoyee: true });
+      await api.put(`/api/commandes/${id}`, { notificationEnvoyee: true });
       fetchCommandes();
     } catch (error) {
       console.error('Error updating notification status:', error);
@@ -135,13 +193,28 @@ export default function CommandesPage() {
     );
   }, [clientSearch, clients]);
 
-  // Filter products based on search
+  // Filter products based on search - exclude products already used in other orders/reservations
   const filteredProducts = useMemo(() => {
     if (productSearch.length < 3) return [];
-    return products.filter(product => 
-      product.description.toLowerCase().includes(productSearch.toLowerCase())
-    );
-  }, [productSearch, products]);
+    
+    // Get all product names that are already used in other orders/reservations
+    const usedProductNames = new Set<string>();
+    commandes.forEach(commande => {
+      // Skip if we're editing this specific order (allow same products)
+      if (editingCommande && commande.id === editingCommande.id) return;
+      
+      commande.produits.forEach(produit => {
+        usedProductNames.add(produit.nom.toLowerCase());
+      });
+    });
+    
+    // Filter out products that are already used
+    return products.filter(product => {
+      const matchesSearch = product.description.toLowerCase().includes(productSearch.toLowerCase());
+      const isNotUsed = !usedProductNames.has(product.description.toLowerCase());
+      return matchesSearch && isNotUsed;
+    });
+  }, [productSearch, products, commandes, editingCommande]);
 
   const handleClientSelect = (client: Client) => {
     setClientNom(client.nom);
@@ -163,10 +236,7 @@ export default function CommandesPage() {
       clientNom.trim() !== '' &&
       clientPhone.trim() !== '' &&
       clientAddress.trim() !== '' &&
-      produitNom.trim() !== '' &&
-      prixUnitaire.trim() !== '' &&
-      quantite.trim() !== '' &&
-      prixVente.trim() !== '' &&
+      produitsListe.length > 0 &&
       (type === 'commande' ? dateArrivagePrevue.trim() !== '' : dateEcheance.trim() !== '')
     );
   };
@@ -177,14 +247,100 @@ export default function CommandesPage() {
     setClientAddress('');
     setProduitNom('');
     setPrixUnitaire('');
-    setQuantite('');
+    setQuantite('1');
     setPrixVente('');
     setDateArrivagePrevue('');
     setDateEcheance('');
     setType('commande');
     setClientSearch('');
     setProductSearch('');
+    setProduitsListe([]);
     setEditingCommande(null);
+  };
+
+  const resetProductFields = () => {
+    setProduitNom('');
+    setPrixUnitaire('');
+    setQuantite('1');
+    setPrixVente('');
+    setProductSearch('');
+    setEditingProductIndex(null);
+  };
+
+  const handleAddProduit = () => {
+    if (!produitNom.trim() || !prixUnitaire.trim() || !quantite.trim() || !prixVente.trim()) {
+      toast({
+        title: 'Erreur',
+        description: 'Veuillez remplir tous les champs du produit',
+        className: "bg-app-red text-white",
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const nouveauProduit: CommandeProduit = {
+      nom: produitNom,
+      prixUnitaire: parseFloat(prixUnitaire),
+      quantite: parseInt(quantite),
+      prixVente: parseFloat(prixVente),
+    };
+
+    if (editingProductIndex !== null) {
+      // Modifier le produit existant
+      const nouveauxProduits = [...produitsListe];
+      nouveauxProduits[editingProductIndex] = nouveauProduit;
+      setProduitsListe(nouveauxProduits);
+      setEditingProductIndex(null);
+      
+      toast({
+        title: 'Produit modifié',
+        description: `${nouveauProduit.nom} a été mis à jour`,
+      });
+    } else {
+      // Ajouter un nouveau produit
+      setProduitsListe([...produitsListe, nouveauProduit]);
+      
+      toast({
+        title: 'Produit ajouté',
+        description: `${nouveauProduit.nom} a été ajouté au panier`,
+      });
+    }
+    
+    resetProductFields();
+  };
+
+  const handleEditProduit = (index: number) => {
+    const produit = produitsListe[index];
+    setProduitNom(produit.nom);
+    setPrixUnitaire(produit.prixUnitaire.toString());
+    setQuantite(produit.quantite.toString());
+    setPrixVente(produit.prixVente.toString());
+    setProductSearch(produit.nom);
+    setEditingProductIndex(index);
+    
+    toast({
+      title: 'Mode édition',
+      description: 'Modifiez les champs et cliquez sur "Ajouter ce produit" pour sauvegarder',
+    });
+  };
+
+  const handleRemoveProduit = (index: number) => {
+    const nouveauxProduits = produitsListe.filter((_, i) => i !== index);
+    setProduitsListe(nouveauxProduits);
+    
+    // Si on était en train d'éditer ce produit, annuler l'édition
+    if (editingProductIndex === index) {
+      setEditingProductIndex(null);
+      resetProductFields();
+    } else if (editingProductIndex !== null && editingProductIndex > index) {
+      // Ajuster l'index si on supprime un produit avant celui en édition
+      setEditingProductIndex(editingProductIndex - 1);
+    }
+    
+    toast({
+      title: 'Produit retiré',
+      description: 'Le produit a été retiré du panier',
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -193,25 +349,19 @@ export default function CommandesPage() {
     if (!isFormValid()) {
       toast({
         title: 'Erreur',
-        description: 'Tous les champs sont obligatoires',
+        description: 'Veuillez remplir tous les champs et ajouter au moins un produit',
+        className: "bg-app-red text-white",
         variant: 'destructive',
       });
       return;
     }
-
-    const produit: CommandeProduit = {
-      nom: produitNom,
-      prixUnitaire: parseFloat(prixUnitaire),
-      quantite: parseInt(quantite),
-      prixVente: parseFloat(prixVente),
-    };
 
     const commandeData: Partial<Commande> = {
       clientNom,
       clientPhone,
       clientAddress,
       type,
-      produits: [produit],
+      produits: produitsListe,
       dateCommande: new Date().toISOString(),
       statut: type === 'commande' ? 'en_route' : 'en_attente',
     };
@@ -223,17 +373,43 @@ export default function CommandesPage() {
     }
 
     try {
+      // Créer le client s'il n'existe pas
+      const existingClient = clients.find(c => c.nom.toLowerCase() === clientNom.toLowerCase());
+      if (!existingClient) {
+        await api.post('/api/clients', {
+          nom: clientNom,
+          phone: clientPhone,
+          adresse: clientAddress
+        });
+        await fetchClients();
+      }
+
+      // Créer les produits s'ils n'existent pas
+      for (const produit of produitsListe) {
+        const existingProduct = products.find(p => p.description.toLowerCase() === produit.nom.toLowerCase());
+        if (!existingProduct) {
+          await api.post('/api/products', {
+            description: produit.nom,
+            purchasePrice: produit.prixUnitaire,
+            quantity: produit.quantite
+          });
+        }
+      }
+      await fetchProducts();
+
       if (editingCommande) {
-        await api.put(`/commandes/${editingCommande.id}`, commandeData);
+        await api.put(`/api/commandes/${editingCommande.id}`, commandeData);
         toast({
           title: 'Succès',
           description: 'Commande modifiée avec succès',
+          className: "bg-app-green text-white",
         });
       } else {
-        await api.post('/commandes', commandeData);
+        await api.post('/api/commandes', commandeData);
         toast({
           title: 'Succès',
           description: 'Commande ajoutée avec succès',
+          className: "bg-app-green text-white",
         });
       }
       fetchCommandes();
@@ -244,6 +420,7 @@ export default function CommandesPage() {
       toast({
         title: 'Erreur',
         description: 'Impossible de sauvegarder la commande',
+        className: "bg-app-red text-white",
         variant: 'destructive',
       });
     }
@@ -256,27 +433,22 @@ export default function CommandesPage() {
     setClientAddress(commande.clientAddress);
     setType(commande.type);
     
-    if (commande.produits.length > 0) {
-      const produit = commande.produits[0];
-      setProduitNom(produit.nom);
-      setPrixUnitaire(produit.prixUnitaire.toString());
-      setQuantite(produit.quantite.toString());
-      setPrixVente(produit.prixVente.toString());
-    }
+    // Charger tous les produits de la commande
+    setProduitsListe(commande.produits);
     
     setDateArrivagePrevue(commande.dateArrivagePrevue || '');
     setDateEcheance(commande.dateEcheance || '');
     setClientSearch(commande.clientNom);
-    setProductSearch(commande.produits[0]?.nom || '');
     setIsDialogOpen(true);
   };
 
   const handleDelete = async (id: string) => {
     try {
-      await api.delete(`/commandes/${id}`);
+      await api.delete(`/api/commandes/${id}`);
       toast({
         title: 'Succès',
         description: 'Commande supprimée avec succès',
+        className: "bg-app-green text-white",
       });
       fetchCommandes();
       setDeleteId(null);
@@ -285,17 +457,25 @@ export default function CommandesPage() {
       toast({
         title: 'Erreur',
         description: 'Impossible de supprimer la commande',
+        className: "bg-app-red text-white",
         variant: 'destructive',
       });
     }
   };
 
-  const handleStatusChange = async (id: string, newStatus: 'en_route' | 'arrive' | 'en_attente') => {
+  const handleStatusChange = async (id: string, newStatus: 'en_route' | 'arrive' | 'en_attente' | 'valide') => {
+    // Si on passe à "valide", demander confirmation
+    if (newStatus === 'valide') {
+      setValidatingId(id);
+      return;
+    }
+    
     try {
-      await api.put(`/commandes/${id}`, { statut: newStatus });
+      await api.put(`/api/commandes/${id}`, { statut: newStatus });
       toast({
         title: 'Succès',
         description: 'Statut mis à jour',
+        className: "bg-app-green text-white",
       });
       fetchCommandes();
     } catch (error) {
@@ -303,6 +483,30 @@ export default function CommandesPage() {
       toast({
         title: 'Erreur',
         description: 'Impossible de mettre à jour le statut',
+        className: "bg-app-red text-white",
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const confirmValidation = async () => {
+    if (!validatingId) return;
+    
+    try {
+      await api.put(`/api/commandes/${validatingId}`, { statut: 'valide' });
+      toast({
+        title: 'Succès',
+        description: 'Commande validée avec succès',
+        className: "bg-app-green text-white",
+      });
+      fetchCommandes();
+      setValidatingId(null);
+    } catch (error) {
+      console.error('Error validating:', error);
+      toast({
+        title: 'Erreur',
+        description: 'Impossible de valider la commande',
+        className: "bg-app-red text-white",
         variant: 'destructive',
       });
     }
@@ -311,52 +515,169 @@ export default function CommandesPage() {
   const getStatusBadge = (statut: string) => {
     switch (statut) {
       case 'arrive':
-        return <Badge className="bg-green-500">Arrivé</Badge>;
+        return <Badge className="text-green-600 font-semibold">Arrivé</Badge>;
       case 'en_route':
-        return <Badge className="bg-blue-500">En route</Badge>;
+        return <Badge className="text-purple-600 font-semibold">En route</Badge>;
       case 'en_attente':
-        return <Badge className="bg-yellow-500">En attente</Badge>;
+        return <Badge className="text-red-600 font-semibold">En attente</Badge>;
+      case 'valide':
+        return <Badge className="text-blue-600 font-semibold">Validé</Badge>;
       default:
         return <Badge>{statut}</Badge>;
     }
   };
 
+  const getStatusOptions = (type: 'commande' | 'reservation') => {
+    if (type === 'commande') {
+      return [
+        { value: 'en_route', label: 'En route' },
+        { value: 'arrive', label: 'Arrivé' },
+        { value: 'valide', label: 'Validé' }
+      ];
+    } else {
+      return [
+        { value: 'en_attente', label: 'En attente' },
+        { value: 'valide', label: 'Validé' }
+      ];
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <PremiumLoading 
+          text="Bienvenue sur La page commandes ou reservation"
+          size="xl"
+          overlay={true}
+          variant="default"
+        />
+      </Layout>
+    );
+  }
+
   return (
-    <div className="container mx-auto p-4 md:p-6 lg:p-8 space-y-6">
+    <Layout>
+       {/* Hero Header Premium */}
+                  <div className="text-center mb-6 sm:mb-8 md:mb-12 relative">
+                    {/* Decorative elements */}
+                    <div className="absolute inset-0 -z-10 overflow-hidden">
+                      <div className="absolute top-0 left-1/4 w-72 h-72 bg-purple-300/20 dark:bg-purple-600/10 rounded-full blur-3xl"></div>
+                      <div className="absolute top-0 right-1/4 w-72 h-72 bg-pink-300/20 dark:bg-pink-600/10 rounded-full blur-3xl"></div>
+                    </div>
+                    
+                    <div className="inline-flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-purple-500/10 via-pink-500/10 to-indigo-500/10 dark:from-purple-500/20 dark:via-pink-500/20 dark:to-indigo-500/20 backdrop-blur-xl rounded-full text-purple-700 dark:text-purple-300 text-xs sm:text-sm font-bold mb-4 sm:mb-6 border-2 border-purple-300/50 dark:border-purple-600/50 shadow-2xl">
+                      <Crown className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-500" />
+                      <span className="hidden xs:inline">Gestion Premium</span>
+                      <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-pink-500" />
+                    </div>
+                    
+                        <motion.h1
+                          initial={{ opacity: 0, y: 60, scale: 0.9 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          transition={{ duration: 0.9, ease: "easeOut" }}
+                          className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black 
+                                    bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 
+                                    bg-[length:200%_200%] animate-gradient 
+                                    bg-clip-text text-transparent mb-4 sm:mb-6 text-center px-2
+                                    drop-shadow-2xl"
+                        >
+                          <span className="inline-flex items-center gap-3">
+                            <Diamond className="h-8 w-8 sm:h-12 sm:w-12 text-purple-600" />
+                            Commandes & Réservations
+                            <Star className="h-8 w-8 sm:h-12 sm:w-12 text-pink-600" />
+                          </span>
+                        </motion.h1>
+                    <p className="text-sm sm:text-base md:text-lg lg:text-xl text-gray-600 dark:text-gray-300 max-w-3xl mx-auto px-4 font-medium">
+                      Une expérience de gestion <span className="font-bold text-purple-600 dark:text-purple-400">ultra-premium</span> pour vos commandes d'élite
+                    </p>
+                  </div>
+      <div className="container mx-auto p-4 md:p-6 lg:p-8 space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-            Commandes & Réservations
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Gérez vos commandes et réservations clients
-          </p>
+        
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-purple-500 via-pink-500 to-indigo-500 flex items-center justify-center shadow-2xl">
+              <Award className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl md:text-4xl font-black bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 bg-clip-text text-transparent">
+                Commandes Premium
+              </h1>
+              <p className="text-muted-foreground mt-1 flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-yellow-500" />
+                Gestion d'élite de vos commandes
+              </p>
+            </div>
+          </div>
         </div>
         
-        <Dialog open={isDialogOpen} onOpenChange={(open) => {
-          setIsDialogOpen(open);
-          if (!open) resetForm();
-        }}>
-          <DialogTrigger asChild>
-            <Button className="w-full md:w-auto" size="lg">
-              <Plus className="mr-2 h-4 w-4" />
-              Nouvelle Commande/Réservation
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingCommande ? 'Modifier' : 'Nouvelle'} Commande/Réservation</DialogTitle>
-              <DialogDescription>
-                Remplissez tous les champs pour enregistrer
+        <div className="flex flex-col md:flex-row gap-4 items-center">
+          {/* Barre de recherche */}
+          <div className="relative w-full md:flex-1">
+            <Input
+              value={commandeSearch}
+              onChange={(e) => setCommandeSearch(e.target.value)}
+              placeholder="🔍 Rechercher une commande (min. 3 caractères)..."
+              className="border-2 border-purple-300 dark:border-purple-700 focus:border-purple-500 dark:focus:border-purple-500 bg-white dark:bg-gray-900 shadow-lg pl-4"
+            />
+            {commandeSearch.length > 0 && commandeSearch.length < 3 && (
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">
+                {3 - commandeSearch.length} caractère(s) restant(s)
+              </div>
+            )}
+          </div>
+          
+          <Dialog open={isDialogOpen} onOpenChange={(open) => {
+            setIsDialogOpen(open);
+            if (!open) resetForm();
+          }}>
+            <DialogTrigger asChild>
+              <Button className="w-full md:w-auto bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 hover:from-purple-700 hover:via-pink-700 hover:to-indigo-700 text-white shadow-2xl hover:shadow-purple-500/50 border-0" size="lg">
+                <Zap className="mr-2 h-5 w-5" />
+                Nouvelle Commande Elite
+              </Button>
+            </DialogTrigger>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-gradient-to-br from-white via-purple-50/40 to-pink-50/40 dark:from-gray-900 dark:via-purple-900/30 dark:to-pink-900/30 backdrop-blur-2xl border-2 border-purple-300/50 dark:border-purple-600/50 shadow-[0_20px_70px_rgba(168,85,247,0.4)]">
+            <DialogHeader className="border-b-2 border-gradient-to-r from-purple-300 via-pink-300 to-indigo-300 dark:from-purple-700 dark:via-pink-700 dark:to-indigo-700 pb-6">
+              <div className="flex items-center justify-center gap-3 mb-2">
+                <Crown className="h-8 w-8 text-yellow-500 animate-pulse" />
+                <Sparkles className="h-6 w-6 text-pink-500" />
+              </div>
+              <DialogTitle className="text-2xl md:text-3xl font-black bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 bg-clip-text text-transparent text-center">
+                {editingCommande ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Edit className="h-6 w-6 text-purple-600" />
+                    Modifier Commande Premium
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-2">
+                    <Gift className="h-6 w-6 text-pink-600" />
+                    Nouvelle Commande Elite
+                  </span>
+                )}
+              </DialogTitle>
+              <DialogDescription className="text-base text-muted-foreground mt-3 text-center font-medium">
+                ✨ Créez une expérience d'achat exclusive et luxueuse ✨
               </DialogDescription>
             </DialogHeader>
             
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg">Informations Client</h3>
+            <form onSubmit={handleSubmit} className="space-y-6 mt-6">
+              {/* Section Client Premium */}
+              <div className="space-y-4 p-6 rounded-2xl bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-900/30 dark:via-indigo-900/30 dark:to-purple-900/30 border-2 border-blue-300 dark:border-blue-700 shadow-[0_8px_30px_rgba(59,130,246,0.3)]">
+                <h3 className="font-black text-xl flex items-center gap-3 text-blue-700 dark:text-blue-300">
+                  <span className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 flex items-center justify-center text-white text-sm shadow-lg">
+                    <Crown className="h-5 w-5" />
+                  </span>
+                  <span className="flex items-center gap-2">
+                    Client Premium
+                    <Star className="h-5 w-5 text-yellow-500" />
+                  </span>
+                </h3>
                 
                 <div className="relative">
-                  <Label htmlFor="clientNom">Nom du Client</Label>
+                  <Label htmlFor="clientNom" className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
+                    👤 Nom du Client
+                  </Label>
                   <Input
                     id="clientNom"
                     value={clientSearch}
@@ -366,52 +687,74 @@ export default function CommandesPage() {
                       setShowClientSuggestions(e.target.value.length >= 3);
                     }}
                     placeholder="Saisir au moins 3 caractères..."
+                    className="border-2 border-blue-300 dark:border-blue-700 focus:border-blue-500 dark:focus:border-blue-500 bg-white dark:bg-gray-900 shadow-sm"
                     required
                   />
                   {showClientSuggestions && filteredClients.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                    <div className="absolute z-50 w-full mt-2 bg-white dark:bg-gray-800 border-2 border-purple-300 dark:border-purple-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto">
                       {filteredClients.map((client) => (
                         <div
                           key={client.id}
-                          className="p-2 hover:bg-accent cursor-pointer"
+                          className="p-3 hover:bg-gradient-to-r hover:from-purple-100 hover:to-blue-100 dark:hover:from-purple-900/30 dark:hover:to-blue-900/30 cursor-pointer transition-all duration-200 border-b border-gray-100 dark:border-gray-700 last:border-0"
                           onClick={() => handleClientSelect(client)}
                         >
-                          <div className="font-medium">{client.nom}</div>
-                          <div className="text-sm text-muted-foreground">{client.phone}</div>
+                          <div className="font-semibold text-gray-900 dark:text-white">{client.nom}</div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400 flex items-center gap-1 mt-1">
+                            📱 {client.phone}
+                          </div>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
 
-                <div>
-                  <Label htmlFor="clientPhone">Téléphone</Label>
-                  <Input
-                    id="clientPhone"
-                    value={clientPhone}
-                    onChange={(e) => setClientPhone(e.target.value)}
-                    placeholder="Numéro de téléphone"
-                    required
-                  />
-                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="clientPhone" className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
+                      📞 Téléphone
+                    </Label>
+                    <Input
+                      id="clientPhone"
+                      value={clientPhone}
+                      onChange={(e) => setClientPhone(e.target.value)}
+                      placeholder="Numéro de téléphone"
+                      className="border-2 border-blue-300 dark:border-blue-700 focus:border-blue-500 dark:focus:border-blue-500 bg-white dark:bg-gray-900 shadow-sm"
+                      required
+                    />
+                  </div>
 
-                <div>
-                  <Label htmlFor="clientAddress">Adresse</Label>
-                  <Input
-                    id="clientAddress"
-                    value={clientAddress}
-                    onChange={(e) => setClientAddress(e.target.value)}
-                    placeholder="Adresse complète"
-                    required
-                  />
+                  <div>
+                    <Label htmlFor="clientAddress" className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
+                      🏠 Adresse
+                    </Label>
+                    <Input
+                      id="clientAddress"
+                      value={clientAddress}
+                      onChange={(e) => setClientAddress(e.target.value)}
+                      placeholder="Adresse complète"
+                      className="border-2 border-blue-300 dark:border-blue-700 focus:border-blue-500 dark:focus:border-blue-500 bg-white dark:bg-gray-900 shadow-sm"
+                      required
+                    />
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg">Informations Produit</h3>
+              {/* Section Produit Premium */}
+              <div className="space-y-4 p-6 rounded-2xl bg-gradient-to-br from-purple-50 via-pink-50 to-rose-50 dark:from-purple-900/30 dark:via-pink-900/30 dark:to-rose-900/30 border-2 border-purple-300 dark:border-purple-700 shadow-[0_8px_30px_rgba(168,85,247,0.3)]">
+                <h3 className="font-black text-xl flex items-center gap-3 text-purple-700 dark:text-purple-300">
+                  <span className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white text-sm shadow-lg">
+                    <Diamond className="h-5 w-5" />
+                  </span>
+                  <span className="flex items-center gap-2">
+                    Produit Luxe
+                    <Sparkles className="h-5 w-5 text-pink-500" />
+                  </span>
+                </h3>
                 
                 <div className="relative">
-                  <Label htmlFor="produitNom">Nom du Produit</Label>
+                  <Label htmlFor="produitNom" className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
+                    📦 Nom du Produit
+                  </Label>
                   <Input
                     id="produitNom"
                     value={productSearch}
@@ -421,18 +764,20 @@ export default function CommandesPage() {
                       setShowProductSuggestions(e.target.value.length >= 3);
                     }}
                     placeholder="Saisir au moins 3 caractères..."
-                    required
+                    className="border-2 border-purple-300 dark:border-purple-700 focus:border-purple-500 dark:focus:border-purple-500 bg-white dark:bg-gray-900 shadow-sm"
                   />
                   {showProductSuggestions && filteredProducts.length > 0 && (
-                    <div className="absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-y-auto">
+                    <div className="absolute z-50 w-full mt-2 bg-white dark:bg-gray-800 border-2 border-purple-300 dark:border-purple-700 rounded-xl shadow-2xl max-h-60 overflow-y-auto">
                       {filteredProducts.map((product) => (
                         <div
                           key={product.id}
-                          className="p-2 hover:bg-accent cursor-pointer"
+                          className="p-3 hover:bg-gradient-to-r hover:from-purple-100 hover:to-pink-100 dark:hover:from-purple-900/30 dark:hover:to-pink-900/30 cursor-pointer transition-all duration-200 border-b border-gray-100 dark:border-gray-700 last:border-0"
                           onClick={() => handleProductSelect(product)}
                         >
-                          <div className="font-medium">{product.description}</div>
-                          <div className="text-sm text-muted-foreground">Prix: {product.purchasePrice}€</div>
+                          <div className="font-semibold text-gray-900 dark:text-white">{product.description}</div>
+                          <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                            💰 Prix: {product.purchasePrice}€
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -441,7 +786,9 @@ export default function CommandesPage() {
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <Label htmlFor="prixUnitaire">Prix Unitaire (€)</Label>
+                    <Label htmlFor="prixUnitaire" className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
+                      💵 Prix Unitaire (€)
+                    </Label>
                     <Input
                       id="prixUnitaire"
                       type="number"
@@ -449,24 +796,23 @@ export default function CommandesPage() {
                       value={prixUnitaire}
                       onChange={(e) => setPrixUnitaire(e.target.value)}
                       placeholder="0.00"
-                      required
+                      className="border-2 border-purple-300 dark:border-purple-700 focus:border-purple-500 dark:focus:border-purple-500 bg-white dark:bg-gray-900 shadow-sm"
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="quantite">Quantité</Label>
-                    <Input
-                      id="quantite"
-                      type="number"
-                      value={quantite}
-                      onChange={(e) => setQuantite(e.target.value)}
-                      placeholder="1"
-                      required
+                    <SaleQuantityInput
+                      quantity={quantite}
+                      maxQuantity={1000}
+                      onChange={setQuantite}
+                      showAvailableStock={false}
                     />
                   </div>
 
                   <div>
-                    <Label htmlFor="prixVente">Prix de Vente (€)</Label>
+                    <Label htmlFor="prixVente" className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
+                      💎 Prix de Vente (€)
+                    </Label>
                     <Input
                       id="prixVente"
                       type="number"
@@ -474,168 +820,385 @@ export default function CommandesPage() {
                       value={prixVente}
                       onChange={(e) => setPrixVente(e.target.value)}
                       placeholder="0.00"
-                      required
+                      className="border-2 border-purple-300 dark:border-purple-700 focus:border-purple-500 dark:focus:border-purple-500 bg-white dark:bg-gray-900 shadow-sm"
                     />
                   </div>
                 </div>
+
+                <div className="flex justify-end gap-2">
+                  {editingProductIndex !== null && (
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        resetProductFields();
+                        toast({
+                          title: 'Édition annulée',
+                          description: 'Retour au mode ajout',
+                        });
+                      }}
+                      variant="outline"
+                      className="border-purple-300 dark:border-purple-700"
+                    >
+                      Annuler
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    onClick={handleAddProduit}
+                    className="bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 hover:from-purple-700 hover:via-pink-700 hover:to-indigo-700 text-white shadow-2xl hover:shadow-purple-500/50 transform hover:-translate-y-1 transition-all duration-300 rounded-xl font-bold"
+                  >
+                    {editingProductIndex !== null ? (
+                      <>
+                        <Edit className="mr-2 h-5 w-5" />
+                        Modifier Produit Elite
+                        <Sparkles className="ml-2 h-5 w-5" />
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="mr-2 h-5 w-5" />
+                        Ajouter Produit Luxe
+                        <Diamond className="ml-2 h-5 w-5" />
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {/* Liste des produits ajoutés */}
+                {produitsListe.length > 0 && (
+                  <div className="mt-4 space-y-2">
+                    <h4 className="font-semibold text-sm text-purple-700 dark:text-purple-300 flex items-center gap-2">
+                      <ShoppingCart className="h-4 w-4" />
+                      Produits dans le panier ({produitsListe.length})
+                    </h4>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {produitsListe.map((produit, index) => (
+                        <div
+                          key={index}
+                          className={`flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border-2 shadow-sm transition-all ${
+                            editingProductIndex === index 
+                              ? 'border-purple-500 dark:border-purple-400 ring-2 ring-purple-200 dark:ring-purple-800' 
+                              : 'border-purple-200 dark:border-purple-700'
+                          }`}
+                        >
+                          <div className="flex-1">
+                            <div className="font-semibold text-sm">
+                              {produit.nom}
+                              {editingProductIndex === index && (
+                                <span className="ml-2 text-xs bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded">
+                                  En édition
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Qté: {produit.quantite} | Prix unitaire: {produit.prixUnitaire}€ | Prix vente: {produit.prixVente}€
+                            </div>
+                          </div>
+                          <div className="flex gap-1">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditProduit(index)}
+                              className="hover:bg-gradient-to-r hover:from-green-100 hover:to-emerald-100 dark:hover:from-green-900/30 dark:hover:to-emerald-900/30 rounded-xl transition-all duration-300"
+                              title="Modifier ce produit"
+                            >
+                              <Edit className="h-5 w-5 text-green-600 dark:text-green-400" />
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveProduit(index)}
+                              className="hover:bg-gradient-to-r hover:from-red-100 hover:to-rose-100 dark:hover:from-red-900/30 dark:hover:to-rose-900/30 rounded-xl transition-all duration-300"
+                              title="Supprimer ce produit"
+                            >
+                              <Trash2 className="h-5 w-5 text-red-600 dark:text-red-400" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="text-sm font-semibold text-right text-purple-700 dark:text-purple-300">
+                      Total: {produitsListe.reduce((sum, p) => sum + (p.prixVente * p.quantite), 0).toFixed(2)}€
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg">Détails</h3>
+              {/* Section Détails Premium */}
+              <div className="space-y-4 p-6 rounded-2xl bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 dark:from-amber-900/30 dark:via-orange-900/30 dark:to-yellow-900/30 border-2 border-amber-300 dark:border-amber-700 shadow-[0_8px_30px_rgba(251,146,60,0.3)]">
+                <h3 className="font-black text-xl flex items-center gap-3 text-amber-700 dark:text-amber-300">
+                  <span className="w-10 h-10 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 flex items-center justify-center text-white text-sm shadow-lg">
+                    <Award className="h-5 w-5" />
+                  </span>
+                  <span className="flex items-center gap-2">
+                    Détails Elite
+                    <Zap className="h-5 w-5 text-orange-500" />
+                  </span>
+                </h3>
                 
                 <div>
-                  <Label htmlFor="type">Type</Label>
+                  <Label htmlFor="type" className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
+                    🎯 Type
+                  </Label>
                   <Select value={type} onValueChange={(value: 'commande' | 'reservation') => setType(value)}>
-                    <SelectTrigger>
+                    <SelectTrigger className="border-2 border-amber-300 dark:border-amber-700 focus:border-amber-500 dark:focus:border-amber-500 bg-white dark:bg-gray-900 shadow-sm">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="commande">Commande</SelectItem>
-                      <SelectItem value="reservation">Réservation</SelectItem>
+                      <SelectItem value="commande">📦 Commande</SelectItem>
+                      <SelectItem value="reservation">🎫 Réservation</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 {type === 'commande' ? (
                   <div>
-                    <Label htmlFor="dateArrivagePrevue">Date d'Arrivage Prévue</Label>
+                    <Label htmlFor="dateArrivagePrevue" className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
+                      📅 Date d'Arrivage Prévue
+                    </Label>
                     <Input
                       id="dateArrivagePrevue"
                       type="date"
                       value={dateArrivagePrevue}
                       onChange={(e) => setDateArrivagePrevue(e.target.value)}
+                      className="border-2 border-amber-300 dark:border-amber-700 focus:border-amber-500 dark:focus:border-amber-500 bg-white dark:bg-gray-900 shadow-sm"
                       required
                     />
                   </div>
                 ) : (
                   <div>
-                    <Label htmlFor="dateEcheance">Date d'Échéance</Label>
+                    <Label htmlFor="dateEcheance" className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 block">
+                      ⏰ Date d'Échéance
+                    </Label>
                     <Input
                       id="dateEcheance"
                       type="date"
                       value={dateEcheance}
                       onChange={(e) => setDateEcheance(e.target.value)}
+                      className="border-2 border-amber-300 dark:border-amber-700 focus:border-amber-500 dark:focus:border-amber-500 bg-white dark:bg-gray-900 shadow-sm"
                       required
                     />
                   </div>
                 )}
               </div>
 
-              <Button type="submit" className="w-full" disabled={!isFormValid()}>
-                {editingCommande ? 'Modifier' : 'Enregistrer'}
+              <Button 
+                type="submit" 
+                className="w-full h-16 text-xl font-black bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 hover:from-purple-700 hover:via-pink-700 hover:to-indigo-700 text-white shadow-[0_20px_60px_rgba(168,85,247,0.5)] hover:shadow-[0_20px_70px_rgba(236,72,153,0.6)] transform hover:-translate-y-2 hover:scale-105 transition-all duration-500 rounded-2xl border-2 border-white/20" 
+                disabled={!isFormValid()}
+              >
+                <span className="flex items-center justify-center gap-3">
+                  {editingCommande ? (
+                    <>
+                      <Edit className="h-6 w-6" />
+                      Modifier la Commande Elite
+                      <Sparkles className="h-6 w-6" />
+                    </>
+                  ) : (
+                    <>
+                      <Crown className="h-6 w-6 animate-pulse" />
+                      Créer Commande Premium
+                      <Star className="h-6 w-6" />
+                    </>
+                  )}
+                </span>
               </Button>
             </form>
           </DialogContent>
         </Dialog>
       </div>
+      </div>
 
-      <Card className="shadow-xl">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="h-5 w-5" />
-            Liste des Commandes et Réservations
+      <Card className="border-2 border-purple-200/50 dark:border-purple-700/50 shadow-[0_20px_70px_rgba(168,85,247,0.3)] bg-gradient-to-br from-white via-purple-50/20 to-pink-50/20 dark:from-gray-900 dark:via-purple-900/10 dark:to-pink-900/10 rounded-3xl overflow-hidden backdrop-blur-sm">
+        <CardHeader className="border-b-2 border-gradient-to-r from-purple-300 via-pink-300 to-indigo-300 dark:from-purple-700 dark:via-pink-700 dark:to-indigo-700 bg-gradient-to-r from-purple-50/50 via-pink-50/50 to-indigo-50/50 dark:from-purple-900/20 dark:via-pink-900/20 dark:to-indigo-900/20 pb-6">
+          <CardTitle className="flex items-center gap-4 text-xl md:text-2xl font-black tracking-tight">
+            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-purple-500 via-pink-500 to-indigo-500 text-white shadow-2xl">
+              <Gift className="h-7 w-7" />
+            </span>
+            <span>Liste des Commandes et Réservations</span>
           </CardTitle>
-          <CardDescription>
-            Total: {commandes.length} {commandes.length > 1 ? 'commandes' : 'commande'}
+          <CardDescription className="mt-1 text-sm md:text-base text-muted-foreground">
+            Total: {filteredCommandes.length} {filteredCommandes.length > 1 ? 'commandes' : 'commande'}
+            {commandeSearch.length >= 3 && (
+              <span className="ml-2 text-purple-600 dark:text-purple-400 font-semibold">
+                (sur {commandes.filter(c => c.statut !== 'valide').length} non validées)
+              </span>
+            )}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Client</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Produit</TableHead>
-                  <TableHead>Prix</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Statut</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
+            <ModernTable className="min-w-full">
+            <ModernTableHeader>
+              <ModernTableRow >
+                <ModernTableHead>Client</ModernTableHead>
+                <ModernTableHead>Contact</ModernTableHead>
+                <ModernTableHead>Produit</ModernTableHead>
+                <ModernTableHead>Prix</ModernTableHead>
+                <ModernTableHead>Type</ModernTableHead>
+                <ModernTableHead>
+                  <button
+                    onClick={() => setSortDateAsc(!sortDateAsc)}
+                    className="flex items-center gap-2 hover:text-primary transition-colors"
+                    title={sortDateAsc ? "Trier du plus loin au plus proche" : "Trier du plus proche au plus loin"}
+                  >
+                    Date
+                    {sortDateAsc ? (
+                      <ArrowDown className="h-4 w-4 text-purple-600" />
+                    ) : (
+                      <ArrowUp className="h-4 w-4 text-purple-600" />
+                    )}
+                  </button>
+                </ModernTableHead>
+                <ModernTableHead>Statut</ModernTableHead>
+                <ModernTableHead>Actions</ModernTableHead>
+              </ModernTableRow>
+            </ModernTableHeader>
+
               <TableBody>
-                {commandes.map((commande) => (
-                  <TableRow key={commande.id}>
-                    <TableCell className="font-medium">
-                      <div>{commande.clientNom}</div>
-                      <div className="text-xs text-muted-foreground">{commande.clientAddress}</div>
-                    </TableCell>
-                    <TableCell>{commande.clientPhone}</TableCell>
-                    <TableCell>
+                {filteredCommandes.map((commande) => (
+                  <ModernTableRow
+                    key={commande.id}
+                    className="bg-background/40 hover:bg-primary/5 transition-colors"
+                  >
+                    <ModernTableCell className="align-top">
+                      <div className="font-medium">{commande.clientNom}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {commande.clientAddress}
+                      </div>
+                    </ModernTableCell>
+                    <ModernTableCell className="align-top">
+                      <span className="text-sm">{commande.clientPhone}</span>
+                    </ModernTableCell>
+                    <ModernTableCell className="align-top">
                       {commande.produits.map((p, idx) => (
-                        <div key={idx} className="text-sm">
+                        <div key={idx} className="text-sm space-y-0.5">
                           <div className="font-medium">{p.nom}</div>
-                          <div className="text-muted-foreground">Qté: {p.quantite}</div>
+                         <div className="text-xs text-muted-foreground">
+                          Qté: <span className="font-bold text-red-600">{p.quantite}</span>
+                        </div>
+
                         </div>
                       ))}
-                    </TableCell>
-                    <TableCell>
+                    </ModernTableCell>
+                    <ModernTableCell className="align-top">
                       {commande.produits.map((p, idx) => (
-                        <div key={idx} className="text-sm">
+                        <div key={idx} className="text-sm space-y-0.5">
                           <div>Unitaire: {p.prixUnitaire}€</div>
-                          <div className="font-medium">Vente: {p.prixVente}€</div>
+                          <div className="font-semibold">
+                            Vente: {p.prixVente}€
+                          </div>
                         </div>
                       ))}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={commande.type === 'commande' ? 'default' : 'secondary'}>
-                        {commande.type === 'commande' ? 'Commande' : 'Réservation'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm">
+                      {/* Prix total en gras et rouge */}
+                      <div className="mt-3 pt-3 border-t-2 border-red-300 dark:border-red-700">
+                        <div className="text-base font-black text-red-600 dark:text-red-500">
+                          Prix Total: {commande.produits.reduce((sum, p) => sum + (p.prixVente * p.quantite), 0).toFixed(2)}€
+                        </div>
+                      </div>
+                    </ModernTableCell>
+                    <ModernTableCell className="align-top">
+                     <Badge
+                      className={
+                        commande.type === 'commande'
+                          ? "bg-purple-600 text-white hover:bg-purple-700"   // violet
+                          : "bg-blue-600 text-white hover:bg-blue-700"       // bleu
+                      }
+                      variant={commande.type === 'commande' ? 'default' : 'secondary'}
+                    >
+                      {commande.type === 'commande' ? 'Commande' : 'Réservation'}
+                    </Badge>
+
+                    </ModernTableCell>
+
+                    <ModernTableCell className="align-top text-sm">
                       {commande.type === 'commande' ? (
                         <div>
-                          <div className="text-muted-foreground">Arrivage:</div>
+                          <div className="text-xs text-muted-foreground">Arrivage:</div>
                           <div>{new Date(commande.dateArrivagePrevue || '').toLocaleDateString()}</div>
                         </div>
                       ) : (
                         <div>
-                          <div className="text-muted-foreground">Échéance:</div>
+                          <div className="text-xs text-muted-foreground">Échéance:</div>
                           <div>{new Date(commande.dateEcheance || '').toLocaleDateString()}</div>
                         </div>
                       )}
-                    </TableCell>
-                    <TableCell>
-                      {commande.type === 'commande' ? (
-                        <Select value={commande.statut} onValueChange={(value) => handleStatusChange(commande.id, value as any)}>
-                          <SelectTrigger className="w-32">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="en_route">En route</SelectItem>
-                            <SelectItem value="arrive">Arrivé</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      ) : (
-                        getStatusBadge(commande.statut)
-                      )}
-                    </TableCell>
-                    <TableCell>
+                    </ModernTableCell>
+                    <ModernTableCell className="align-top">
+                      <Select
+                        value={commande.statut}
+                        onValueChange={(value) => handleStatusChange(commande.id, value as any)}
+                      >
+                        <SelectTrigger className="w-36">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {getStatusOptions(commande.type).map((option) => (
+                            <SelectItem 
+                              key={option.value}
+                              value={option.value}
+                              className={
+                                option.value === 'en_route' ? 'text-purple-600 font-semibold' :
+                                option.value === 'arrive' ? 'text-green-600 font-semibold' :
+                                option.value === 'en_attente' ? 'text-red-600 font-semibold' :
+                                option.value === 'valide' ? 'text-blue-600 font-semibold' :
+                                ''
+                              }
+                            >
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </ModernTableCell>
+                    <ModernTableCell className="align-top">
                       <div className="flex gap-2">
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => handleEdit(commande)}
+                          className="hover:bg-gradient-to-r hover:from-green-100 hover:to-emerald-100 dark:hover:from-green-900/30 dark:hover:to-emerald-900/30 rounded-xl transition-all duration-300"
+                          title="Modifier"
                         >
-                          <Edit className="h-4 w-4" />
+                          <Edit className="h-5 w-5 text-green-600 dark:text-green-400" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => setDeleteId(commande.id)}
+                          className="hover:bg-gradient-to-r hover:from-red-100 hover:to-rose-100 dark:hover:from-red-900/30 dark:hover:to-rose-900/30 rounded-xl transition-all duration-300"
+                          title="Supprimer"
                         >
-                          <Trash2 className="h-4 w-4 text-destructive" />
+                          <Trash2 className="h-5 w-5 text-red-600 dark:text-red-400" />
                         </Button>
                       </div>
-                    </TableCell>
-                  </TableRow>
+                    </ModernTableCell>
+                  </ModernTableRow>
                 ))}
               </TableBody>
-            </Table>
+            </ModernTable>
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!validatingId} onOpenChange={(open) => !open && setValidatingId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmer la validation</AlertDialogTitle>
+            <AlertDialogDescription>
+              Êtes-vous sûr de vouloir valider cette commande/réservation ? 
+              Une fois validée, elle sera retirée de la liste.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmValidation} className="bg-blue-600 hover:bg-blue-700">
+              Valider
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
         <AlertDialogContent>
@@ -653,6 +1216,7 @@ export default function CommandesPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+      </div>
+    </Layout>
   );
 }

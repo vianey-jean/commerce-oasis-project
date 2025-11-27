@@ -14,6 +14,7 @@ import ClientSearchInput from '../ClientSearchInput';
 import { calculateSaleProfit } from './utils/saleCalculations';
 import ConfirmDeleteDialog from './ConfirmDeleteDialog';
 import AdvancePaymentModal from './AdvancePaymentModal';
+import PretProduitFromSaleModal from './PretProduitFromSaleModal';
 import axios from 'axios';
 
 interface MultiProductSaleFormProps {
@@ -70,6 +71,10 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
   // États pour la modale de paiement d'avance sur prêts existants
   const [advancePaymentModalOpen, setAdvancePaymentModalOpen] = useState(false);
   const [currentAdvanceProductIndex, setCurrentAdvanceProductIndex] = useState<number | null>(null);
+  
+  // États pour la modale de création de prêt produit
+  const [pretProduitModalOpen, setPretProduitModalOpen] = useState(false);
+  const [currentPretProductIndex, setCurrentPretProductIndex] = useState<number | null>(null);
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:10000';
 
@@ -262,6 +267,17 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
     const purchasePriceUnit = product.purchasePrice;
     const suggestedSellingPrice = isAdvance ? '' : (product.purchasePrice * 1.2).toFixed(2);
 
+    // Vérifier si c'est "Prêt Produit" - nouveau comportement
+    const isPretProduit = product.description.toLowerCase().includes('prêt') || 
+                          product.description.toLowerCase().includes('pret');
+
+    if (isPretProduit) {
+      // Ouvrir la modale pour créer un nouveau prêt produit
+      setCurrentPretProductIndex(index);
+      setPretProduitModalOpen(true);
+      return;
+    }
+
     // Vérifier si c'est "Avance Perruque ou Tissages"
     const isAdvancePerruqueOuTissages = product.description.toLowerCase().includes('avance') && 
                                          (product.description.toLowerCase().includes('perruque') || 
@@ -340,6 +356,35 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
       toast({
         title: 'Succès',
         description: `Avance de ${totalAdvance.toLocaleString('fr-FR')} € ajoutée au produit`,
+      });
+    }
+  };
+
+  // Gérer la création d'un prêt produit depuis la modale
+  const handlePretProduitCreated = (pretProduit: any, product: Product) => {
+    if (currentPretProductIndex !== null) {
+      setFormProducts(prev => {
+        const newProducts = [...prev];
+        newProducts[currentPretProductIndex] = {
+          ...newProducts[currentPretProductIndex],
+          productId: String(product.id),
+          description: `Prêt - ${pretProduit.description}`,
+          selectedProduct: product,
+          maxQuantity: product.quantity || 0,
+          isAdvanceProduct: false,
+          purchasePriceUnit: product.purchasePrice.toString(),
+          sellingPriceUnit: pretProduit.prixVente.toString(),
+          quantitySold: '1',
+          profit: (pretProduit.prixVente - product.purchasePrice).toString(),
+        };
+        return newProducts;
+      });
+      
+      setCurrentPretProductIndex(null);
+      toast({
+        title: 'Succès',
+        description: `Prêt produit créé et ajouté à la vente`,
+        className: "notification-success",
       });
     }
   };
@@ -1117,6 +1162,16 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
       setCurrentAdvanceProductIndex(null);
     }}
     onConfirm={handleAdvancePaymentConfirm}
+  />
+
+  {/* Modale de création de prêt produit */}
+  <PretProduitFromSaleModal
+    isOpen={pretProduitModalOpen}
+    onClose={() => {
+      setPretProduitModalOpen(false);
+      setCurrentPretProductIndex(null);
+    }}
+    onPretCreated={handlePretProduitCreated}
   />
 
   {/* Dialog de confirmation de suppression */}
