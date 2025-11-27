@@ -553,12 +553,17 @@ const MultiProductSaleForm: React.FC<MultiProductSaleFormProps> = ({ isOpen, onC
         const sellingPriceUnit = Number(product.sellingPriceUnit);
         const deliveryFee = Number(product.deliveryFee || 0);
         
+        // Détecter automatiquement si c'est un prêt produit
+        const isPretProduit = product.isPretProduit || 
+                              product.description.toLowerCase().includes('prêt') || 
+                              product.description.toLowerCase().includes('pret');
+        
         let purchasePrice, sellingPrice;
         
         if (product.isAdvanceProduct) {
           purchasePrice = purchasePriceUnit;
           sellingPrice = sellingPriceUnit;
-        } else if (product.isPretProduit) {
+        } else if (isPretProduit) {
           // Pour les prêts produits, sellingPrice = 0 dans la DB
           purchasePrice = purchasePriceUnit * quantity;
           sellingPrice = 0;
