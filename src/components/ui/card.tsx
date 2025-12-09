@@ -1,3 +1,31 @@
+/**
+ * @fileoverview Composants Card modulaires basés sur Shadcn/UI
+ * 
+ * Ensemble de composants pour créer des cartes structurées et accessibles.
+ * Basés sur des éléments HTML sémantiques avec des styles cohérents.
+ * 
+ * Composants inclus:
+ * - Card : Conteneur principal avec bordure et ombre
+ * - CardHeader : En-tête avec espacement vertical
+ * - CardTitle : Titre principal (h3) avec tracking optimisé
+ * - CardDescription : Description secondaire avec couleur muted
+ * - CardContent : Contenu principal avec padding adapté
+ * - CardFooter : Pied de carte avec layout flex
+ * 
+ * Utilisation:
+ * <Card>
+ *   <CardHeader>
+ *     <CardTitle>Titre</CardTitle>
+ *     <CardDescription>Description</CardDescription>
+ *   </CardHeader>
+ *   <CardContent>Contenu principal</CardContent>
+ *   <CardFooter>Actions/boutons</CardFooter>
+ * </Card>
+ * 
+ * @version 1.0.0
+ * @author Shadcn/UI + Équipe Riziky-Boutic
+ */
+
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
@@ -9,7 +37,7 @@ const Card = React.forwardRef<
   <div
     ref={ref}
     className={cn(
-      "rounded-lg sm:rounded-xl border bg-card text-card-foreground shadow-sm",
+      "rounded-lg border bg-card text-card-foreground shadow-sm",
       className
     )}
     {...props}
@@ -23,7 +51,7 @@ const CardHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex flex-col space-y-1.5 p-4 sm:p-5 md:p-6", className)}
+    className={cn("flex flex-col space-y-1.5 p-6", className)}
     {...props}
   />
 ))
@@ -36,7 +64,7 @@ const CardTitle = React.forwardRef<
   <h3
     ref={ref}
     className={cn(
-      "text-lg sm:text-xl md:text-2xl font-semibold leading-none tracking-tight",
+      "text-2xl font-semibold leading-none tracking-tight",
       className
     )}
     {...props}
@@ -50,7 +78,7 @@ const CardDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <p
     ref={ref}
-    className={cn("text-xs sm:text-sm text-muted-foreground", className)}
+    className={cn("text-sm text-muted-foreground", className)}
     {...props}
   />
 ))
@@ -60,7 +88,7 @@ const CardContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, ...props }, ref) => (
-  <div ref={ref} className={cn("p-4 sm:p-5 md:p-6 pt-0", className)} {...props} />
+  <div ref={ref} className={cn("p-6 pt-0", className)} {...props} />
 ))
 CardContent.displayName = "CardContent"
 
@@ -70,7 +98,7 @@ const CardFooter = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-0 p-4 sm:p-5 md:p-6 pt-0", className)}
+    className={cn("flex items-center p-6 pt-0", className)}
     {...props}
   />
 ))

@@ -1,0 +1,11 @@
+{
+  "enableCreditCard": false,
+  "enablePaypal": false,
+  "enableBankTransfer": false,
+  "enableCash": true,
+  "stripeEnabled": false,
+  "stripePublicKey": "",
+  "paypalEnabled": false,
+  "paypalClientId": "",
+  "enableApplePay": false
+}

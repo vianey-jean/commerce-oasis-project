@@ -1,292 +1,265 @@
+
 import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/contexts/AuthContext';
+import {
+  Card, CardContent, CardDescription, CardFooter,
+  CardHeader, CardTitle
+} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import PasswordInput from '@/components/PasswordInput';
-import PasswordStrengthChecker from '@/components/PasswordStrengthChecker';
-import Layout from '@/components/Layout';
-import PremiumLoading from '@/components/ui/premium-loading';
-import { Lock, Mail, ArrowRight, Sparkles } from 'lucide-react';
-import axios from 'axios';
+import {
+  Form, FormControl, FormField, FormItem, FormLabel, FormMessage
+} from '@/components/ui/form';
+import { useAuth } from '@/contexts/AuthContext';
+import Layout from '@/components/layout/Layout';
+import { authAPI } from '@/services/api';
+import { toast } from '@/components/ui/sonner';
+import { Eye, EyeOff, Mail, Lock, ArrowRight, ShoppingBag } from 'lucide-react';
+import PasswordStrengthIndicator from '@/components/auth/PasswordStrengthIndicator';
 
-const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+// ✅ Validation schemas
+const emailSchema = z.object({
+  email: z.string().email('Email invalide'),
+});
+const passwordSchema = z.object({
+  password: z.string().min(1, 'Mot de passe requis'),
+});
 
-const LoginPage: React.FC = () => {
+const LoginPage = () => {
+  const { login } = useAuth();
   const navigate = useNavigate();
-  const { login, checkEmail } = useAuth();
-  
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
-  const [showPasswordField, setShowPasswordField] = useState(false);
-  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
-  const [emailExists, setEmailExists] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [step, setStep] = useState<'email' | 'password'>('email');
+  const [userEmail, setUserEmail] = useState('');
   const [userName, setUserName] = useState('');
-  const [isPasswordValid, setIsPasswordValid] = useState(false);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
-  
-  const handleEmailCheck = async () => {
-    if (!email) {
-      setErrors({ ...errors, email: 'Veuillez entrer votre email' });
-      return;
-    }
-    
-    if (!/\S+@\S+\.\S+/.test(email)) {
-      setErrors({ ...errors, email: 'Veuillez entrer un email valide' });
-      return;
-    }
-    
-    setIsCheckingEmail(true);
-    try {
-      const response = await axios.post(`${AUTH_BASE_URL}/api/auth/check-email`, { email });
+  const [isLoading, setIsLoading] = useState(false);
 
-      setIsCheckingEmail(false);
-      
+  // ✅ Formulaires
+  const emailForm = useForm<{ email: string }>({
+    resolver: zodResolver(emailSchema),
+    defaultValues: { email: '' },
+  });
+
+  const passwordForm = useForm<{ password: string }>({
+    resolver: zodResolver(passwordSchema),
+    defaultValues: { password: '' },
+  });
+
+  // ✅ Gestion soumission email
+  const onEmailSubmit = async (data: { email: string }) => {
+    const normalizedEmail = data.email.trim().toLowerCase();
+    try {
+      setIsLoading(true);
+      const response = await authAPI.checkEmail(normalizedEmail);
+
       if (response.data.exists) {
-        setEmailExists(true);
-        setShowPasswordField(true);
-        setUserName(`${response.data.user.firstName} ${response.data.user.lastName}`);
+        setUserEmail(normalizedEmail);
+        setUserName(response.data.user.nom || 'Utilisateur');
+        setStep('password');
+        toast.success(`Bienvenue ${response.data.user.nom || 'Utilisateur'}`, {
+          style: { backgroundColor: 'green', color: 'white' },
+        });
       } else {
-        setEmailExists(false);
-        setShowPasswordField(false);
-        setErrors({ ...errors, email: 'Ce profil n\'existe pas' });
+        toast.error("Cet email n'existe pas", {
+          style: { backgroundColor: 'red', color: 'white' },
+        });
       }
     } catch (error) {
-      setIsCheckingEmail(false);
-      setEmailExists(false);
-      setShowPasswordField(false);
-      setErrors({ ...errors, email: 'Une erreur s\'est produite' });
+      console.error("Erreur lors de la vérification de l'email:", error);
+      toast.error("Erreur lors de la vérification de l'email", {
+        style: { backgroundColor: 'red', color: 'white' },
+      });
+    } finally {
+      setIsLoading(false);
     }
-  };
-  
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    setErrors({});
-    
-    if (!email) {
-      setErrors(prev => ({ ...prev, email: 'Veuillez entrer votre email' }));
-      return;
-    }
-    
-    if (showPasswordField && !password) {
-      setErrors(prev => ({ ...prev, password: 'Veuillez entrer votre mot de passe' }));
-      return;
-    }
-    
-    if (!showPasswordField) {
-      await handleEmailCheck();
-      return;
-    }
-    
-    setIsLoggingIn(true);
-    const success = await login({ email, password });
-    if (success) {
-      navigate('/dashboard');
-    }
-    setIsLoggingIn(false);
-  };
-  
-  const handlePasswordValidityChange = (isValid: boolean) => {
-    setIsPasswordValid(isValid);
   };
 
-  // Show loading during login process
-  if (isLoggingIn) {
-    return (
-      <Layout>
-        <PremiumLoading 
-          text="Connexion en cours..."
-          size="lg"
-          overlay={true}
-          variant="default"
-        />
-      </Layout>
-    );
-  }
-  
+  // ✅ Gestion soumission mot de passe
+  const onPasswordSubmit = async (data: { password: string }) => {
+    try {
+      setIsLoading(true);
+      await login(userEmail, data.password);
+      // La redirection est gérée dans le contexte Auth
+    } catch (error) {
+      console.error("Erreur de connexion:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const togglePasswordVisibility = () => setShowPassword(!showPassword);
+
   return (
     <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-indigo-100 dark:from-gray-900 dark:via-purple-900/20 dark:to-slate-900 flex items-center justify-center p-4">
-        {/* Background decorations */}
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-400/20 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-400/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-r from-pink-400/10 to-violet-400/10 rounded-full blur-3xl"></div>
-        </div>
+      <div className="min-h-[90vh] bg-gradient-to-br from-red-50 via-white to-red-50 dark:from-red-950/20 dark:via-neutral-950 dark:to-red-950/20 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          {/* Header with Logo */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-red-600 to-red-700 rounded-2xl shadow-lg mb-4">
+              <ShoppingBag className="h-8 w-8 text-white" />
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+              Riziky Boutique
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400">
+              Connectez-vous à votre compte
+            </p>
+          </div>
 
-        <div className="relative w-full max-w-md">
-          <Card className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-xl border-0 shadow-2xl">
-            <CardHeader className="text-center pb-8 pt-10">
-              <div className="flex justify-center mb-6">
-                <div className="w-20 h-20 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg">
-                  <Lock className="h-10 w-10 text-white" />
-                </div>
-              </div>
-              <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+          <Card className="shadow-2xl border-0 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm">
+            <CardHeader className="space-y-1 pb-6">
+              <CardTitle className="text-2xl font-bold text-center bg-gradient-to-r from-red-600 to-red-700 bg-clip-text text-transparent">
                 Connexion
               </CardTitle>
-              <CardDescription className="text-gray-600 dark:text-gray-300 text-lg mt-2">
-                Accédez à votre espace personnel
+              <CardDescription className="text-center text-gray-600 dark:text-gray-400">
+                {step === 'email' ? 'Entrez votre adresse email' : 'Entrez votre mot de passe'}
               </CardDescription>
             </CardHeader>
-            
-            <form onSubmit={handleSubmit}>
-              <CardContent className="space-y-6 px-8">
-                <div className="space-y-3">
-                  <Label htmlFor="email" className="text-sm font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2">
-                    <Mail className="h-4 w-4" />
-                    Adresse email
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="exemple@email.com"
-                    value={email}
-                    onChange={(e) => {
-                      setEmail(e.target.value);
-                      setShowPasswordField(false);
-                      setEmailExists(false);
-                      if (errors.email) {
-                        setErrors({ ...errors, email: undefined });
-                      }
-                    }}
-                    onBlur={handleEmailCheck}
-                    disabled={isCheckingEmail || showPasswordField}
-                    className={`h-14 bg-white/50 dark:bg-gray-700/50 border-2 rounded-xl transition-all duration-200 ${
-                      errors.email 
-                        ? "border-red-500 focus:border-red-500 focus:ring-red-500/20" 
-                        : "border-purple-200 dark:border-purple-700 focus:border-purple-500 focus:ring-purple-500/20"
-                    } focus:ring-4`}
-                  />
-                  {errors.email && (
-                    <div className="flex items-center gap-2 text-red-500 text-sm animate-in fade-in-50">
-                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                      {errors.email}
-                    </div>
-                  )}
-                  {emailExists && (
-                    <div className="flex items-center gap-2 text-green-600 text-sm animate-in fade-in-50">
-                      <Sparkles className="h-4 w-4" />
-                      Bienvenue {userName}
-                    </div>
-                  )}
-                </div>
-                
-                {showPasswordField && (
-                  <div className="space-y-3 animate-in fade-in-50 slide-in-from-top-4 duration-300">
-                    <Label htmlFor="password" className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                      Mot de passe
-                    </Label>
-                    <PasswordInput
-                      id="password"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      error={errors.password}
-                      className="h-14"
+
+            <CardContent className="space-y-6">
+              {step === 'email' ? (
+                <Form {...emailForm}>
+                  <form onSubmit={emailForm.handleSubmit(onEmailSubmit)} className="space-y-6">
+                    <FormField
+                      control={emailForm.control}
+                      name="email"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                            Adresse email
+                          </FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Input
+                                {...field}
+                                placeholder="votre@email.com"
+                                onChange={(e) => field.onChange(e.target.value.trim())}
+                                className="pl-12 h-12 border-gray-200 dark:border-gray-700 focus:border-red-500 focus:ring-red-500 rounded-xl"
+                              />
+                              <Mail className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
-                    <PasswordStrengthChecker 
-                      password={password} 
-                      onValidityChange={handlePasswordValidityChange}
-                    />
-                    <div className="text-sm text-right">
-                      <Link 
-                        to="/reset-password" 
-                        className="text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 font-medium hover:underline transition-colors"
-                      >
-                        Mot de passe oublié?
-                      </Link>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-              
-              {/* <CardFooter className="flex flex-col space-y-6 px-8 pb-10">
-                <Button
-                  type="submit"
-                  className="w-full h-14 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 hover:from-purple-700 hover:via-pink-700 hover:to-blue-700 text-white font-bold text-lg rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 flex items-center justify-center gap-3"
-                  disabled={isCheckingEmail || (showPasswordField && !isPasswordValid)}
-                >
-                  {isCheckingEmail ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                      Vérification...
-                    </>
-                  ) : showPasswordField ? (
-                    <>
-                      <Lock className="h-5 w-5" />
-                      Se connecter
-                    </>
-                  ) : (
-                    <>
-                      <ArrowRight className="h-5 w-5" />
-                      Continuer
-                    </>
-                  )}
-                </Button>
-                
-                <div className="text-center">
-                  <p className="text-gray-600 dark:text-gray-300">
-                    Nouveau sur  plateforme?{" "}
-                  </p>
-                  <p>
-                    <Link 
-                      to="/register" 
-                      className="h-5 w-5 text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 font-semibold hover:underline transition-colors"
+                    <Button 
+                      type="submit" 
+                      className="w-full h-12 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]" 
+                      disabled={isLoading}
                     >
-                      Créer un compte
-                    </Link>
-                  </p>
-                </div>
-              </CardFooter> */}
- <CardFooter className="flex flex-row space-x-4 px-8 pb-10">
-  {/* Bouton principal - Connexion */}
-  <Button
-    type="submit"
-    className="w-1/2 h-14 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 
-               hover:from-purple-700 hover:via-pink-700 hover:to-blue-700 
-               text-white font-bold text-lg rounded-xl shadow-lg 
-               hover:shadow-xl transform hover:scale-105 
-               transition-all duration-300 flex items-center justify-center gap-3"
-    disabled={isCheckingEmail || (showPasswordField && !isPasswordValid)}
-  >
-    {isCheckingEmail ? (
-      <>
-        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-        Vérification...
-      </>
-    ) : showPasswordField ? (
-      <>
-        <Lock className="h-5 w-5" />
-        Se connecter
-      </>
-    ) : (
-      <>
-        <ArrowRight className="h-5 w-5" />
-        Continuer
-      </>
-    )}
-  </Button>
+                      {isLoading ? (
+                        <div className="flex items-center gap-2">
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          Vérification...
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          Continuer
+                          <ArrowRight className="h-4 w-4" />
+                        </div>
+                      )}
+                    </Button>
+                  </form>
+                </Form>
+              ) : (
+                <Form {...passwordForm}>
+                  <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-6">
+                    <div className="p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl">
+                      <p className="text-sm text-green-700 dark:text-green-300 font-medium">
+                        Connecté en tant que : <span className="font-bold">{userEmail}</span>
+                      </p>
+                    </div>
 
-  {/* Bouton secondaire - Créer un compte */}
-  <Link to="/register" className="w-1/2">
-    <Button
-      className="w-full h-14 bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 
-                 hover:from-purple-700 hover:via-pink-700 hover:to-blue-700 
-                 text-white hover:text-black font-bold text-lg rounded-xl shadow-lg 
-                 hover:shadow-xl transform hover:scale-105 ">
-      Créer un compte
-    </Button>
-  </Link>
-</CardFooter>
+                    <FormField
+                      control={passwordForm.control}
+                      name="password"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                            Mot de passe
+                          </FormLabel>
+                          <FormControl>
+                            <div className="relative">
+                              <Input
+                                {...field}
+                                type={showPassword ? 'text' : 'password'}
+                                placeholder="••••••••"
+                                className="pl-12 pr-12 h-12 border-gray-200 dark:border-gray-700 focus:border-red-500 focus:ring-red-500 rounded-xl"
+                              />
+                              <Lock className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="absolute right-2 top-1.5 h-8 w-8 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                                onClick={togglePasswordVisibility}
+                              >
+                                {showPassword ? (
+                                  <EyeOff className="h-4 w-4 text-gray-500" />
+                                ) : (
+                                  <Eye className="h-4 w-4 text-gray-500" />
+                                )}
+                              </Button>
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                          <PasswordStrengthIndicator password={field.value} />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <div className="space-y-3">
+                      <Button 
+                        type="submit" 
+                        className="w-full h-12 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02]" 
+                        disabled={isLoading}
+                      >
+                        {isLoading ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                            Connexion...
+                          </div>
+                        ) : (
+                          'Se connecter'
+                        )}
+                      </Button>
+                      
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full h-12 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl transition-all duration-300"
+                        onClick={() => setStep('email')}
+                        disabled={isLoading}
+                      >
+                        ← Modifier l'email
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              )}
+            </CardContent>
 
-
-
-            </form>
+            <CardFooter className="flex flex-col space-y-4 pt-6">
+              <Link 
+                to="/forgot-password" 
+                className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-medium hover:underline transition-colors"
+              >
+                Mot de passe oublié ?
+              </Link>
+              <div className="text-sm text-center text-gray-600 dark:text-gray-400">
+                Pas encore de compte ?{" "}
+                <Link 
+                  to="/register" 
+                  className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-semibold hover:underline transition-colors"
+                >
+                  S'inscrire maintenant
+                </Link>
+              </div>
+            </CardFooter>
           </Card>
         </div>
       </div>
