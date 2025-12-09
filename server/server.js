@@ -89,6 +89,7 @@ app.use('/api/contacts', require('./routes/contacts'));
 app.use('/api/flash-sales', require('./routes/flash-sales'));
 app.use('/api/code-promos', require('./routes/code-promos'));
 app.use('/api/remboursements', require('./routes/remboursements'));
+app.use('/api/paiement-remboursement', require('./routes/paiement-remboursement'));
 app.use('/api/sales-notifications', require('./routes/sales-notifications'));
 app.use('/api/visitors', require('./routes/visitors'));
 app.use('/api/pub-layout', require('./routes/pub-layout'));

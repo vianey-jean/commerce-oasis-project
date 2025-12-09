@@ -221,9 +221,53 @@ router.put('/:id/status', isAuthenticated, async (req, res) => {
     if (status === 'traité' && decision) {
       remboursement.decision = decision;
       
+      // Add to paiement-remboursement.json for both accepted and refused
+      const paiementRemboursementPath = path.join(__dirname, '../data/paiement-remboursement.json');
+      const paiementsRemboursement = readJSON(paiementRemboursementPath);
+      
+      // Get order info
+      const orders = readJSON(ordersPath);
+      const order = orders.find(o => o.id === remboursement.orderId);
+      
+      if (order) {
+        const newPaiementRemboursement = {
+          id: `PR-${Date.now()}`,
+          remboursementId: remboursement.id,
+          orderId: remboursement.orderId,
+          userId: remboursement.userId,
+          userName: remboursement.userName,
+          userEmail: remboursement.userEmail,
+          order: {
+            id: order.id,
+            totalAmount: order.totalAmount,
+            originalAmount: order.originalAmount || order.totalAmount,
+            discount: order.discount || 0,
+            shippingAddress: order.shippingAddress,
+            paymentMethod: order.paymentMethod,
+            items: order.items,
+            createdAt: order.createdAt
+          },
+          reason: remboursement.reason,
+          customReason: remboursement.customReason,
+          status: 'debut',
+          decision: decision,
+          clientValidated: false,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        
+        paiementsRemboursement.push(newPaiementRemboursement);
+        writeJSON(paiementRemboursementPath, paiementsRemboursement);
+        
+        // Emit socket event
+        const io = req.app.get('io');
+        if (io) {
+          io.emit('paiement-remboursement-created', newPaiementRemboursement);
+        }
+      }
+      
       if (decision === 'accepté') {
         // Supprimer la commande et restaurer le stock
-        const orders = readJSON(ordersPath);
         const commandes = readJSON(commandesPath);
         const products = readJSON(productsPath);
         
@@ -231,11 +275,11 @@ router.put('/:id/status', isAuthenticated, async (req, res) => {
         const commandeIndex = commandes.findIndex(c => c.id === remboursement.orderId);
         
         if (orderIndex !== -1) {
-          const order = orders[orderIndex];
+          const orderToDelete = orders[orderIndex];
           
           // Restaurer le stock des produits
           const updatedProducts = products.map(product => {
-            const orderItem = order.items.find(item => item.productId === product.id);
+            const orderItem = orderToDelete.items.find(item => item.productId === product.id);
             if (orderItem) {
               const newStock = (product.stock || 0) + orderItem.quantity;
               return {
