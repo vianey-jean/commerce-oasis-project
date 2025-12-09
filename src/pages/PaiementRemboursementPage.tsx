@@ -32,6 +32,14 @@ const PaiementRemboursementPage: React.FC = () => {
     // Socket connection for real-time updates
     const socket = io(import.meta.env.VITE_API_BASE_URL || 'http://localhost:10000');
     
+    socket.on('paiement-remboursement-created', (newPaiement: PaiementRemboursement) => {
+      // Only add if it belongs to this user and is accepted
+      const currentUserId = localStorage.getItem('userId');
+      if (newPaiement.userId === currentUserId && newPaiement.decision === 'accepté') {
+        setPaiements(prev => [...prev, newPaiement]);
+      }
+    });
+    
     socket.on('paiement-remboursement-updated', (updatedPaiement: PaiementRemboursement) => {
       setPaiements(prev => prev.map(p => 
         p.id === updatedPaiement.id ? updatedPaiement : p
