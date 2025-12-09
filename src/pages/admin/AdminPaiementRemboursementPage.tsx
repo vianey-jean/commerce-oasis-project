@@ -21,6 +21,7 @@ import {
   CheckCircle,
   AlertCircle
 } from 'lucide-react';
+import { io } from 'socket.io-client';
 
 const AdminPaiementRemboursementPage: React.FC = () => {
   const [paiements, setPaiements] = useState<PaiementRemboursement[]>([]);
@@ -29,6 +30,25 @@ const AdminPaiementRemboursementPage: React.FC = () => {
 
   useEffect(() => {
     loadPaiements();
+    
+    // Socket connection for real-time updates
+    const socket = io(import.meta.env.VITE_API_BASE_URL || 'http://localhost:10000');
+    
+    socket.on('paiement-remboursement-created', (newPaiement: PaiementRemboursement) => {
+      if (newPaiement.decision === 'accepté') {
+        setPaiements(prev => [...prev, newPaiement]);
+      }
+    });
+    
+    socket.on('paiement-remboursement-updated', (updatedPaiement: PaiementRemboursement) => {
+      setPaiements(prev => prev.map(p => 
+        p.id === updatedPaiement.id ? updatedPaiement : p
+      ));
+    });
+
+    return () => {
+      socket.disconnect();
+    };
   }, []);
 
   const loadPaiements = async () => {
