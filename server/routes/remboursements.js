@@ -124,7 +124,40 @@ router.post('/', isAuthenticated, upload.single('photo'), async (req, res) => {
 router.get('/user', isAuthenticated, async (req, res) => {
   try {
     const remboursements = readJSON(remboursementsPath);
-    const userRemboursements = remboursements.filter(r => r.userId === req.user.id);
+    const orders = readJSON(ordersPath);
+    
+    const userRemboursements = remboursements
+      .filter(r => String(r.userId) === String(req.user.id))
+      .map(r => {
+        const order = orders.find(o => o.id === r.orderId);
+        return {
+          ...r,
+          order: order ? {
+            id: order.id,
+            totalAmount: order.totalAmount,
+            originalAmount: order.originalAmount || order.subtotalProduits || order.totalAmount,
+            subtotalProduits: order.subtotalProduits || order.originalAmount || order.totalAmount,
+            subtotalApresPromo: order.subtotalApresPromo || order.subtotalProduits || order.totalAmount,
+            discount: order.discount || 0,
+            taxRate: order.taxRate || 0,
+            taxAmount: order.taxAmount || 0,
+            deliveryPrice: order.deliveryPrice || 0,
+            shippingAddress: order.shippingAddress,
+            paymentMethod: order.paymentMethod,
+            items: order.items.map(item => ({
+              productId: item.productId,
+              name: item.name,
+              price: item.price,
+              originalPrice: item.originalPrice || item.price,
+              quantity: item.quantity,
+              image: item.image,
+              subtotal: item.subtotal || (item.price * item.quantity)
+            })),
+            createdAt: order.createdAt
+          } : null
+        };
+      });
+    
     res.json(userRemboursements);
   } catch (error) {
     console.error('Erreur lors de la récupération des remboursements:', error);
@@ -162,7 +195,40 @@ router.get('/', isAuthenticated, async (req, res) => {
     }
 
     const remboursements = readJSON(remboursementsPath);
-    res.json(remboursements);
+    const orders = readJSON(ordersPath);
+    
+    // Enrichir chaque remboursement avec les données de commande complètes
+    const enrichedRemboursements = remboursements.map(r => {
+      const order = orders.find(o => o.id === r.orderId);
+      return {
+        ...r,
+        order: order ? {
+          id: order.id,
+          totalAmount: order.totalAmount,
+          originalAmount: order.originalAmount || order.subtotalProduits || order.totalAmount,
+          subtotalProduits: order.subtotalProduits || order.originalAmount || order.totalAmount,
+          subtotalApresPromo: order.subtotalApresPromo || order.subtotalProduits || order.totalAmount,
+          discount: order.discount || 0,
+          taxRate: order.taxRate || 0,
+          taxAmount: order.taxAmount || 0,
+          deliveryPrice: order.deliveryPrice || 0,
+          shippingAddress: order.shippingAddress,
+          paymentMethod: order.paymentMethod,
+          items: order.items.map(item => ({
+            productId: item.productId,
+            name: item.name,
+            price: item.price,
+            originalPrice: item.originalPrice || item.price,
+            quantity: item.quantity,
+            image: item.image,
+            subtotal: item.subtotal || (item.price * item.quantity)
+          })),
+          createdAt: order.createdAt
+        } : null
+      };
+    });
+    
+    res.json(enrichedRemboursements);
   } catch (error) {
     console.error('Erreur lors de la récupération des remboursements:', error);
     res.status(500).json({ message: 'Erreur interne du serveur.' });
@@ -240,11 +306,24 @@ router.put('/:id/status', isAuthenticated, async (req, res) => {
           order: {
             id: order.id,
             totalAmount: order.totalAmount,
-            originalAmount: order.originalAmount || order.totalAmount,
+            originalAmount: order.originalAmount || order.subtotalProduits || order.totalAmount,
             discount: order.discount || 0,
+            subtotalProduits: order.subtotalProduits || order.originalAmount || order.totalAmount,
+            subtotalApresPromo: order.subtotalApresPromo || order.subtotalProduits || order.totalAmount,
+            taxRate: order.taxRate || 0,
+            taxAmount: order.taxAmount || 0,
+            deliveryPrice: order.deliveryPrice || 0,
             shippingAddress: order.shippingAddress,
             paymentMethod: order.paymentMethod,
-            items: order.items,
+            items: order.items.map(item => ({
+              productId: item.productId,
+              name: item.name,
+              price: item.price,
+              originalPrice: item.originalPrice || item.price,
+              quantity: item.quantity,
+              image: item.image,
+              subtotal: item.subtotal || (item.price * item.quantity)
+            })),
             createdAt: order.createdAt
           },
           reason: remboursement.reason,

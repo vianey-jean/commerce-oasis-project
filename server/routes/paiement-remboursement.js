@@ -33,7 +33,7 @@ router.get('/check', isAuthenticated, async (req, res) => {
   try {
     const paiements = readJSON(paiementRemboursementPath);
     const userPaiements = paiements.filter(
-      p => p.userId === req.user.id && 
+      p => String(p.userId) === String(req.user.id) && 
            p.decision === 'accepté' && 
            !p.clientValidated
     );
@@ -48,11 +48,16 @@ router.get('/check', isAuthenticated, async (req, res) => {
 router.get('/user', isAuthenticated, async (req, res) => {
   try {
     const paiements = readJSON(paiementRemboursementPath);
+    console.log('User ID from token:', req.user.id, 'Type:', typeof req.user.id);
+    console.log('All paiements:', paiements.map(p => ({ id: p.id, userId: p.userId, decision: p.decision, clientValidated: p.clientValidated })));
+    
     const userPaiements = paiements.filter(
-      p => p.userId === req.user.id && 
+      p => String(p.userId) === String(req.user.id) && 
            p.decision === 'accepté' && 
            !p.clientValidated
     );
+    
+    console.log('Filtered paiements for user:', userPaiements.length);
     res.json(userPaiements);
   } catch (error) {
     console.error('Erreur get user paiements:', error);
@@ -86,7 +91,7 @@ router.get('/:id', isAuthenticated, async (req, res) => {
       return res.status(404).json({ message: 'Paiement non trouvé' });
     }
     
-    if (req.user.role !== 'admin' && paiement.userId !== req.user.id) {
+    if (req.user.role !== 'admin' && String(paiement.userId) !== String(req.user.id)) {
       return res.status(403).json({ message: 'Accès non autorisé' });
     }
     
@@ -146,7 +151,7 @@ router.put('/:id/validate', isAuthenticated, async (req, res) => {
       return res.status(404).json({ message: 'Paiement non trouvé' });
     }
     
-    if (paiements[index].userId !== req.user.id) {
+    if (String(paiements[index].userId) !== String(req.user.id)) {
       return res.status(403).json({ message: 'Accès non autorisé' });
     }
     

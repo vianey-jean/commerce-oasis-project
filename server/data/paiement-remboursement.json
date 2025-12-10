@@ -1,1 +1,97 @@
-[]
+[
+  {
+    "id": "PR-1765286683479",
+    "remboursementId": "RMB-1765286651465",
+    "orderId": "ORD-1748097370624",
+    "userId": "3",
+    "userName": "RABEMANALINA  Jean Marie",
+    "userEmail": "vianey.jean@ymail.com",
+    "order": {
+      "id": "ORD-1748097370624",
+      "totalAmount": 162.5,
+      "originalAmount": 162.5,
+      "discount": 0,
+      "shippingAddress": {
+        "nom": "RABEMANALINA",
+        "prenom": "Jean Marie",
+        "adresse": "21 rue de paris",
+        "ville": "Saint-Denis",
+        "codePostal": "97400",
+        "pays": "La Réunion",
+        "telephone": "0692198701"
+      },
+      "paymentMethod": "cash",
+      "items": [
+        {
+          "productId": "1746760831010",
+          "name": "Perruque 💯 cheveux humain , bouclé coloré, 16 pouces",
+          "price": 112.5,
+          "originalPrice": 150,
+          "quantity": 1,
+          "image": "/uploads/images-1746760831007-189769899.jpg",
+          "subtotal": 112.5
+        },
+        {
+          "productId": "1746726531059",
+          "name": "4 Paquet Tissage 💯cheveux naturelle, 20 pouces",
+          "price": 50,
+          "originalPrice": 50,
+          "quantity": 1,
+          "image": "/uploads/images-1746726531053-828134332.jpg",
+          "subtotal": 50
+        }
+      ],
+      "createdAt": "2025-05-24T14:36:10.624Z"
+    },
+    "reason": "trompé produit",
+    "customReason": "desole",
+    "status": "payé",
+    "decision": "accepté",
+    "clientValidated": true,
+    "createdAt": "2025-12-09T13:24:43.479Z",
+    "updatedAt": "2025-12-09T14:23:04.736Z"
+  },
+  {
+    "id": "PR-1765287701693",
+    "remboursementId": "RMB-1765287680297",
+    "orderId": "ORD-1765287640258",
+    "userId": "3",
+    "userName": "RABEMANALINA  Jean Marie",
+    "userEmail": "vianey.jean@ymail.com",
+    "order": {
+      "id": "ORD-1765287640258",
+      "totalAmount": 80,
+      "originalAmount": 50,
+      "discount": 0,
+      "shippingAddress": {
+        "nom": "RABEMANALINA",
+        "prenom": "Jean Marie",
+        "adresse": "21 rue de paris",
+        "ville": "Entre-Deux",
+        "codePostal": "97400",
+        "pays": "La Réunion",
+        "telephone": "0692198701"
+      },
+      "paymentMethod": "cash",
+      "items": [
+        {
+          "productId": "1746726531059",
+          "name": "4 Paquet Tissage 💯cheveux naturelle, 20 pouces",
+          "price": 50,
+          "originalPrice": 50,
+          "quantity": 1,
+          "image": "/uploads/images-1746726531053-828134332.jpg",
+          "subtotal": 50
+        }
+      ],
+      "createdAt": "2025-12-09T13:40:40.258Z"
+    },
+    "reason": "trompé produit",
+    "customReason": "desolé merci",
+    "status": "en cours",
+    "decision": "accepté",
+    "clientValidated": false,
+    "createdAt": "2025-12-09T13:41:41.693Z",
+    "updatedAt": "2025-12-09T14:23:32.461Z"
+  }
+]

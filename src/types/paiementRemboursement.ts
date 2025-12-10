@@ -11,6 +11,11 @@ export interface PaiementRemboursement {
     totalAmount: number;
     originalAmount: number;
     discount: number;
+    subtotalProduits?: number;
+    subtotalApresPromo?: number;
+    taxRate?: number;
+    taxAmount?: number;
+    deliveryPrice?: number;
     shippingAddress: {
       nom: string;
       prenom: string;
