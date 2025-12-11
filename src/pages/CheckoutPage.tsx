@@ -373,6 +373,7 @@ const CheckoutPage = () => {
                   <PaymentForm
                     paymentMethod={paymentMethod}
                     loading={loading}
+                    totalAmount={orderTotal}
                     onMethodChange={setPaymentMethod}
                     onSubmit={handlePaymentSubmit}
                     onBackToShipping={() => setStep('shipping')}
