@@ -66,14 +66,6 @@ export const useOrders = () => {
     }
   }, [isAuthenticated]);
 
-  /**
-   * Crée une nouvelle commande avec calcul TVA
-   * 
-   * Le calcul de prix fonctionne ainsi:
-   * - subtotalHT = prix TTC * 0.80 (prix hors taxe)
-   * - taxAmount = prix TTC * 0.20 (TVA 20%)
-   * - total = subtotalHT + taxAmount + deliveryPrice
-   */
   const createOrder = async (
     shippingAddress: any,
     paymentMethod: string,
@@ -89,16 +81,10 @@ export const useOrders = () => {
     try {
       console.log('Preparing order payload with items:', selectedCartItems.length);
       
-      // Taux de TVA (20%)
-      const TAX_RATE = 0.20;
-      
       const orderItems = selectedCartItems.map(item => {
-        // Prix avec code promo si applicable
         const finalPrice = codePromo && codePromo.productId === item.product.id
           ? item.product.price * (1 - codePromo.pourcentage / 100)
           : item.product.price;
-        
-        const itemSubtotal = finalPrice * item.quantity;
 
         return {
           productId: item.product.id,
@@ -109,34 +95,22 @@ export const useOrders = () => {
           image: item.product.images && item.product.images.length > 0 
             ? item.product.images[0] 
             : item.product.image,
-          subtotal: itemSubtotal,
+          subtotal: finalPrice * item.quantity,
           codePromoApplied: codePromo && codePromo.productId === item.product.id
         };
       });
       
       console.log('Order items mapped:', orderItems);
-      
-      // Calculer les totaux avec TVA
-      const totalTTC = orderItems.reduce((sum, item) => sum + item.subtotal, 0);
-      const subtotalHT = totalTTC * (1 - TAX_RATE); // Prix HT (sans TVA)
-      const taxAmount = totalTTC * TAX_RATE; // TVA 20%
-      const finalDeliveryPrice = deliveryPrice !== undefined ? deliveryPrice : 0;
-      const orderTotal = subtotalHT + taxAmount + finalDeliveryPrice;
 
       const orderPayload = {
         items: orderItems,
         shippingAddress,
         paymentMethod,
         codePromo: codePromo || null,
-        // Informations de TVA pour la base de données
-        subtotalHT: subtotalHT,
-        taxRate: TAX_RATE,
-        taxAmount: taxAmount,
-        deliveryPrice: finalDeliveryPrice,
-        orderTotal: orderTotal
+        deliveryPrice: deliveryPrice !== undefined ? deliveryPrice : 0
       };
 
-      console.log('Sending order payload with tax info:', orderPayload);
+      console.log('Sending order payload:', orderPayload);
       
       const response = await ordersAPI.create(orderPayload);
 

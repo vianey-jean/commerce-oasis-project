@@ -47,7 +47,6 @@ export interface Order {
   originalAmount?: number;
   discount?: number;
   subtotalApresPromo?: number;
-  subtotalHT?: number;        // Prix HT (prix - 20%)
   taxRate?: number;
   taxAmount?: number;
   deliveryPrice?: number;

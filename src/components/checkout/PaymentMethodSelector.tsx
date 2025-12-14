@@ -1,77 +1,124 @@
+/**
+ * @fileoverview Sélecteur de méthode de paiement avec intégration Stripe
+ * 
+ * Ce composant permet à l'utilisateur de :
+ * - Choisir une carte bancaire enregistrée
+ * - Ajouter une nouvelle carte
+ * - Confirmer et traiter le paiement via Stripe
+ * 
+ * @version 2.0.0
+ */
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CreditCard, Plus } from 'lucide-react';
+import { CreditCard, Plus, Shield } from 'lucide-react';
 import SavedCardsList from './SavedCardsList';
 import CreditCardForm from './CreditCardForm';
-import StripePaymentModal from './StripePaymentModal';
-import { cardsAPI, SavedCard, CardData } from '@/services/cards';
+import StripePaymentProcessor from './StripePaymentProcessor';
+import { cardsAPI, type SavedCard } from '@/services/cards';
 import { toast } from '@/components/ui/sonner';
-import { useStore } from '@/contexts/StoreContext';
-import { useNavigate } from 'react-router-dom';
-import { getSecureRoute } from '@/services/security/routing/routeSecurity';
 
+/**
+ * Props du composant PaymentMethodSelector
+ */
 interface PaymentMethodSelectorProps {
+  /** Callback appelé après un paiement réussi */
   onPaymentSuccess: () => void;
-  shippingAddress?: {
-    nom: string;
-    prenom: string;
-    adresse: string;
-    ville: string;
-    codePostal: string;
-    pays: string;
-    telephone: string;
+  /** Montant total à payer en euros */
+  totalAmount?: number;
+  /** Données de commande pour Stripe */
+  orderData?: {
+    userId: string;
+    items: Array<{
+      productId: string;
+      name: string;
+      price: number;
+      quantity: number;
+      image?: string;
+    }>;
+    shippingAddress: {
+      nom: string;
+      prenom: string;
+      adresse: string;
+      ville: string;
+      codePostal: string;
+      pays: string;
+      telephone: string;
+    };
+    subtotal: number;
+    taxAmount: number;
+    deliveryPrice: number;
+    total: number;
+    codePromo?: {
+      code: string;
+      productId: string;
+      pourcentage: number;
+    } | null;
   };
-  subtotal?: number;
-  taxAmount?: number;
-  deliveryPrice?: number;
-  orderTotal?: number;
 }
 
+/**
+ * Composant de sélection de méthode de paiement
+ * 
+ * Gère l'affichage des cartes enregistrées, l'ajout de nouvelles cartes
+ * et le traitement des paiements via Stripe.
+ * 
+ * @param props - Les propriétés du composant
+ * @returns Le composant JSX
+ */
 const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({ 
   onPaymentSuccess,
-  shippingAddress,
-  subtotal = 0,
-  taxAmount = 0,
-  deliveryPrice = 0,
-  orderTotal = 0
+  totalAmount = 0,
+  orderData
 }) => {
-  const { selectedCartItems } = useStore();
-  const navigate = useNavigate();
+  // ID de la carte sélectionnée
   const [selectedCardId, setSelectedCardId] = useState<string>('');
+  // Onglet actif (cartes sauvegardées ou nouvelle carte)
   const [activeTab, setActiveTab] = useState('saved');
+  // Indique si l'utilisateur a des cartes sauvegardées
   const [hasSavedCards, setHasSavedCards] = useState(false);
-  const [savedCards, setSavedCards] = useState<SavedCard[]>([]);
+  // Liste des cartes de l'utilisateur
+  const [cards, setCards] = useState<SavedCard[]>([]);
+  // État d'ouverture de la modale de paiement Stripe
   const [showStripeModal, setShowStripeModal] = useState(false);
+  // Informations sur la carte sélectionnée pour l'affichage
   const [selectedCardInfo, setSelectedCardInfo] = useState<{
-    id?: string;
     maskedNumber: string;
-    cardType: string;
     cardName: string;
-    expiryDate: string;
-  } | null>(null);
-  const [pendingNewCard, setPendingNewCard] = useState<CardData | null>(null);
+    cardType: string;
+  } | undefined>();
 
+  /**
+   * Charge les cartes de l'utilisateur au montage du composant
+   */
   useEffect(() => {
     checkSavedCards();
   }, []);
 
+  /**
+   * Vérifie et charge les cartes sauvegardées de l'utilisateur
+   */
   const checkSavedCards = async () => {
     try {
-      const cards = await cardsAPI.getUserCards();
-      setSavedCards(cards);
-      setHasSavedCards(cards.length > 0);
+      const userCards = await cardsAPI.getUserCards();
+      setCards(userCards);
+      setHasSavedCards(userCards.length > 0);
       
       // Sélectionner automatiquement la carte par défaut
-      const defaultCard = cards.find(card => card.isDefault);
+      const defaultCard = userCards.find(card => card.isDefault);
       if (defaultCard) {
         setSelectedCardId(defaultCard.id);
+        setSelectedCardInfo({
+          maskedNumber: defaultCard.maskedNumber,
+          cardName: defaultCard.cardName,
+          cardType: defaultCard.cardType
+        });
       }
       
       // Si pas de cartes sauvegardées, aller directement à l'onglet nouvelle carte
-      if (cards.length === 0) {
+      if (userCards.length === 0) {
         setActiveTab('new');
       }
     } catch (error) {
@@ -79,89 +126,66 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
     }
   };
 
+  /**
+   * Gère la sélection d'une carte
+   * 
+   * @param cardId - L'ID de la carte sélectionnée
+   */
+  const handleCardSelect = (cardId: string) => {
+    setSelectedCardId(cardId);
+    
+    // Mettre à jour les infos de la carte sélectionnée
+    const card = cards.find(c => c.id === cardId);
+    if (card) {
+      setSelectedCardInfo({
+        maskedNumber: card.maskedNumber,
+        cardName: card.cardName,
+        cardType: card.cardType
+      });
+    }
+  };
+
+  /**
+   * Lance le processus de paiement avec une carte sauvegardée
+   */
   const handlePayWithSavedCard = async () => {
     if (!selectedCardId) {
       toast.error('Veuillez sélectionner une carte');
       return;
     }
 
-    try {
-      const card = savedCards.find(c => c.id === selectedCardId);
-      if (!card) {
-        toast.error('Carte non trouvée');
-        return;
-      }
-
-      // Préparer les informations de la carte pour le modal
-      setSelectedCardInfo({
-        id: card.id,
-        maskedNumber: card.maskedNumber,
-        cardType: card.cardType,
-        cardName: card.cardName,
-        expiryDate: card.expiryDate
-      });
-
-      // Ouvrir le modal de confirmation Stripe
-      setShowStripeModal(true);
-    } catch (error) {
-      console.error('Erreur lors de la récupération de la carte:', error);
-      toast.error('Erreur lors du paiement');
-    }
-  };
-
-  const handleNewCardPayment = (cardData: CardData) => {
-    // Masquer le numéro de carte
-    const maskedNumber = `**** **** **** ${cardData.cardNumber.slice(-4)}`;
-    
-    // Détecter le type de carte
-    const cardType = detectCardType(cardData.cardNumber);
-    
-    setSelectedCardInfo({
-      maskedNumber,
-      cardType,
-      cardName: cardData.cardName,
-      expiryDate: cardData.expiryDate
-    });
-    
-    setPendingNewCard(cardData);
+    // Ouvrir la modale de confirmation Stripe
     setShowStripeModal(true);
   };
 
-  const detectCardType = (number: string): string => {
-    const cleaned = number.replace(/\s/g, '');
-    if (/^4/.test(cleaned)) return 'visa';
-    if (/^5[1-5]/.test(cleaned)) return 'mastercard';
-    if (/^3[47]/.test(cleaned)) return 'american-express';
-    return 'other';
-  };
-
-  const handlePaymentSuccess = () => {
+  /**
+   * Callback appelé après un paiement Stripe réussi
+   * 
+   * @param orderId - L'ID de la commande créée (optionnel)
+   */
+  const handleStripePaymentSuccess = (orderId?: string) => {
     setShowStripeModal(false);
-    
-    // Si une nouvelle carte était en attente, la sauvegarder si demandé
-    if (pendingNewCard) {
-      checkSavedCards();
-      setPendingNewCard(null);
-    }
-    
     onPaymentSuccess();
   };
 
-  const handlePaymentFailed = () => {
-    setShowStripeModal(false);
-    setPendingNewCard(null);
-    // Rester sur la page de sélection de carte
+  /**
+   * Callback appelé en cas d'erreur de paiement Stripe
+   * 
+   * @param error - Le message d'erreur
+   */
+  const handleStripePaymentError = (error: string) => {
+    console.error('Erreur Stripe:', error);
+    // La modale reste ouverte pour permettre de réessayer
   };
 
-  // Valeurs par défaut pour l'adresse si non fournie
-  const defaultShippingAddress = shippingAddress || {
-    nom: '',
-    prenom: '',
-    adresse: '',
-    ville: '',
-    codePostal: '',
-    pays: 'La Réunion',
-    telephone: ''
+  /**
+   * Gère le succès de l'ajout d'une nouvelle carte
+   * Ouvre automatiquement la modale de paiement
+   */
+  const handleNewCardSuccess = () => {
+    checkSavedCards();
+    // Ouvrir directement la modale de paiement après ajout de carte
+    setShowStripeModal(true);
   };
 
   return (
@@ -175,6 +199,7 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
+            {/* Onglets de sélection */}
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="saved" disabled={!hasSavedCards}>
                 Cartes enregistrées
@@ -185,52 +210,60 @@ const PaymentMethodSelector: React.FC<PaymentMethodSelectorProps> = ({
               </TabsTrigger>
             </TabsList>
             
+            {/* Contenu: Cartes sauvegardées */}
             <TabsContent value="saved" className="space-y-4">
               <SavedCardsList 
-                onCardSelect={setSelectedCardId}
+                onCardSelect={handleCardSelect}
                 selectedCardId={selectedCardId}
               />
+              
+              {/* Affichage du montant */}
+              {totalAmount > 0 && (
+                <div className="bg-muted/50 rounded-lg p-3 flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Montant à payer:</span>
+                  <span className="text-lg font-bold text-primary">{totalAmount.toFixed(2)} €</span>
+                </div>
+              )}
+              
               <Button 
                 onClick={handlePayWithSavedCard}
-                className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700"
+                className="w-full bg-green-600 hover:bg-green-700"
                 disabled={!selectedCardId}
               >
+                <Shield className="h-4 w-4 mr-2" />
                 Payer avec cette carte
               </Button>
             </TabsContent>
             
+            {/* Contenu: Nouvelle carte */}
             <TabsContent value="new">
+              {/* Affichage du montant */}
+              {totalAmount > 0 && (
+                <div className="bg-muted/50 rounded-lg p-3 flex justify-between items-center mb-4">
+                  <span className="text-sm text-muted-foreground">Montant à payer:</span>
+                  <span className="text-lg font-bold text-primary">{totalAmount.toFixed(2)} €</span>
+                </div>
+              )}
+              
               <CreditCardForm 
-                onSuccess={() => {
-                  // Cette fonction n'est plus appelée directement
-                  // Le paiement passe par le modal
-                }}
-                onPayWithCard={handleNewCardPayment}
+                onSuccess={handleNewCardSuccess}
+                totalAmount={totalAmount}
               />
             </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
 
-      {/* Modal de confirmation de paiement Stripe */}
-      {selectedCardInfo && (
-        <StripePaymentModal
-          isOpen={showStripeModal}
-          onClose={() => {
-            setShowStripeModal(false);
-            setPendingNewCard(null);
-          }}
-          onPaymentSuccess={handlePaymentSuccess}
-          onPaymentFailed={handlePaymentFailed}
-          cartItems={selectedCartItems}
-          shippingAddress={defaultShippingAddress}
-          cardInfo={selectedCardInfo}
-          subtotal={subtotal}
-          taxAmount={taxAmount}
-          deliveryPrice={deliveryPrice}
-          orderTotal={orderTotal}
-        />
-      )}
+      {/* Modale de traitement du paiement Stripe */}
+      <StripePaymentProcessor
+        isOpen={showStripeModal}
+        onClose={() => setShowStripeModal(false)}
+        amount={totalAmount}
+        orderData={orderData}
+        onPaymentSuccess={handleStripePaymentSuccess}
+        onPaymentError={handleStripePaymentError}
+        cardInfo={selectedCardInfo}
+      />
     </>
   );
 };

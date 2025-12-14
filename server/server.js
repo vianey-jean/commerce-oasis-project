@@ -101,7 +101,6 @@ app.use('/api/client-chat', require('./routes/client-chat'));
 app.use('/api/cards', require('./routes/cards'));
 app.use('/api/profile-images', require('./routes/profile-images'));
 app.use('/api/chat-files', require('./routes/chat-files'));
-app.use('/api/payments', require('./routes/payments'));
 
 // ✅ Route test
 app.get('/api/test', (req, res) => {

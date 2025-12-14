@@ -10,7 +10,6 @@ interface OrderSummaryProps {
   selectedCartItems: StoreCartItem[];
   subtotal: number;
   discountedSubtotal: number;
-  subtotalHT: number; // Sous-total hors taxe (prix - 20%)
   hasPromoDiscount: boolean;
   taxAmount: number;
   deliveryPrice: number;
@@ -31,7 +30,6 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
   selectedCartItems,
   subtotal,
   discountedSubtotal,
-  subtotalHT,
   hasPromoDiscount,
   taxAmount,
   deliveryPrice,
@@ -119,10 +117,9 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
         </div>
         
         <div className="border-t-2 border-gradient-to-r from-gray-200 to-gray-100 pt-6 space-y-4">
-          {/* Sous-total HT (prix - 20% TVA) */}
           <div className="flex justify-between text-gray-600">
-            <p className="font-medium">Sous-total HT</p>
-            <p className="font-semibold">{formatPrice(subtotalHT)}</p>
+            <p className="font-medium">Sous-total</p>
+            <p className="font-semibold">{formatPrice(subtotal)}</p>
           </div>
           
           {hasPromoDiscount && (
@@ -140,13 +137,11 @@ const OrderSummary: React.FC<OrderSummaryProps> = ({
             </motion.div>
           )}
 
-          {/* TVA 20% du prix réel */}
           <div className="flex justify-between text-gray-600">
             <p className="font-medium">TVA (20%)</p>
             <p className="font-semibold">{formatPrice(taxAmount)}</p>
           </div>
 
-          {/* Frais de livraison */}
           <div className="flex justify-between text-gray-600">
             <p className="flex items-center font-medium">
               <Truck className="h-4 w-4 mr-2" />

@@ -263,41 +263,38 @@ const AdminOrdersPage = () => {
                         Détails financiers
                       </h3>
                       <div className="space-y-3">
-                        {/* Sous-total HT (prix - 20%) */}
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600 dark:text-gray-400">Sous-total HT</span>
-                          <span className="font-medium">{(order.subtotalHT || (order.totalAmount * 0.8) || 0).toFixed(2)} €</span>
-                        </div>
-                        
+                        {order.subtotalProduits !== undefined && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600 dark:text-gray-400">Sous-total produits</span>
+                            <span className="font-medium">{(order.subtotalProduits || 0).toFixed(2)} €</span>
+                          </div>
+                        )}
                         {order.discount !== undefined && order.discount > 0 && (
                           <div className="flex justify-between text-sm text-emerald-600">
                             <span>Remise appliquée</span>
                             <span className="font-medium">-{order.discount.toFixed(2)} €</span>
                           </div>
                         )}
-                        
-                        {/* TVA 20% du prix réel */}
-                        <div className="flex justify-between text-sm">
-                          <span className="text-gray-600 dark:text-gray-400">
-                            TVA (20%)
-                          </span>
-                          <span className="font-medium">{(order.taxAmount || (order.totalAmount * 0.2) || 0).toFixed(2)} €</span>
-                        </div>
-                        
-                        {/* Frais de livraison */}
+                        {order.taxAmount !== undefined && order.taxAmount > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-gray-600 dark:text-gray-400">
+                              TVA ({((order.taxRate || 0.2) * 100).toFixed(0)}%)
+                            </span>
+                            <span className="font-medium">{order.taxAmount.toFixed(2)} €</span>
+                          </div>
+                        )}
                         {order.deliveryPrice !== undefined && order.deliveryPrice > 0 && (
                           <div className="flex justify-between text-sm">
                             <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1">
                               <Truck className="h-4 w-4" />
-                              Livraison ({order.shippingAddress?.ville || ''})
+                              Frais de livraison ({order.shippingAddress.ville})
                             </span>
                             <span className="font-medium">{order.deliveryPrice.toFixed(2)} €</span>
                           </div>
                         )}
-                        
                         <div className="border-t border-emerald-200 dark:border-emerald-700 pt-3 mt-3">
                           <div className="flex justify-between">
-                            <span className="text-lg font-bold text-gray-900 dark:text-gray-100">Total TTC</span>
+                            <span className="text-lg font-bold text-gray-900 dark:text-gray-100">Total</span>
                             <span className="text-lg font-bold text-emerald-600">{order.totalAmount.toFixed(2)} €</span>
                           </div>
                         </div>

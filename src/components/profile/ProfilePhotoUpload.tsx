@@ -1,3 +1,4 @@
+
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -41,7 +42,6 @@ const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({ onPhotoUpdated 
     setShowConfirmation(true);
   };
 
-  // 🔥 Correction majeure : version complète corrigée
   const handleUpload = async () => {
     if (!user) {
       toast.error('Utilisateur non connecté');
@@ -49,64 +49,72 @@ const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({ onPhotoUpdated 
     }
 
     setUploading(true);
-
     try {
       if (selectedFile) {
+        // Upload nouvelle photo
+        console.log('📤 Upload nouvelle photo pour utilisateur:', user.id);
+        
         const formData = new FormData();
         formData.append('profileImage', selectedFile);
+        
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/profile-images/${user.id}/upload`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          },
+          body: formData
+        });
 
-        const response = await fetch(
-          `${import.meta.env.VITE_API_BASE_URL}/api/profile-images/${user.id}/upload`,
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-            },
-            body: formData,
-          }
-        );
-
+        console.log('📡 Response status:', response.status);
+        
         if (!response.ok) {
           const errorText = await response.text();
+          console.error('❌ Erreur response:', errorText);
           throw new Error(`Erreur serveur: ${response.status} - ${errorText}`);
         }
 
         const result = await response.json();
+        console.log('✅ Upload réussi:', result);
+        
+        // Mettre à jour le profil utilisateur avec la nouvelle photo
         await authAPI.updateProfile(user.id, { profileImage: result.profileImage });
-
+        
       } else if (selectedExisting) {
-        const response = await fetch(
-          `${import.meta.env.VITE_API_BASE_URL}/api/profile-images/${user.id}/set-active`,
-          {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-            },
-            body: JSON.stringify({ profileImagePath: selectedExisting }),
-          }
-        );
+        // Définir une photo existante comme active
+        console.log('🔄 Définition photo existante comme active:', selectedExisting);
+        
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/profile-images/${user.id}/set-active`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+          },
+          body: JSON.stringify({ profileImagePath: selectedExisting })
+        });
 
         if (!response.ok) {
           const errorText = await response.text();
+          console.error('❌ Erreur response:', errorText);
           throw new Error(`Erreur serveur: ${response.status} - ${errorText}`);
         }
 
+        const result = await response.json();
+        console.log('✅ Photo active mise à jour:', result);
+        
+        // Mettre à jour le profil utilisateur
         await authAPI.updateProfile(user.id, { profileImage: selectedExisting });
       }
 
       toast.success('Photo de profil mise à jour avec succès');
-
-      // 🔥 Correction ici — fermeture propre du modal + refresh
       onPhotoUpdated?.();
       setIsOpen(false);
       setShowConfirmation(false);
-
       setSelectedFile(null);
       setPreviewUrl('');
       setSelectedExisting('');
-
-    } catch (error: any) {
+      
+    } catch (error) {
+      console.error('❌ Erreur upload:', error);
       toast.error(`Erreur lors de la mise à jour de la photo de profil: ${error.message}`);
     } finally {
       setUploading(false);
@@ -116,18 +124,15 @@ const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({ onPhotoUpdated 
   const loadExistingPhotos = async () => {
     if (!user) return;
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/api/profile-images/${user.id}/list`,
-        {
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
-          },
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/api/profile-images/${user.id}/list`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
         }
-      );
-
+      });
       if (response.ok) {
         const photos = await response.json();
         setExistingPhotos(photos);
+        console.log('📸 Photos existantes chargées:', photos.length);
       }
     } catch (error) {
       console.error('Erreur lors du chargement des photos:', error);
@@ -151,15 +156,19 @@ const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({ onPhotoUpdated 
             <Plus className="h-4 w-4" />
           </Button>
         </DialogTrigger>
-
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>Changer la photo de profil</DialogTitle>
           </DialogHeader>
-
+          
           <div className="space-y-4">
+            {/* Upload nouvelle photo */}
             <div>
-              <Button onClick={() => fileInputRef.current?.click()} variant="outline" className="w-full">
+              <Button
+                onClick={() => fileInputRef.current?.click()}
+                variant="outline"
+                className="w-full"
+              >
                 <Upload className="h-4 w-4 mr-2" />
                 Ajouter une nouvelle photo
               </Button>
@@ -172,6 +181,7 @@ const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({ onPhotoUpdated 
               />
             </div>
 
+            {/* Aperçu de la nouvelle photo */}
             {previewUrl && (
               <div className="flex justify-center">
                 <img
@@ -182,6 +192,7 @@ const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({ onPhotoUpdated 
               </div>
             )}
 
+            {/* Photos existantes */}
             {existingPhotos.length > 0 && (
               <div>
                 <h4 className="text-sm font-medium mb-2">
@@ -217,13 +228,10 @@ const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({ onPhotoUpdated 
               disabled={!selectedFile && !selectedExisting || uploading}
               className="w-full"
             >
-              {uploading
-                ? 'Enregistrement...'
-                : selectedFile
-                  ? 'Ajouter cette nouvelle photo'
-                  : selectedExisting
-                    ? 'Utiliser cette photo'
-                    : 'Sélectionnez une photo'}
+              {uploading ? 'Enregistrement...' : 
+               selectedFile ? 'Ajouter cette nouvelle photo' : 
+               selectedExisting ? 'Utiliser cette photo' : 
+               'Sélectionnez une photo'}
             </Button>
           </div>
         </DialogContent>
@@ -234,12 +242,11 @@ const ProfilePhotoUpload: React.FC<ProfilePhotoUploadProps> = ({ onPhotoUpdated 
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmer le changement</AlertDialogTitle>
             <AlertDialogDescription>
-              {selectedFile
-                ? 'Voulez-vous ajouter cette nouvelle photo comme photo de profil ?'
+              {selectedFile 
+                ? 'Voulez-vous ajouter cette nouvelle photo comme photo de profil ?' 
                 : 'Voulez-vous utiliser cette photo existante comme photo de profil ?'}
             </AlertDialogDescription>
           </AlertDialogHeader>
-
           <AlertDialogFooter>
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={handleUpload} disabled={uploading}>

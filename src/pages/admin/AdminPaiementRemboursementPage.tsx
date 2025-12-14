@@ -561,19 +561,19 @@ const AdminPaiementRemboursementPage: React.FC = () => {
                     
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div className="bg-white/10 rounded-xl p-3">
-                        <p className="text-white/70 text-sm">Sous-total HT</p>
-                        <p className="font-bold text-lg">{formatCurrency(paiement.order.subtotalHT || (paiement.order.totalAmount * 0.8))}</p>
+                        <p className="text-white/70 text-sm">Produits</p>
+                        <p className="font-bold text-lg">{formatCurrency(paiement.order.subtotalProduits || paiement.order.originalAmount)}</p>
                       </div>
                       <div className="bg-white/10 rounded-xl p-3">
-                        <p className="text-white/70 text-sm">TVA (20%)</p>
-                        <p className="font-bold text-lg">{formatCurrency(paiement.order.taxAmount || (paiement.order.totalAmount * 0.2))}</p>
+                        <p className="text-white/70 text-sm">TVA</p>
+                        <p className="font-bold text-lg">{formatCurrency(paiement.order.taxAmount || 0)}</p>
                       </div>
                       <div className="bg-white/10 rounded-xl p-3">
                         <p className="text-white/70 text-sm">Livraison</p>
                         <p className="font-bold text-lg">{formatCurrency(paiement.order.deliveryPrice || 0)}</p>
                       </div>
                       <div className="bg-white/20 rounded-xl p-3 border-2 border-white/30">
-                        <p className="text-white/90 text-sm font-semibold">TOTAL TTC</p>
+                        <p className="text-white/90 text-sm font-semibold">TOTAL</p>
                         <p className="font-bold text-xl">{formatCurrency(paiement.order.totalAmount)}</p>
                       </div>
                     </div>

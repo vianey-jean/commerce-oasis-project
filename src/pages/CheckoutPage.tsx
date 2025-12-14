@@ -5,13 +5,13 @@ import { useStore } from '@/contexts/StoreContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/sonner';
+import PaymentMethodSelector from '@/components/checkout/PaymentMethodSelector';
 import CheckoutHeader from '@/components/checkout/CheckoutHeader';
 import CheckoutSteps from '@/components/checkout/CheckoutSteps';
 import ShippingForm from '@/components/checkout/ShippingForm';
 import PaymentForm from '@/components/checkout/PaymentForm';
 import OrderSummary from '@/components/checkout/OrderSummary';
 import LoadingOrderState from '@/components/checkout/LoadingOrderState';
-import StripePaymentModal from '@/components/checkout/StripePaymentModal';
 import { ShippingAddress, codePromosAPI } from '@/services/api';
 import { Link } from 'react-router-dom';
 import { ShoppingCart, Shield } from 'lucide-react';
@@ -189,7 +189,6 @@ const CheckoutPage = () => {
     e.preventDefault();
     
     if (paymentMethod === 'card') {
-      // Ouvrir directement le modal Stripe pour saisir les infos de carte
       setShowCardForm(true);
     } else {
       // Traiter les autres méthodes de paiement
@@ -273,26 +272,17 @@ const CheckoutPage = () => {
   
   const subtotal = getCartTotal();
   
-  // Calculer le total avec remise code promo (prix TTC)
+  // Calculer le total avec remise code promo
   const discountedSubtotal = selectedCartItems.reduce((total, item) => {
     return total + calculateItemPrice(item);
   }, 0);
   
   const hasPromoDiscount = subtotal !== discountedSubtotal;
   
-  /**
-   * Calcul TVA - Le prix affiché est TTC (Toutes Taxes Comprises)
-   * On extrait la TVA du prix TTC:
-   * - Sous-total HT = Prix TTC / 1.20 = Prix TTC * (1 - 0.20/1.20) ≈ Prix TTC * 0.8333
-   * - Mais selon la demande: Sous-total = Prix - 20% = Prix * 0.80
-   * - TVA = 20% du prix réel = Prix * 0.20
-   * - Total = Sous-total (HT) + TVA + Livraison = Prix + Livraison
-   */
-  const subtotalHT = discountedSubtotal * (1 - TAX_RATE); // Prix HT (sans TVA)
-  const taxAmount = discountedSubtotal * TAX_RATE; // TVA 20% du prix TTC
+  // Calcul des taxes (20% de TVA)
+  const taxAmount = discountedSubtotal * TAX_RATE;
   
-  // Total TTC = Sous-total HT + TVA + Livraison = Prix original + Livraison
-  const orderTotal = subtotalHT + taxAmount + deliveryPrice;
+  const orderTotal = discountedSubtotal + deliveryPrice + taxAmount;
   
   // URL de base pour les images
   const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -334,22 +324,33 @@ const CheckoutPage = () => {
 
           <CheckoutSteps currentStep={step} />
         
-        {/* Modal Stripe pour paiement par carte */}
-          <StripePaymentModal
-            isOpen={showCardForm}
-            onClose={() => setShowCardForm(false)}
-            onPaymentSuccess={handlePaymentSuccess}
-            onPaymentFailed={() => setShowCardForm(false)}
-            cartItems={selectedCartItems}
-            shippingAddress={shippingData}
-            cardInfo={{ maskedNumber: '', cardType: '', cardName: '', expiryDate: '' }}
-            subtotal={discountedSubtotal}
-            taxAmount={taxAmount}
-            deliveryPrice={deliveryPrice}
-            orderTotal={orderTotal}
-          />
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {showCardForm ? (
+            <motion.div 
+              className="max-w-md mx-auto"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.4 }}
+            >
+              <div className="bg-white p-8 rounded-2xl shadow-xl border border-gray-200">
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Shield className="h-8 w-8 text-white" />
+                  </div>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">Paiement sécurisé</h2>
+                  <p className="text-gray-600">Vos données sont protégées par cryptage SSL</p>
+                </div>
+                <PaymentMethodSelector onPaymentSuccess={handlePaymentSuccess} />
+                <Button 
+                  variant="outline" 
+                  className="mt-6 w-full border-gray-300 hover:border-gray-400"
+                  onClick={() => setShowCardForm(false)}
+                >
+                  Retour aux options de paiement
+                </Button>
+              </div>
+            </motion.div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
               <motion.div 
                 className="lg:col-span-8 space-y-6"
                 initial={{ opacity: 0, x: -20 }}
@@ -372,6 +373,7 @@ const CheckoutPage = () => {
                   <PaymentForm
                     paymentMethod={paymentMethod}
                     loading={loading}
+                    totalAmount={orderTotal}
                     onMethodChange={setPaymentMethod}
                     onSubmit={handlePaymentSubmit}
                     onBackToShipping={() => setStep('shipping')}
@@ -383,7 +385,6 @@ const CheckoutPage = () => {
                 selectedCartItems={selectedCartItems}
                 subtotal={subtotal}
                 discountedSubtotal={discountedSubtotal}
-                subtotalHT={subtotalHT}
                 hasPromoDiscount={hasPromoDiscount}
                 taxAmount={taxAmount}
                 deliveryPrice={deliveryPrice}
@@ -400,6 +401,7 @@ const CheckoutPage = () => {
                 onVerifyCodePromo={handleVerifyCodePromo}
               />
             </div>
+          )}
         </div>
       </div>
     </Layout>

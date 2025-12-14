@@ -13,24 +13,17 @@ export const ordersService = {
       items: Array.isArray(orderData.items) 
         ? orderData.items.map((item: any) => ({
             productId: item.productId,
-            name: item.name,
             quantity: Number(item.quantity),
             ...(item.price !== undefined && { price: Number(item.price) }),
-            ...(item.originalPrice !== undefined && { originalPrice: Number(item.originalPrice) }),
-            ...(item.subtotal !== undefined && { subtotal: Number(item.subtotal) }),
-            ...(item.image !== undefined && { image: item.image }),
-            ...(item.codePromoApplied !== undefined && { codePromoApplied: item.codePromoApplied }),
           })) 
         : [],
       shippingAddress: orderData.shippingAddress,
       paymentMethod: orderData.paymentMethod,
       codePromo: orderData.codePromo,
-      // Informations de TVA
-      subtotalHT: orderData.subtotalHT !== undefined ? Number(orderData.subtotalHT) : 0,
-      taxRate: orderData.taxRate !== undefined ? Number(orderData.taxRate) : 0.20,
-      taxAmount: orderData.taxAmount !== undefined ? Number(orderData.taxAmount) : 0,
-      deliveryPrice: orderData.deliveryPrice !== undefined ? Number(orderData.deliveryPrice) : 0,
-      orderTotal: orderData.orderTotal !== undefined ? Number(orderData.orderTotal) : 0
+      // Ajouter les informations de taxes
+      taxRate: orderData.taxRate || 0.20,
+      taxAmount: orderData.taxAmount || 0,
+      deliveryPrice: orderData.deliveryPrice || 0
     };
     
     return apiClient.post<Order>('/orders', validatedData);

@@ -263,10 +263,9 @@ const OrdersPage = () => {
                                               
                                               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                                 <div className="space-y-3">
-                                                  {/* Sous-total HT (prix - 20%) */}
                                                   <div className="flex justify-between items-center">
-                                                    <span className="text-gray-700 font-medium">Sous-total HT:</span>
-                                                    <span className="font-bold text-gray-900">{(order.subtotalHT || (order.totalAmount * 0.8) || 0).toFixed(2)} €</span>
+                                                    <span className="text-gray-700 font-medium">Sous-total produits:</span>
+                                                    <span className="font-bold text-gray-900">{(order.subtotalProduits || order.originalAmount || 0).toFixed(2)} €</span>
                                                   </div>
                                                   
                                                   {order.codePromoUsed && typeof order.codePromoUsed === 'object' && (
@@ -279,13 +278,9 @@ const OrdersPage = () => {
                                                     </div>
                                                   )}
                                                   
-                                                  {/* TVA 20% du prix réel */}
                                                   <div className="flex justify-between items-center">
-                                                    <span className="flex items-center text-gray-700 font-medium">
-                                                      <Percent className="h-4 w-4 mr-2" />
-                                                      TVA (20%):
-                                                    </span>
-                                                    <span className="font-bold text-gray-900">{(order.taxAmount || (order.totalAmount * 0.2) || 0).toFixed(2)} €</span>
+                                                    <span className="text-gray-700 font-medium">Sous-total après promo:</span>
+                                                    <span className="font-bold text-gray-900">{(order.subtotalApresPromo || order.subtotalProduits || order.originalAmount || 0).toFixed(2)} €</span>
                                                   </div>
                                                 </div>
                                                 

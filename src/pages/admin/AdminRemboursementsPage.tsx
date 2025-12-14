@@ -422,40 +422,35 @@ const AdminRemboursementsPage = () => {
                       ))}
                     </div>
 
-                    {/* Récapitulatif financier TVA 20% */}
+                    {/* Récapitulatif financier */}
                     <div className="bg-white p-4 rounded-xl border border-emerald-200">
                       <h4 className="font-semibold text-emerald-700 mb-3">Récapitulatif financier</h4>
                       <div className="space-y-2 text-sm">
-                        {/* Sous-total HT (prix - 20%) */}
                         <div className="flex justify-between">
-                          <span className="text-gray-600">Sous-total HT:</span>
-                          <span className="font-medium">{((selectedRemboursement.order.totalAmount || 0) * 0.8).toFixed(2)} €</span>
+                          <span className="text-gray-600">Sous-total produits:</span>
+                          <span className="font-medium">{(selectedRemboursement.order.subtotalProduits || selectedRemboursement.order.originalAmount || 0).toFixed(2)} €</span>
                         </div>
-                        
                         {(selectedRemboursement.order.discount || 0) > 0 && (
                           <div className="flex justify-between text-green-600">
                             <span>Réduction:</span>
                             <span>-{(selectedRemboursement.order.discount || 0).toFixed(2)} €</span>
                           </div>
                         )}
-                        
-                        {/* TVA 20% du prix réel */}
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">TVA (20%):</span>
-                          <span className="font-medium">{((selectedRemboursement.order.totalAmount || 0) * 0.2).toFixed(2)} €</span>
-                        </div>
-                        
-                        {/* Frais de livraison */}
+                        {(selectedRemboursement.order.taxAmount || 0) > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">TVA ({((selectedRemboursement.order.taxRate || 0) * 100).toFixed(0)}%):</span>
+                            <span className="font-medium">{(selectedRemboursement.order.taxAmount || 0).toFixed(2)} €</span>
+                          </div>
+                        )}
                         {(selectedRemboursement.order.deliveryPrice || 0) > 0 && (
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Livraison:</span>
+                            <span className="text-gray-600">Frais de livraison:</span>
                             <span className="font-medium">{(selectedRemboursement.order.deliveryPrice || 0).toFixed(2)} €</span>
                           </div>
                         )}
-                        
                         <div className="border-t pt-2 mt-2">
                           <div className="flex justify-between text-lg">
-                            <span className="font-bold">Total TTC:</span>
+                            <span className="font-bold">Total commande:</span>
                             <span className="font-bold text-emerald-700">{(selectedRemboursement.order.totalAmount || 0).toFixed(2)} €</span>
                           </div>
                         </div>

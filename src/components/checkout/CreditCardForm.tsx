@@ -1,19 +1,45 @@
-import React, { useState, useEffect } from 'react';
+/**
+ * @fileoverview Formulaire de carte bancaire avec validation
+ * 
+ * Ce composant gère la saisie et la validation des informations
+ * de carte bancaire avec :
+ * - Détection automatique du type de carte
+ * - Validation Luhn du numéro
+ * - Validation de la date d'expiration
+ * - Option de sauvegarde de la carte
+ * 
+ * @version 2.0.0
+ */
+
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from '@/components/ui/sonner';
 import LoadingSpinner from '@/components/ui/loading-spinner';
-import { cardsAPI, CardData } from '@/services/cards';
+import { Shield } from 'lucide-react';
+import { cardsAPI } from '@/services/cards';
 
+/**
+ * Props du composant CreditCardForm
+ */
 interface CreditCardFormProps {
+  /** Callback appelé après succès */
   onSuccess: () => void;
-  onSaveCard?: (cardData: CardData) => void;
-  onPayWithCard?: (cardData: CardData) => void;
+  /** Callback optionnel pour sauvegarder les données de carte */
+  onSaveCard?: (cardData: any) => void;
+  /** Montant total à payer (optionnel) */
+  totalAmount?: number;
 }
 
-const detectCardType = (number: string) => {
+/**
+ * Détecte le type de carte bancaire à partir du numéro
+ * 
+ * @param number - Le numéro de carte
+ * @returns Le type de carte détecté
+ */
+const detectCardType = (number: string): string => {
   const cleaned = number.replace(/\s/g, '');
   if (/^4/.test(cleaned)) return 'Visa';
   if (/^5[1-5]/.test(cleaned)) return 'Mastercard';
@@ -22,7 +48,13 @@ const detectCardType = (number: string) => {
   return 'Inconnue';
 };
 
-const isValidLuhn = (number: string) => {
+/**
+ * Valide un numéro de carte avec l'algorithme de Luhn
+ * 
+ * @param number - Le numéro de carte à valider
+ * @returns true si le numéro est valide
+ */
+const isValidLuhn = (number: string): boolean => {
   const cleaned = number.replace(/\s/g, '');
   let sum = 0;
   let shouldDouble = false;
@@ -40,7 +72,13 @@ const isValidLuhn = (number: string) => {
   return sum % 10 === 0;
 };
 
-const CreditCardForm: React.FC<CreditCardFormProps> = ({ onSuccess, onSaveCard, onPayWithCard }) => {
+/**
+ * Composant de formulaire de carte bancaire
+ * 
+ * @param props - Les propriétés du composant
+ * @returns Le composant JSX
+ */
+const CreditCardForm: React.FC<CreditCardFormProps> = ({ onSuccess, onSaveCard, totalAmount }) => {
   const [cardNumber, setCardNumber] = useState('');
   const [cardType, setCardType] = useState('Inconnue');
   const [cardName, setCardName] = useState('');
@@ -123,29 +161,11 @@ const CreditCardForm: React.FC<CreditCardFormProps> = ({ onSuccess, onSaveCard, 
       toast.error("Veuillez corriger les erreurs avant de soumettre");
       return;
     }
-
-    const cardData: CardData = { cardNumber, cardName, expiryDate, cvv };
-
-    // Si onPayWithCard est fourni, ouvrir le modal de paiement
-    if (onPayWithCard) {
-      if (saveCard) {
-        try {
-          await cardsAPI.addCard(cardData);
-          toast.success("Carte sauvegardée");
-        } catch (error) {
-          console.error(error);
-        }
-      }
-      onPayWithCard(cardData);
-      return;
-    }
-
-    // Sinon, comportement par défaut
     setLoading(true);
 
     try {
       if (saveCard) {
-        await cardsAPI.addCard(cardData);
+        await cardsAPI.addCard({ cardNumber, cardName, expiryDate, cvv });
         toast.success("Carte sauvegardée");
       }
       setTimeout(() => {
@@ -225,14 +245,19 @@ const CreditCardForm: React.FC<CreditCardFormProps> = ({ onSuccess, onSaveCard, 
 
       <Button
         type="submit"
-        className="w-full mt-4 bg-red-800 hover:bg-red-700"
+        className="w-full mt-4 bg-green-600 hover:bg-green-700"
         disabled={loading || !isFormValid()}
       >
         {loading ? (
           <span className="flex items-center justify-center">
             <LoadingSpinner size="sm" className="mr-2" /> Traitement...
           </span>
-        ) : 'Payer'}
+        ) : (
+          <span className="flex items-center justify-center">
+            <Shield className="h-4 w-4 mr-2" />
+            {totalAmount ? `Payer ${totalAmount.toFixed(2)} €` : 'Ajouter et payer'}
+          </span>
+        )}
       </Button>
     </form>
   );

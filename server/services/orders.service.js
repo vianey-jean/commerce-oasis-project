@@ -21,27 +21,11 @@ class OrdersService {
     return orders.find(order => order.id === orderId);
   }
 
-  /**
-   * Crée une nouvelle commande avec informations TVA
-   * 
-   * Structure des données enregistrées:
-   * - subtotalHT: Sous-total hors taxe (prix - 20%)
-   * - taxRate: Taux de TVA (0.20 = 20%)
-   * - taxAmount: Montant de la TVA
-   * - deliveryPrice: Frais de livraison
-   * - orderTotal: Total TTC final
-   */
   create(orderData) {
     const orders = this.getAll();
     const newOrder = {
       id: `ORD-${Date.now()}`,
       ...orderData,
-      // Assurer que les informations TVA sont présentes
-      subtotalHT: orderData.subtotalHT || 0,
-      taxRate: orderData.taxRate || 0.20,
-      taxAmount: orderData.taxAmount || 0,
-      deliveryPrice: orderData.deliveryPrice || 0,
-      orderTotal: orderData.orderTotal || 0,
       status: 'en attente',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -55,14 +39,6 @@ class OrdersService {
     
     // Enregistrer la notification de vente pour chaque produit
     this.recordSalesNotifications(newOrder);
-    
-    console.log('Commande créée avec TVA:', {
-      id: newOrder.id,
-      subtotalHT: newOrder.subtotalHT,
-      taxAmount: newOrder.taxAmount,
-      deliveryPrice: newOrder.deliveryPrice,
-      orderTotal: newOrder.orderTotal
-    });
     
     return newOrder;
   }
