@@ -66,6 +66,9 @@ export interface PaiementRemboursement {
     /** Sous-total après application des promotions */
     subtotalApresPromo?: number;
     
+    /** Sous-total HT (prix - 20%) */
+    subtotalHT?: number;
+    
     /** Taux de TVA appliqué (ex: 0.2 pour 20%) */
     taxRate?: number;
     
