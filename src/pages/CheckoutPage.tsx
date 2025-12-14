@@ -273,17 +273,26 @@ const CheckoutPage = () => {
   
   const subtotal = getCartTotal();
   
-  // Calculer le total avec remise code promo
+  // Calculer le total avec remise code promo (prix TTC)
   const discountedSubtotal = selectedCartItems.reduce((total, item) => {
     return total + calculateItemPrice(item);
   }, 0);
   
   const hasPromoDiscount = subtotal !== discountedSubtotal;
   
-  // Calcul des taxes (20% de TVA)
-  const taxAmount = discountedSubtotal * TAX_RATE;
+  /**
+   * Calcul TVA - Le prix affiché est TTC (Toutes Taxes Comprises)
+   * On extrait la TVA du prix TTC:
+   * - Sous-total HT = Prix TTC / 1.20 = Prix TTC * (1 - 0.20/1.20) ≈ Prix TTC * 0.8333
+   * - Mais selon la demande: Sous-total = Prix - 20% = Prix * 0.80
+   * - TVA = 20% du prix réel = Prix * 0.20
+   * - Total = Sous-total (HT) + TVA + Livraison = Prix + Livraison
+   */
+  const subtotalHT = discountedSubtotal * (1 - TAX_RATE); // Prix HT (sans TVA)
+  const taxAmount = discountedSubtotal * TAX_RATE; // TVA 20% du prix TTC
   
-  const orderTotal = discountedSubtotal + deliveryPrice + taxAmount;
+  // Total TTC = Sous-total HT + TVA + Livraison = Prix original + Livraison
+  const orderTotal = subtotalHT + taxAmount + deliveryPrice;
   
   // URL de base pour les images
   const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL;
@@ -374,6 +383,7 @@ const CheckoutPage = () => {
                 selectedCartItems={selectedCartItems}
                 subtotal={subtotal}
                 discountedSubtotal={discountedSubtotal}
+                subtotalHT={subtotalHT}
                 hasPromoDiscount={hasPromoDiscount}
                 taxAmount={taxAmount}
                 deliveryPrice={deliveryPrice}
