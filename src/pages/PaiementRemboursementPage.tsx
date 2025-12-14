@@ -430,10 +430,10 @@ const PaiementRemboursementPage: React.FC = () => {
                     </h3>
                     
                     <div className="space-y-3 mb-4">
-                      {/* Sous-total produits */}
+                      {/* Sous-total HT (prix - 20%) */}
                       <div className="flex justify-between items-center text-white/90">
-                        <span>Sous-total produits</span>
-                        <span className="font-medium">{formatCurrency(paiement.order.subtotalProduits || paiement.order.originalAmount)}</span>
+                        <span>Sous-total HT</span>
+                        <span className="font-medium">{formatCurrency(paiement.order.subtotalHT || (paiement.order.totalAmount * 0.8))}</span>
                       </div>
                       
                       {/* Remise */}
@@ -444,20 +444,18 @@ const PaiementRemboursementPage: React.FC = () => {
                         </div>
                       )}
                       
-                      {/* TVA */}
-                      {paiement.order.taxAmount !== undefined && paiement.order.taxAmount > 0 && (
-                        <div className="flex justify-between items-center text-white/90">
-                          <span>TVA ({((paiement.order.taxRate || 0.2) * 100).toFixed(0)}%)</span>
-                          <span className="font-medium">{formatCurrency(paiement.order.taxAmount)}</span>
-                        </div>
-                      )}
+                      {/* TVA 20% du prix réel */}
+                      <div className="flex justify-between items-center text-white/90">
+                        <span>TVA (20%)</span>
+                        <span className="font-medium">{formatCurrency(paiement.order.taxAmount || (paiement.order.totalAmount * 0.2))}</span>
+                      </div>
                       
                       {/* Frais de livraison */}
                       {paiement.order.deliveryPrice !== undefined && paiement.order.deliveryPrice > 0 && (
                         <div className="flex justify-between items-center text-white/90">
                           <span className="flex items-center gap-2">
                             <Truck className="w-4 h-4" />
-                            Frais de livraison
+                            Livraison
                           </span>
                           <span className="font-medium">{formatCurrency(paiement.order.deliveryPrice)}</span>
                         </div>
