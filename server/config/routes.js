@@ -58,10 +58,8 @@ const setupRoutes = (app) => {
   app.use('/api/visitors', require('../routes/visitors'));
   app.use('/api/sales-notifications', require('../routes/sales-notifications'));
   app.use('/api/site-settings', require('../routes/site-settings'));
-  app.use('/api/stripe', require('../routes/stripe-payment'));
-  app.use('/api/cards', require('../routes/cards'));
   app.use('/api/payment-modes', require('../routes/payment-modes'));
-  app.use('/api/paiement-remboursement', require('../routes/paiement-remboursement'));
+  app.use('/api/payments', require('../routes/payments'));
 };
 
 module.exports = setupRoutes;
