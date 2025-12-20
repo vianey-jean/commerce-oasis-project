@@ -1,29 +1,4 @@
-# Bienvenur sur le projet e-commerce Riziky Boutic
 
-## Pour connecté sur l'app:
-
-    email: admin@example.com,
-    password: Admin123@,
-
-   ou 
-
-    email: client@example.com,
-    password: Azerty123@,
-
-   ou 
-
-    email: bekotoj@yahoo.fr,
-    password: Admin123@,
-    
-   ou 
-
-    email: service.client@example.com,
-    password: Service123@,
-  
-
-## Project info
-
-**URL**: https://riziky-boutic.vercel.app/
 
 
 Follow these steps:
@@ -58,7 +33,7 @@ npm run dev
 
 ## What technologies are used for this project?
 
-This project is built with:
+This project is built with .
 
 - Vite
 - TypeScript
@@ -66,3 +41,11 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## How can I deploy this project?
+
+
+## I want to use a custom domain - is that possible?
+
+We don't support custom domains (yet). If you want to deploy your project under your own domain then we recommend using Netlify. Visit our docs for more details: [Custom domains]# Riziky-gestion Ventes
+# gestion-ventes
+# gestion-ventes

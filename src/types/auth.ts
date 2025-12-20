@@ -1,55 +1,53 @@
+// Types pour l'authentification
+
+export interface User {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  gender?: string;
+  address?: string;
+  phone?: string;
+}
+
+export interface LoginCredentials {
+  email: string;
+  password: string;
+}
+
+export interface RegisterCredentials {
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  gender: 'male' | 'female' | 'other';
+  address: string;
+  phone: string;
+}
+
+export interface RegistrationData {
+  email: string;
+  password: string;
+  confirmPassword: string;
+  firstName: string;
+  lastName: string;
+  gender: 'male' | 'female' | 'other';
+  address: string;
+  phone: string;
+  acceptTerms: boolean;
+}
+
+export interface PasswordResetRequest {
+  email: string;
+}
+
+export interface PasswordResetData {
+  email: string;
+  newPassword: string;
+  confirmPassword: string;
+}
 
 export interface AuthResponse {
   user: User;
   token: string;
-}
-
-export interface User {
-  id: string;
-  nom: string;
-  prenom?: string;
-  email: string;
-  role: 'admin' | 'client';
-  dateCreation: string;
-  adresse?: string;
-  ville?: string;
-  codePostal?: string;
-  pays?: string;
-  telephone?: string;
-  genre?: 'homme' | 'femme' | 'autre';
-  passwordUnique?: string;
-  profileImage?: string;
-}
-
-export interface LoginData {
-  email: string;
-  password: string;
-}
-
-export interface RegisterData {
-  nom: string;
-  email: string;
-  password: string;
-}
-
-export interface ForgotPasswordData {
-  email: string;
-}
-
-export interface ResetPasswordData {
-  email: string;
-  passwordUnique: string;
-  newPassword: string;
-}
-
-export interface UpdateProfileData {
-  nom?: string;
-  prenom?: string;
-  adresse?: string;
-  ville?: string;
-  codePostal?: string;
-  pays?: string;
-  telephone?: string;
-  genre?: 'homme' | 'femme' | 'autre';
-  profileImage?: string;
 }
