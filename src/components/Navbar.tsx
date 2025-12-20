@@ -235,51 +235,139 @@ const Navbar: React.FC = () => {
             </div>
           </div>
 
-          {/* Mobile / Tablet Menu Items (icônes seulement) */}
+          {/* Mobile / Tablet Menu Items - Modernisé avec toutes les sections */}
           {isMobileMenuOpen && (
-            <div className="md:hidden mt-2 grid grid-cols-2 sm:flex sm:flex-col gap-2 px-2 pb-4">
+            <div className="md:hidden mt-2 pb-4 space-y-3 px-2 animate-fade-in">
               {isAuthenticated ? (
                 <>
-                  <Link to="/dashboard" className="w-full">
-                    <Button variant="outline" size="icon" className="w-full h-10 sm:h-12 p-0 rounded-lg sm:rounded-xl border-2 border-green-200 text-green-600 hover:bg-green-500 hover:text-white hover:border-green-500">
-                      <LayoutDashboard className="h-4 w-4 sm:h-5 sm:w-5" />
+                  {/* Section principale */}
+                  <div className="grid grid-cols-4 gap-2">
+                    <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)} className="w-full">
+                      <Button variant="outline" className="w-full h-14 flex flex-col items-center justify-center gap-1 rounded-xl border-2 border-blue-200 text-blue-600 hover:bg-blue-500 hover:text-white hover:border-blue-500">
+                        <LayoutDashboard className="h-5 w-5" />
+                        <span className="text-[10px]">Dashboard</span>
+                      </Button>
+                    </Link>
+                    <Link to="/commandes" onClick={() => setIsMobileMenuOpen(false)} className="w-full">
+                      <Button variant="outline" className="w-full h-14 flex flex-col items-center justify-center gap-1 rounded-xl border-2 border-indigo-200 text-indigo-600 hover:bg-indigo-500 hover:text-white hover:border-indigo-500">
+                        <Package className="h-5 w-5" />
+                        <span className="text-[10px]">Commandes</span>
+                      </Button>
+                    </Link>
+                    <Link to="/tendances" onClick={() => setIsMobileMenuOpen(false)} className="w-full">
+                      <Button variant="outline" className="w-full h-14 flex flex-col items-center justify-center gap-1 rounded-xl border-2 border-emerald-200 text-emerald-600 hover:bg-emerald-500 hover:text-white hover:border-emerald-500">
+                        <TrendingUp className="h-5 w-5" />
+                        <span className="text-[10px]">Tendances</span>
+                      </Button>
+                    </Link>
+                    <Link to="/clients" onClick={() => setIsMobileMenuOpen(false)} className="w-full">
+                      <Button variant="outline" className="w-full h-14 flex flex-col items-center justify-center gap-1 rounded-xl border-2 border-purple-200 text-purple-600 hover:bg-purple-500 hover:text-white hover:border-purple-500">
+                        <Users className="h-5 w-5" />
+                        <span className="text-[10px]">Clients</span>
+                      </Button>
+                    </Link>
+                  </div>
+
+                  {/* Section Gestion */}
+                  <div className="bg-gradient-to-r from-cyan-50 to-teal-50 dark:from-cyan-900/20 dark:to-teal-900/20 rounded-xl p-3">
+                    <p className="text-xs font-semibold text-cyan-700 dark:text-cyan-400 mb-2 flex items-center gap-1">
+                      <BarChart3 className="h-3 w-3" />
+                      Gestion
+                    </p>
+                    <div className="grid grid-cols-4 gap-2">
+                      <Link to="/kpi" onClick={() => setIsMobileMenuOpen(false)} className="w-full">
+                        <Button variant="outline" className="w-full h-12 flex flex-col items-center justify-center gap-0.5 rounded-lg border border-violet-200 text-violet-600 hover:bg-violet-500 hover:text-white text-[9px]">
+                          <BarChart3 className="h-4 w-4" />
+                          KPI
+                        </Button>
+                      </Link>
+                      <Link to="/projets" onClick={() => setIsMobileMenuOpen(false)} className="w-full">
+                        <Button variant="outline" className="w-full h-12 flex flex-col items-center justify-center gap-0.5 rounded-lg border border-cyan-200 text-cyan-600 hover:bg-cyan-500 hover:text-white text-[9px]">
+                          <FolderKanban className="h-4 w-4" />
+                          Projets
+                        </Button>
+                      </Link>
+                      <Link to="/crm" onClick={() => setIsMobileMenuOpen(false)} className="w-full">
+                        <Button variant="outline" className="w-full h-12 flex flex-col items-center justify-center gap-0.5 rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-500 hover:text-white text-[9px]">
+                          <Contact className="h-4 w-4" />
+                          CRM
+                        </Button>
+                      </Link>
+                      <Link to="/comptabilite" onClick={() => setIsMobileMenuOpen(false)} className="w-full">
+                        <Button variant="outline" className="w-full h-12 flex flex-col items-center justify-center gap-0.5 rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-500 hover:text-white text-[9px]">
+                          <Calculator className="h-4 w-4" />
+                          Compta
+                        </Button>
+                      </Link>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 mt-2">
+                      <Link to="/ressources-humaines" onClick={() => setIsMobileMenuOpen(false)} className="w-full">
+                        <Button variant="outline" className="w-full h-12 flex flex-col items-center justify-center gap-0.5 rounded-lg border border-emerald-200 text-emerald-600 hover:bg-emerald-500 hover:text-white text-[9px]">
+                          <UserCog className="h-4 w-4" />
+                          RH
+                        </Button>
+                      </Link>
+                      <Link to="/rendez-vous" onClick={() => setIsMobileMenuOpen(false)} className="w-full">
+                        <Button variant="outline" className="w-full h-12 flex flex-col items-center justify-center gap-0.5 rounded-lg border border-amber-200 text-amber-600 hover:bg-amber-500 hover:text-white text-[9px]">
+                          <CalendarDays className="h-4 w-4" />
+                          RDV
+                        </Button>
+                      </Link>
+                      <Link to="/notifications" onClick={() => setIsMobileMenuOpen(false)} className="w-full relative">
+                        <Button variant="outline" className="w-full h-12 flex flex-col items-center justify-center gap-0.5 rounded-lg border border-orange-200 text-orange-600 hover:bg-orange-500 hover:text-white text-[9px]">
+                          <Bell className="h-4 w-4" />
+                          Notifs
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+
+                  {/* Actions utilisateur */}
+                  <div className="grid grid-cols-3 gap-2">
+                    <Link to="/messages" onClick={() => setIsMobileMenuOpen(false)} className="relative w-full">
+                      <Button variant="outline" className="w-full h-12 flex flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-blue-200 text-blue-600 hover:bg-blue-500 hover:text-white hover:border-blue-500">
+                        <MessageSquare className="h-4 w-4" />
+                        <span className="text-[9px]">Messages</span>
+                      </Button>
+                      {unreadCount > 0 && (
+                        <Badge variant="destructive" className="absolute -top-1 -right-1 text-[10px] px-1.5 py-0.5 min-w-[18px] h-4 flex items-center justify-center bg-red-500 text-white">
+                          {unreadCount}
+                        </Badge>
+                      )}
+                    </Link>
+                    <Button 
+                      variant="outline" 
+                      className="w-full h-12 flex flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-gray-200 text-gray-600 hover:bg-gray-100"
+                      onClick={toggleTheme}
+                    >
+                      {theme === 'dark' ? <Sun className="h-4 w-4 text-yellow-500" /> : <Moon className="h-4 w-4 text-blue-600" />}
+                      <span className="text-[9px]">{theme === 'dark' ? 'Clair' : 'Sombre'}</span>
                     </Button>
-                  </Link>
-                  <Link to="/commandes" className="w-full">
-                    <Button variant="outline" size="icon" className="w-full h-10 sm:h-12 p-0 rounded-lg sm:rounded-xl border-2 border-indigo-200 text-indigo-600 hover:bg-indigo-500 hover:text-white hover:border-indigo-500">
-                      <Package className="h-4 w-4 sm:h-5 sm:w-5" />
+                    <Button 
+                      variant="outline" 
+                      className="w-full h-12 flex flex-col items-center justify-center gap-0.5 rounded-xl border-2 border-red-200 text-red-600 hover:bg-red-500 hover:text-white hover:border-red-500" 
+                      onClick={() => { logout(); setIsMobileMenuOpen(false); }}
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span className="text-[9px]">Déco</span>
                     </Button>
-                  </Link>
-                  <Link to="/tendances" className="w-full">
-                    <Button variant="outline" size="icon" className="w-full h-10 sm:h-12 p-0 rounded-lg sm:rounded-xl border-2 border-emerald-200 text-emerald-600 hover:bg-emerald-500 hover:text-white hover:border-emerald-500">
-                      <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
-                    </Button>
-                  </Link>
-                  <Link to="/clients" className="w-full">
-                    <Button variant="outline" size="icon" className="w-full h-10 sm:h-12 p-0 rounded-lg sm:rounded-xl border-2 border-purple-200 text-purple-600 hover:bg-purple-500 hover:text-white hover:border-purple-500">
-                      <Users className="h-4 w-4 sm:h-5 sm:w-5" />
-                    </Button>
-                  </Link>
-                  <Link to="/messages" className="relative w-full">
-                    <Button variant="outline" size="icon" className="w-full h-10 sm:h-12 p-0 rounded-lg sm:rounded-xl border-2 border-blue-200 text-blue-600 hover:bg-blue-500 hover:text-white hover:border-blue-500">
-                      <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
-                    </Button>
-                    {unreadCount > 0 && (
-                      <Badge variant="destructive" className="absolute -top-1 -right-1 text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 min-w-[16px] sm:min-w-[18px] h-3.5 sm:h-4 flex items-center justify-center bg-red-500 text-white">
-                        {unreadCount}
-                      </Badge>
-                    )}
-                  </Link>
-                  <Button variant="outline" size="icon" className="w-full h-10 sm:h-12 p-0 rounded-lg sm:rounded-xl border-2 border-red-200 text-red-600 hover:bg-red-500 hover:text-white hover:border-red-500 col-span-2 sm:col-span-1" onClick={logout}>
-                    <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
-                  </Button>
+                  </div>
                 </>
               ) : (
-                <Link to="/login" className="col-span-2">
-                  <Button variant="outline" size="icon" className="w-full h-10 sm:h-12 p-0 rounded-lg sm:rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white">
-                    <LogIn className="h-4 w-4 sm:h-5 sm:w-5" />
-                  </Button>
-                </Link>
+                <div className="grid grid-cols-2 gap-2">
+                  <Link to="/about" onClick={() => setIsMobileMenuOpen(false)} className="w-full">
+                    <Button variant="outline" className="w-full h-12 flex items-center justify-center gap-2 rounded-xl border-2 border-gray-200">
+                      <Info className="h-4 w-4" />
+                      <span className="text-sm">À propos</span>
+                    </Button>
+                  </Link>
+                  <Link to="/login" onClick={() => setIsMobileMenuOpen(false)} className="w-full">
+                    <Button className="w-full h-12 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white">
+                      <LogIn className="h-4 w-4" />
+                      <span className="text-sm">Connexion</span>
+                    </Button>
+                  </Link>
+                </div>
               )}
             </div>
           )}
