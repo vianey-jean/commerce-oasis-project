@@ -24,7 +24,11 @@ import {
   Package,
   Calculator,
   UserCog,
-  CalendarDays
+  CalendarDays,
+  BarChart3,
+  FolderKanban,
+  Contact,
+  Bell
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -86,6 +90,61 @@ const Navbar: React.FC = () => {
                     <Users className="mr-1.5 lg:mr-2 h-3 w-3 lg:h-4 lg:w-4 text-purple-600 group-hover:scale-110 transition-transform" />
                     Clients
                   </Link>
+
+                  {/* Menu déroulant Gestion */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" className="group inline-flex items-center px-2 lg:px-4 py-2 rounded-lg text-xs lg:text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-cyan-600 hover:bg-cyan-50 dark:hover:bg-cyan-900/20">
+                        <BarChart3 className="mr-1.5 h-3 w-3 lg:h-4 lg:w-4 text-cyan-600" />
+                        Gestion
+                        <ChevronDown className="ml-1 h-3 w-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start" className="w-48 bg-white dark:bg-gray-800">
+                      <DropdownMenuItem asChild>
+                        <Link to="/kpi" className="flex items-center w-full">
+                          <BarChart3 className="mr-2 h-4 w-4 text-violet-600" />
+                          KPI Dashboard
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/projets" className="flex items-center w-full">
+                          <FolderKanban className="mr-2 h-4 w-4 text-cyan-600" />
+                          Projets
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/crm" className="flex items-center w-full">
+                          <Contact className="mr-2 h-4 w-4 text-rose-600" />
+                          CRM
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/comptabilite" className="flex items-center w-full">
+                          <Calculator className="mr-2 h-4 w-4 text-blue-600" />
+                          Comptabilité
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/ressources-humaines" className="flex items-center w-full">
+                          <UserCog className="mr-2 h-4 w-4 text-emerald-600" />
+                          Ressources Humaines
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/rendez-vous" className="flex items-center w-full">
+                          <CalendarDays className="mr-2 h-4 w-4 text-amber-600" />
+                          Calendrier RDV
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link to="/notifications" className="flex items-center w-full">
+                          <Bell className="mr-2 h-4 w-4 text-orange-600" />
+                          Notifications
+                        </Link>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </>
               )}
 
