@@ -305,6 +305,7 @@ const RdvPage: React.FC = () => {
                 onRdvClick={(rdv) => handleOpenForm(rdv)}
                 onSlotClick={(date, time) => handleOpenForm(undefined, date, time)}
                 onRdvDrop={handleRdvDrop}
+                onRdvDelete={confirmDelete}
               />
             </TabsContent>
 

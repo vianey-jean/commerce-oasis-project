@@ -11,7 +11,6 @@ export interface RDV {
   heureFin: string; // Format: HH:mm
   lieu?: string;
   statut: 'planifie' | 'confirme' | 'annule' | 'termine';
-  notes?: string;
   // Informations produit (si créé depuis une réservation)
   produits?: RDVProduit[];
   // Lien avec la commande/réservation
@@ -30,7 +29,9 @@ export interface RDVProduit {
   prixVente: number;
 }
 
-export type RDVFormData = Omit<RDV, 'id' | 'createdAt' | 'updatedAt'>;
+export type RDVFormData = Omit<RDV, 'id' | 'createdAt' | 'updatedAt'> & {
+  notes?: string;
+};
 
 export interface RDVConflict {
   rdv: RDV;
