@@ -1,7 +1,6 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import { RdvCalendar, RdvForm, RdvCard, RdvNotifications } from '@/components/rdv';
-import { UnifiedSearchBar } from '@/components/shared';
 import { ConfirmDialog } from '@/components/shared';
 import { useRdv } from '@/hooks/useRdv';
 import { RDV, RDVFormData } from '@/types/rdv';
@@ -9,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { 
   Plus, 
   Calendar, 
@@ -18,11 +18,20 @@ import {
   CalendarX,
   Clock,
   CheckCircle,
-  Package
+  ChevronLeft,
+  ChevronRight,
+  User,
+  Phone,
+  MapPin,
+  Edit,
+  Trash2
 } from 'lucide-react';
-import { format, isToday, isTomorrow, parseISO, addDays } from 'date-fns';
+import { format, isToday, isTomorrow, parseISO, startOfMonth, endOfMonth, isSameMonth } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '@/lib/utils';
+
+const ITEMS_PER_PAGE = 20;
 
 const RdvPage: React.FC = () => {
   const { rdvs, loading, createRdv, updateRdv, deleteRdv, markAsNotified, checkConflicts } = useRdv();
@@ -36,6 +45,20 @@ const RdvPage: React.FC = () => {
   const [defaultTime, setDefaultTime] = useState<string | undefined>();
   const [conflicts, setConflicts] = useState<RDV[]>([]);
   const [activeTab, setActiveTab] = useState('calendar');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  // Fermer les suggestions au clic extérieur
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowSearchSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   // Stats
   const stats = useMemo(() => {
@@ -54,30 +77,55 @@ const RdvPage: React.FC = () => {
     };
   }, [rdvs]);
 
-  // RDV filtrés par recherche
-  const filteredRdvs = useMemo(() => {
-    if (!searchQuery.trim()) return rdvs;
+  // RDV du mois en cours (visibles - exclure annulés)
+  const currentMonthRdvs = useMemo(() => {
+    const now = new Date();
+    const monthStart = startOfMonth(now);
+    const monthEnd = endOfMonth(now);
+    
+    return rdvs
+      .filter(rdv => {
+        const rdvDate = parseISO(rdv.date);
+        return isSameMonth(rdvDate, now) && rdv.statut !== 'annule';
+      })
+      .sort((a, b) => {
+        const dateCompare = a.date.localeCompare(b.date);
+        if (dateCompare !== 0) return dateCompare;
+        return a.heureDebut.localeCompare(b.heureDebut);
+      });
+  }, [rdvs]);
+
+  // Suggestions de recherche (mois en cours, après 3 caractères)
+  const searchSuggestions = useMemo(() => {
+    if (searchQuery.length < 3) return [];
     
     const query = searchQuery.toLowerCase();
-    return rdvs.filter(rdv =>
+    return currentMonthRdvs.filter(rdv =>
       rdv.titre.toLowerCase().includes(query) ||
       rdv.clientNom.toLowerCase().includes(query) ||
       rdv.description?.toLowerCase().includes(query) ||
       rdv.lieu?.toLowerCase().includes(query)
-    );
-  }, [rdvs, searchQuery]);
+    ).slice(0, 10); // Limiter à 10 suggestions
+  }, [currentMonthRdvs, searchQuery]);
 
-  // RDV à venir
+  // Pagination des RDV du mois en cours
+  const totalPages = Math.ceil(currentMonthRdvs.length / ITEMS_PER_PAGE);
+  const paginatedRdvs = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    return currentMonthRdvs.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [currentMonthRdvs, currentPage]);
+
+  // RDV à venir (pour le calendrier)
   const upcomingRdvs = useMemo(() => {
     const today = new Date().toISOString().split('T')[0];
-    return filteredRdvs
+    return rdvs
       .filter(r => r.date >= today && r.statut !== 'annule')
       .sort((a, b) => {
         const dateCompare = a.date.localeCompare(b.date);
         if (dateCompare !== 0) return dateCompare;
         return a.heureDebut.localeCompare(b.heureDebut);
       });
-  }, [filteredRdvs]);
+  }, [rdvs]);
 
   // Handlers
   const handleOpenForm = useCallback((rdv?: RDV, date?: string, time?: string) => {
@@ -86,6 +134,7 @@ const RdvPage: React.FC = () => {
     setDefaultTime(time);
     setConflicts([]);
     setIsFormOpen(true);
+    setShowSearchSuggestions(false);
   }, []);
 
   const handleCloseForm = useCallback(() => {
@@ -107,7 +156,6 @@ const RdvPage: React.FC = () => {
 
     if (existingConflicts.length > 0) {
       setConflicts(existingConflicts);
-      // On continue quand même mais avec un avertissement visible
     }
 
     if (selectedRdv) {
@@ -132,12 +180,10 @@ const RdvPage: React.FC = () => {
   }, []);
 
   const handleRdvDrop = useCallback(async (rdv: RDV, newDate: string, newTime: string) => {
-    // Calculer la durée du RDV
     const [startH, startM] = rdv.heureDebut.split(':').map(Number);
     const [endH, endM] = rdv.heureFin.split(':').map(Number);
     const durationMinutes = (endH * 60 + endM) - (startH * 60 + startM);
     
-    // Calculer la nouvelle heure de fin
     const [newH, newM] = newTime.split(':').map(Number);
     const newEndMinutes = newH * 60 + newM + durationMinutes;
     const newEndH = Math.floor(newEndMinutes / 60);
@@ -150,6 +196,12 @@ const RdvPage: React.FC = () => {
       heureFin: newHeureFin,
     });
   }, [updateRdv]);
+
+  const handleSuggestionClick = (rdv: RDV) => {
+    handleOpenForm(rdv);
+    setSearchQuery('');
+    setShowSearchSuggestions(false);
+  };
 
   const formatRdvDate = (dateStr: string) => {
     const date = parseISO(dateStr);
@@ -168,6 +220,20 @@ const RdvPage: React.FC = () => {
     return groups;
   }, [upcomingRdvs]);
 
+  const statusColors: Record<string, string> = {
+    planifie: 'bg-blue-500',
+    confirme: 'bg-green-500',
+    annule: 'bg-red-500',
+    termine: 'bg-gray-500',
+  };
+
+  const statusLabels: Record<string, string> = {
+    planifie: 'Planifié',
+    confirme: 'Confirmé',
+    annule: 'Annulé',
+    termine: 'Terminé',
+  };
+
   return (
     <Layout>
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
@@ -185,7 +251,7 @@ const RdvPage: React.FC = () => {
                   Gestion des Rendez-vous
                 </h1>
                 <p className="text-muted-foreground mt-1">
-                  Planifiez et gérez vos rendez-vous clients
+                  Planifiez et gérez vos rendez-vous clients - {format(new Date(), 'MMMM yyyy', { locale: fr })}
                 </p>
               </div>
               <Button onClick={() => handleOpenForm()} size="lg" className="shadow-lg">
@@ -231,8 +297,8 @@ const RdvPage: React.FC = () => {
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm text-muted-foreground">Confirmés</p>
-                      <p className="text-2xl font-bold text-green-600">{stats.confirmed}</p>
+                      <p className="text-sm text-muted-foreground">Ce mois</p>
+                      <p className="text-2xl font-bold text-green-600">{currentMonthRdvs.length}</p>
                     </div>
                     <CalendarCheck className="h-8 w-8 text-green-500/50" />
                   </div>
@@ -277,17 +343,126 @@ const RdvPage: React.FC = () => {
             </motion.div>
           </div>
 
-          {/* Search Bar */}
-          <div className="mb-6">
-            <UnifiedSearchBar
-              value={searchQuery}
-              onChange={setSearchQuery}
-              placeholder="Rechercher un rendez-vous (titre, client, lieu...)"
-            />
+          {/* Search Bar with Suggestions */}
+          <div ref={searchRef} className="relative mb-6">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  if (e.target.value.length >= 3) {
+                    setShowSearchSuggestions(true);
+                  } else {
+                    setShowSearchSuggestions(false);
+                  }
+                }}
+                onFocus={() => {
+                  if (searchQuery.length >= 3) {
+                    setShowSearchSuggestions(true);
+                  }
+                }}
+                placeholder="Rechercher un rendez-vous (min. 3 caractères)..."
+                className="pl-12 h-14 text-lg rounded-xl border-2 border-primary/20 focus:border-primary bg-background/80 backdrop-blur-sm shadow-lg"
+              />
+            </div>
+
+            {/* Search Suggestions Dropdown */}
+            <AnimatePresence>
+              {showSearchSuggestions && searchSuggestions.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="absolute top-full left-0 right-0 mt-2 bg-background border-2 border-primary/20 rounded-xl shadow-2xl z-50 overflow-hidden"
+                >
+                  <div className="p-2 bg-primary/5 border-b border-primary/10">
+                    <p className="text-sm font-medium text-muted-foreground">
+                      {searchSuggestions.length} résultat(s) pour "{searchQuery}"
+                    </p>
+                  </div>
+                  <div className="max-h-80 overflow-y-auto">
+                    {searchSuggestions.map((rdv) => (
+                      <motion.div
+                        key={rdv.id}
+                        whileHover={{ backgroundColor: 'hsl(var(--primary) / 0.1)' }}
+                        onClick={() => handleSuggestionClick(rdv)}
+                        className="p-4 cursor-pointer border-b border-primary/10 last:border-b-0"
+                      >
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <Badge className={cn("text-white text-xs", statusColors[rdv.statut])}>
+                                {statusLabels[rdv.statut]}
+                              </Badge>
+                              <span className="font-semibold">{rdv.titre}</span>
+                            </div>
+                            <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <User className="h-3 w-3" />
+                                {rdv.clientNom}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                {format(parseISO(rdv.date), 'd MMM', { locale: fr })}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                {rdv.heureDebut}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-blue-600 hover:bg-blue-100"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenForm(rdv);
+                              }}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-8 w-8 text-red-600 hover:bg-red-100"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                confirmDelete(rdv);
+                                setShowSearchSuggestions(false);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* No results message */}
+            <AnimatePresence>
+              {showSearchSuggestions && searchQuery.length >= 3 && searchSuggestions.length === 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="absolute top-full left-0 right-0 mt-2 bg-background border-2 border-primary/20 rounded-xl shadow-2xl z-50 p-6 text-center"
+                >
+                  <CalendarX className="h-12 w-12 mx-auto text-muted-foreground/50 mb-2" />
+                  <p className="text-muted-foreground">Aucun rendez-vous trouvé pour "{searchQuery}"</p>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Tabs: Calendar / List */}
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <Tabs value={activeTab} onValueChange={(val) => { setActiveTab(val); setCurrentPage(1); }} className="space-y-6">
             <TabsList className="grid w-full max-w-md grid-cols-2">
               <TabsTrigger value="calendar" className="flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
@@ -295,13 +470,13 @@ const RdvPage: React.FC = () => {
               </TabsTrigger>
               <TabsTrigger value="list" className="flex items-center gap-2">
                 <List className="h-4 w-4" />
-                Liste
+                Liste ({currentMonthRdvs.length})
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="calendar">
               <RdvCalendar
-                rdvs={filteredRdvs}
+                rdvs={upcomingRdvs}
                 onRdvClick={(rdv) => handleOpenForm(rdv)}
                 onSlotClick={(date, time) => handleOpenForm(undefined, date, time)}
                 onRdvDrop={handleRdvDrop}
@@ -311,11 +486,11 @@ const RdvPage: React.FC = () => {
 
             <TabsContent value="list">
               <div className="space-y-6">
-                {Object.entries(groupedRdvs).length === 0 ? (
+                {currentMonthRdvs.length === 0 ? (
                   <Card>
                     <CardContent className="py-12 text-center">
                       <Calendar className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-                      <h3 className="text-lg font-medium">Aucun rendez-vous à venir</h3>
+                      <h3 className="text-lg font-medium">Aucun rendez-vous ce mois-ci</h3>
                       <p className="text-muted-foreground mt-1">
                         Créez votre premier rendez-vous pour commencer
                       </p>
@@ -326,25 +501,153 @@ const RdvPage: React.FC = () => {
                     </CardContent>
                   </Card>
                 ) : (
-                  Object.entries(groupedRdvs).map(([date, rdvList]) => (
-                    <div key={date}>
-                      <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-                        <Calendar className="h-5 w-5 text-primary" />
-                        {formatRdvDate(date)}
-                        <Badge variant="secondary">{rdvList.length}</Badge>
-                      </h3>
-                      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                        {rdvList.map(rdv => (
-                          <RdvCard
+                  <>
+                    {/* Grid 4 columns */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      {paginatedRdvs.map((rdv, index) => {
+                        const globalIndex = (currentPage - 1) * ITEMS_PER_PAGE + index + 1;
+                        return (
+                          <motion.div
                             key={rdv.id}
-                            rdv={rdv}
-                            onEdit={() => handleOpenForm(rdv)}
-                            onDelete={() => confirmDelete(rdv)}
-                          />
-                        ))}
-                      </div>
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.05 }}
+                          >
+                            <Card 
+                              className="h-full hover:shadow-xl transition-all duration-300 cursor-pointer border-2 border-transparent hover:border-primary/30 overflow-hidden group"
+                              onClick={() => handleOpenForm(rdv)}
+                            >
+                              {/* Header with status color */}
+                              <div className={cn(
+                                "h-2",
+                                statusColors[rdv.statut]
+                              )} />
+                              
+                              <CardContent className="p-4">
+                                {/* Number badge */}
+                                <div className="flex items-start justify-between mb-3">
+                                  <Badge variant="outline" className="text-xs font-bold">
+                                    #{globalIndex}
+                                  </Badge>
+                                  <Badge className={cn("text-white text-xs", statusColors[rdv.statut])}>
+                                    {statusLabels[rdv.statut]}
+                                  </Badge>
+                                </div>
+
+                                {/* Title */}
+                                <h3 className="font-bold text-base line-clamp-2 mb-3 group-hover:text-primary transition-colors">
+                                  {rdv.titre}
+                                </h3>
+
+                                {/* Client info */}
+                                <div className="space-y-2 text-sm text-muted-foreground">
+                                  <div className="flex items-center gap-2">
+                                    <User className="h-4 w-4 text-primary" />
+                                    <span className="truncate">{rdv.clientNom}</span>
+                                  </div>
+                                  
+                                  {rdv.clientTelephone && (
+                                    <div className="flex items-center gap-2">
+                                      <Phone className="h-4 w-4 text-primary" />
+                                      <span>{rdv.clientTelephone}</span>
+                                    </div>
+                                  )}
+
+                                  <div className="flex items-center gap-2">
+                                    <Calendar className="h-4 w-4 text-primary" />
+                                    <span>{format(parseISO(rdv.date), 'd MMM yyyy', { locale: fr })}</span>
+                                  </div>
+
+                                  <div className="flex items-center gap-2">
+                                    <Clock className="h-4 w-4 text-primary" />
+                                    <span>{rdv.heureDebut} - {rdv.heureFin}</span>
+                                  </div>
+
+                                  {rdv.lieu && (
+                                    <div className="flex items-center gap-2">
+                                      <MapPin className="h-4 w-4 text-primary" />
+                                      <span className="truncate">{rdv.lieu}</span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex gap-2 mt-4 pt-3 border-t border-border">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="flex-1 text-blue-600 border-blue-200 hover:bg-blue-50"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenForm(rdv);
+                                    }}
+                                  >
+                                    <Edit className="h-3 w-3 mr-1" />
+                                    Modifier
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="text-red-600 border-red-200 hover:bg-red-50"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      confirmDelete(rdv);
+                                    }}
+                                  >
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          </motion.div>
+                        );
+                      })}
                     </div>
-                  ))
+
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-center gap-2 mt-8">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                        </Button>
+
+                        <div className="flex gap-1">
+                          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                            <Button
+                              key={page}
+                              variant={currentPage === page ? "default" : "outline"}
+                              size="icon"
+                              onClick={() => setCurrentPage(page)}
+                              className={cn(
+                                "w-10 h-10",
+                                currentPage === page && "bg-primary text-primary-foreground"
+                              )}
+                            >
+                              {page}
+                            </Button>
+                          ))}
+                        </div>
+
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                          disabled={currentPage === totalPages}
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+
+                        <span className="ml-4 text-sm text-muted-foreground">
+                          {((currentPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, currentMonthRdvs.length)} sur {currentMonthRdvs.length}
+                        </span>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </TabsContent>

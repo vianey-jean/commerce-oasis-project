@@ -662,6 +662,19 @@ const CommandesPage: React.FC = () =>  {
       }
       
       await api.put(`/api/commandes/${cancellingId}`, { statut: 'annule', saleId: null });
+      
+      // Marquer le RDV lié comme annulé (invisible mais en DB)
+      if (commande && commande.type === 'reservation') {
+        try {
+          await api.put(`/api/rdv/by-commande/${cancellingId}`, {
+            statut: 'annule'
+          });
+          console.log('✅ RDV marqué comme annulé');
+        } catch (rdvError) {
+          console.log('RDV non trouvé:', rdvError);
+        }
+      }
+      
       toast({
         title: 'Succès',
         description: 'Commande annulée avec succès',
@@ -1839,6 +1852,27 @@ const CommandesPage: React.FC = () =>  {
                   }
                   
                   await api.put(`/api/commandes/${reporterCommandeId}`, updateData);
+                  
+                  // Mettre à jour le RDV lié si c'est une réservation
+                  if (commande.type === 'reservation') {
+                    try {
+                      // Calculer la nouvelle heure de fin (1h après le début)
+                      const heureDebut = reporterHoraire || '09:00';
+                      const [h, m] = heureDebut.split(':').map(Number);
+                      const endH = (h + 1) % 24;
+                      const heureFin = `${endH.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+                      
+                      await api.put(`/api/rdv/by-commande/${reporterCommandeId}`, {
+                        date: reporterDate,
+                        heureDebut,
+                        heureFin,
+                        statut: 'planifie' // Réactiver le RDV
+                      });
+                      console.log('✅ RDV mis à jour avec nouvelle date et horaire');
+                    } catch (rdvError) {
+                      console.log('RDV non trouvé ou erreur:', rdvError);
+                    }
+                  }
                   
                   toast({
                     title: 'Succès',
