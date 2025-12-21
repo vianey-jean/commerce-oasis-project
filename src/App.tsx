@@ -35,14 +35,8 @@ const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
 const TendancesPage = lazy(() => import('@/pages/TendancesPage'));
 const ClientsPage = lazy(() => import('@/pages/ClientsPage'));
 const MessagesPage = lazy(() => import('@/pages/MessagesPage'));
-const ComptabilitePage = lazy(() => import('@/pages/ComptabilitePage'));
-const RessourcesHumainesPage = lazy(() => import('@/pages/RessourcesHumainesPage'));
-const RendezVousPage = lazy(() => import('@/pages/RendezVousPage'));
 const CommandesPage = lazy(() => import('@/pages/CommandesPage'));
-const KPIDashboardPage = lazy(() => import('@/pages/KPIDashboardPage'));
-const ProjetsPage = lazy(() => import('@/pages/ProjetsPage'));
-const CRMPage = lazy(() => import('@/pages/CRMPage'));
-const NotificationsPage = lazy(() => import('@/pages/NotificationsPage'));
+const RdvPage = lazy(() => import('@/pages/RdvPage'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 function App() {
@@ -115,58 +109,10 @@ function App() {
                       }
                     />
                     <Route
-                      path="/comptabilite"
+                      path="/rdv"
                       element={
                         <ProtectedRoute>
-                          <ComptabilitePage />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/ressources-humaines"
-                      element={
-                        <ProtectedRoute>
-                          <RessourcesHumainesPage />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/rendez-vous"
-                      element={
-                        <ProtectedRoute>
-                          <RendezVousPage />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/kpi"
-                      element={
-                        <ProtectedRoute>
-                          <KPIDashboardPage />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/projets"
-                      element={
-                        <ProtectedRoute>
-                          <ProjetsPage />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/crm"
-                      element={
-                        <ProtectedRoute>
-                          <CRMPage />
-                        </ProtectedRoute>
-                      }
-                    />
-                    <Route
-                      path="/notifications"
-                      element={
-                        <ProtectedRoute>
-                          <NotificationsPage />
+                          <RdvPage />
                         </ProtectedRoute>
                       }
                     />

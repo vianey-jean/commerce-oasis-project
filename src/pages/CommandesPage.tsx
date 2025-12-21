@@ -7,11 +7,12 @@ import { ModernTable, ModernTableHeader, ModernTableRow, ModernTableHead, Modern
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
-import { Package, Plus, Trash2, Edit, ShoppingCart, TrendingUp, Sparkles, Crown, Star, Gift, Award, Zap, Diamond, ArrowUp, ArrowDown, Printer, Calendar } from 'lucide-react';
+import { Package, Plus, Trash2, Edit, ShoppingCart, TrendingUp, Sparkles, Crown, Star, Gift, Award, Zap, Diamond, ArrowUp, ArrowDown, Printer, Calendar, CalendarPlus } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Commande, CommandeProduit } from '@/types/commande';
 import api from '@/service/api';
+import { rdvFromReservationService } from '@/services/rdvFromReservationService';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import Layout from '@/components/Layout';
@@ -468,13 +469,39 @@ const CommandesPage: React.FC = () =>  {
 
       if (editingCommande) {
         await api.put(`/api/commandes/${editingCommande.id}`, commandeData);
+        
+        // Mettre à jour le RDV lié si c'est une réservation avec date et horaire
+        if (type === 'reservation' && dateEcheance && horaire) {
+          const updatedCommande = { ...editingCommande, ...commandeData } as Commande;
+          try {
+            await rdvFromReservationService.updateRdvFromCommande(updatedCommande);
+          } catch (err) {
+            console.error('Erreur mise à jour RDV:', err);
+          }
+        }
+        
         toast({
           title: 'Succès',
           description: 'Commande modifiée avec succès',
           className: "bg-app-green text-white",
         });
       } else {
-        await api.post('/api/commandes', commandeData);
+        const response = await api.post('/api/commandes', commandeData);
+        const newCommande = response.data as Commande;
+        
+        // Créer automatiquement un RDV si c'est une réservation avec date et horaire
+        if (type === 'reservation' && dateEcheance && horaire) {
+          try {
+            await rdvFromReservationService.createRdvFromCommande(newCommande);
+            toast({
+              title: '📅 Rendez-vous créé',
+              description: `Un RDV a été automatiquement créé pour le ${dateEcheance} à ${horaire}`,
+            });
+          } catch (err) {
+            console.error('Erreur création RDV:', err);
+          }
+        }
+        
         toast({
           title: 'Succès',
           description: 'Commande ajoutée avec succès',
@@ -514,6 +541,13 @@ const CommandesPage: React.FC = () =>  {
 
   const handleDelete = async (id: string) => {
     try {
+      // Supprimer le RDV lié si existant
+      try {
+        await rdvFromReservationService.deleteRdvFromCommande(id);
+      } catch (err) {
+        console.error('Erreur suppression RDV lié:', err);
+      }
+      
       await api.delete(`/api/commandes/${id}`);
       toast({
         title: 'Succès',
