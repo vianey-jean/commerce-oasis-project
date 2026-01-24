@@ -67,7 +67,7 @@ const NouvelleAchat = {
     }
   },
 
-  // Créer un nouvel achat et mettre à jour le produit
+  // Créer un nouvel achat et gérer le produit
   create: (achatData) => {
     try {
       console.log('📝 Creating new achat:', achatData);
@@ -75,41 +75,81 @@ const NouvelleAchat = {
       const data = fs.readFileSync(nouvelleAchatPath, 'utf8');
       const achats = JSON.parse(data);
       
-      // Créer l'objet achat
+      let productId = achatData.productId;
+      let isNewProduct = false;
+      
+      // Vérifier si le produit existe dans products.json
+      if (productId) {
+        const existingProduct = Product.getById(productId);
+        
+        if (existingProduct) {
+          // Le produit existe - mettre à jour la quantité et le prix si nécessaire
+          const updatedProductData = {
+            description: achatData.productDescription || existingProduct.description,
+            purchasePrice: Number(achatData.purchasePrice) || existingProduct.purchasePrice,
+            quantity: existingProduct.quantity + Number(achatData.quantity)
+          };
+          
+          Product.update(productId, updatedProductData);
+          console.log('✅ Existing product updated with new stock:', updatedProductData);
+        }
+      } else {
+        // Rechercher le produit par description
+        const allProducts = Product.getAll();
+        const foundProduct = allProducts.find(p => 
+          p.description.toLowerCase() === achatData.productDescription.toLowerCase()
+        );
+        
+        if (foundProduct) {
+          // Produit trouvé par description - mettre à jour
+          productId = foundProduct.id;
+          const updatedProductData = {
+            description: achatData.productDescription || foundProduct.description,
+            purchasePrice: Number(achatData.purchasePrice) || foundProduct.purchasePrice,
+            quantity: foundProduct.quantity + Number(achatData.quantity)
+          };
+          
+          Product.update(productId, updatedProductData);
+          console.log('✅ Existing product (found by description) updated with new stock:', updatedProductData);
+        } else {
+          // Le produit n'existe pas - créer un nouveau produit dans products.json
+          const newProductData = {
+            description: achatData.productDescription,
+            purchasePrice: Number(achatData.purchasePrice),
+            sellingPrice: Number(achatData.purchasePrice) * 1.3, // Marge par défaut de 30%
+            quantity: Number(achatData.quantity),
+            fournisseur: achatData.fournisseur || '',
+            caracteristiques: achatData.caracteristiques || ''
+          };
+          
+          const createdProduct = Product.create(newProductData);
+          if (createdProduct) {
+            productId = createdProduct.id;
+            isNewProduct = true;
+            console.log('✅ New product created in products.json:', createdProduct);
+          }
+        }
+      }
+      
+      // Créer l'objet achat dans nouvelle_achat.json
       const newAchat = {
         id: Date.now().toString(),
         date: achatData.date || new Date().toISOString(),
-        productId: achatData.productId,
+        productId: productId,
         productDescription: achatData.productDescription,
         purchasePrice: Number(achatData.purchasePrice),
         quantity: Number(achatData.quantity),
         fournisseur: achatData.fournisseur || '',
         caracteristiques: achatData.caracteristiques || '',
         totalCost: Number(achatData.purchasePrice) * Number(achatData.quantity),
-        type: 'achat_produit'
+        type: 'achat_produit',
+        isNewProduct: isNewProduct
       };
       
       achats.push(newAchat);
       fs.writeFileSync(nouvelleAchatPath, JSON.stringify(achats, null, 2));
       
-      // Mettre à jour le produit dans products.json
-      if (achatData.productId) {
-        const existingProduct = Product.getById(achatData.productId);
-        
-        if (existingProduct) {
-          // Mettre à jour la quantité et le prix si nécessaire
-          const updatedProductData = {
-            description: achatData.productDescription || existingProduct.description,
-            purchasePrice: Number(achatData.purchasePrice),
-            quantity: existingProduct.quantity + Number(achatData.quantity)
-          };
-          
-          Product.update(achatData.productId, updatedProductData);
-          console.log('✅ Product updated with new stock:', updatedProductData);
-        }
-      }
-      
-      console.log('✅ Achat created successfully:', newAchat);
+      console.log('✅ Achat created successfully in nouvelle_achat.json:', newAchat);
       return newAchat;
     } catch (error) {
       console.error("❌ Error creating achat:", error);
@@ -175,10 +215,12 @@ const NouvelleAchat = {
     }
   },
 
-  // Ajouter une dépense (taxes, carburant, autres)
+  // DEPRECATED: Utiliser NouvelleDepense.create() à la place
+  // Cette méthode est conservée pour la compatibilité
   addDepense: (depenseData) => {
     try {
-      console.log('📝 Adding depense:', depenseData);
+      console.log('⚠️ DEPRECATED: addDepense should use NouvelleDepense model instead');
+      console.log('📝 Adding depense to nouvelle_achat.json for backward compatibility:', depenseData);
       
       const data = fs.readFileSync(nouvelleAchatPath, 'utf8');
       const achats = JSON.parse(data);
@@ -188,7 +230,7 @@ const NouvelleAchat = {
         date: depenseData.date || new Date().toISOString(),
         description: depenseData.description,
         totalCost: Number(depenseData.montant),
-        type: depenseData.type || 'autre_depense', // taxes, carburant, autre_depense
+        type: depenseData.type || 'autre_depense',
         categorie: depenseData.categorie || 'divers'
       };
       
@@ -203,7 +245,7 @@ const NouvelleAchat = {
     }
   },
 
-  // Calculer les statistiques mensuelles
+  // Calculer les statistiques mensuelles (achats uniquement)
   getMonthlyStats: (month, year) => {
     try {
       const achats = NouvelleAchat.getByMonthYear(month, year);
