@@ -6,6 +6,15 @@ const fs = require('fs');
 const path = require('path');
 const dotenv = require('dotenv');
 const bcrypt = require('bcryptjs');
+const compression = require('compression');
+
+// Middleware de sécurité
+const {
+  rateLimitMiddleware,
+  sanitizeMiddleware,
+  securityHeadersMiddleware,
+  suspiciousActivityLogger
+} = require('./middleware/security');
 
 // Load environment variables
 dotenv.config();
@@ -14,37 +23,53 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 10000;
 
+// ===================
+// SECURITY MIDDLEWARE
+// ===================
+
+// Compression pour performance
+app.use(compression());
+
+// Security headers
+app.use(securityHeadersMiddleware);
+
+// ===================
+// CORS (DOIT ÊTRE AVANT LE RATE LIMIT)
+// ===================
+
 // Configuration CORS avec toutes les origines autorisées
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:8080',
+  'http://localhost:8081',
   'https://server-gestion-ventes.onrender.com',
-  'https://riziky-gestion-ventes.vercel.app'
+  'https://riziky-gestion-ventes.vercel.app',
+  'https://riziky-boutic.vercel.app'
 ];
 
 const corsOptions = {
   origin: function (origin, callback) {
     // Permettre les requêtes sans origine (comme les apps mobiles ou curl)
     if (!origin) return callback(null, true);
-    
+
     // Permettre toutes les origines Lovable preview
     if (origin.includes('lovable.app') || origin.includes('lovableproject.com')) {
       return callback(null, true);
     }
-    
+
     // Permettre les origines dans la liste
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
-    
-    // Permettre toutes les origines en développement
+
+    // Par défaut, autoriser (évite les blocages preview)
     return callback(null, true);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
   allowedHeaders: [
-    'Content-Type', 
-    'Authorization', 
+    'Content-Type',
+    'Authorization',
     'Cache-Control',
     'X-Requested-With',
     'Accept',
@@ -56,8 +81,27 @@ const corsOptions = {
 // Middleware CORS global
 app.use(cors(corsOptions));
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+// ===================
+// RATE LIMIT (APRÈS CORS)
+// ===================
+
+// Ne pas bloquer SSE (connexion longue) avec le rate-limit global
+app.use((req, res, next) => {
+  if (req.path === '/api/sync/events') {
+    return next();
+  }
+  return rateLimitMiddleware('general')(req, res, next);
+});
+
+// Détection d'activités suspectes
+app.use(suspiciousActivityLogger);
+
+// Body parsing avec limites de taille
+app.use(bodyParser.json({ limit: '10mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
+
+// Sanitization de tous les inputs
+app.use(sanitizeMiddleware);
 
 // Create db directory if it doesn't exist
 const dbPath = path.join(__dirname, 'db');
@@ -189,9 +233,13 @@ const depensesRoutes = require('./routes/depenses');
 const syncRoutes = require('./routes/sync');
 const beneficesRoutes = require('./routes/benefices');
 const messagesRoutes = require('./routes/messages');
-const marketingRoutes = require('./routes/marketing');
+
 const commandesRoutes = require('./routes/commandes');
 const rdvRoutes = require('./routes/rdv');
+const rdvNotificationsRoutes = require('./routes/rdvNotifications');
+const objectifRoutes = require('./routes/objectif');
+const nouvelleAchatRoutes = require('./routes/nouvelleAchat');
+const comptaRoutes = require('./routes/compta');
 
 // Use routes
 app.use('/api/auth', authRoutes);
@@ -204,26 +252,55 @@ app.use('/api/depenses', depensesRoutes);
 app.use('/api/sync', syncRoutes);
 app.use('/api/benefices', beneficesRoutes);
 app.use('/api/messages', messagesRoutes);
-app.use('/api/marketing', marketingRoutes);
+
 app.use('/api/commandes', commandesRoutes);
 app.use('/api/rdv', rdvRoutes);
+app.use('/api/rdv-notifications', rdvNotificationsRoutes);
+app.use('/api/objectif', objectifRoutes);
+app.use('/api/nouvelle-achat', nouvelleAchatRoutes);
+app.use('/api/compta', comptaRoutes);
 
 // Static file serving for uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Error handling middleware
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ error: 'Route non trouvée' });
+});
+
+// Error handling middleware avec sécurité
 app.use((err, req, res, next) => {
-  console.error('Server error:', err.stack);
-  res.status(500).json({ 
-    error: 'Something broke!', 
-    message: err.message,
-    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  // Log l'erreur en interne
+  console.error('Server error:', err.message);
+  
+  // Ne jamais exposer les stack traces en production
+  const isProduction = process.env.NODE_ENV === 'production';
+  
+  res.status(err.status || 500).json({ 
+    error: 'Une erreur est survenue', 
+    message: isProduction ? 'Erreur serveur interne' : err.message,
+    ...(isProduction ? {} : { stack: err.stack })
   });
+});
+
+// Gestion gracieuse de l'arrêt
+process.on('SIGTERM', () => {
+  console.log('SIGTERM reçu, arrêt gracieux...');
+  process.exit(0);
+});
+
+process.on('uncaughtException', (err) => {
+  console.error('Exception non capturée:', err);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Promesse rejetée non gérée:', reason);
 });
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`CORS enabled for all origins in development`);
-  console.log(`Sync events available at http://localhost:${PORT}/api/sync/events`);
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`🔒 Security middleware enabled`);
+  console.log(`📡 Sync events available at /api/sync/events`);
 });

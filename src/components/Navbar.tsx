@@ -1,229 +1,269 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
-import { useTheme } from '@/contexts/ThemeContext';
-import { useMessages } from '@/hooks/use-messages';
-import { 
-  Home, 
-  Info, 
-  Mail, 
-  LogIn, 
-  UserCircle, 
-  LogOut, 
-  LayoutDashboard, 
-  Moon, 
-  Sun, 
-  Sparkles, 
-  TrendingUp, 
-  Users,
-  CalendarDays,
-  MessageSquare,
-  Menu,
-  X,
-  ChevronDown,
-  Package
-} from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Badge } from '@/components/ui/badge';
 
+import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useMessages } from '@/hooks/use-messages';
+
+import RdvNotifications from '@/components/rdv/RdvNotifications';
+import ObjectifIndicator from '@/components/navbar/ObjectifIndicator';
+
+import {
+  LayoutDashboard,
+  Users,
+  CalendarDays,
+  MessageSquare,
+  LogIn,
+  LogOut,
+  UserCircle,
+  Moon,
+  Sun,
+  Menu,
+  X,
+  Package,
+  ChevronDown,
+  TrendingUp,
+  Sparkles,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const Navbar: React.FC = () => {
   const { isAuthenticated, user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { unreadCount } = useMessages();
-
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const toggleMobileMenu = () => setIsMobileMenuOpen(prev => !prev);
 
   return (
-    <header className="sticky top-0 z-50 backdrop-blur-xl bg-white/80 dark:bg-gray-900/80 border-b border-gray-200/50 dark:border-gray-700/50">
-      <nav className="transition-all duration-200" role="navigation">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
+    <header className="sticky top-0 z-50 backdrop-blur-xl bg-gradient-to-r from-white/90 via-slate-50/90 to-violet-50/90 dark:from-slate-950/90 dark:via-slate-900/90 dark:to-violet-950/90 border-b border-slate-200/50 dark:border-slate-800/50 shadow-lg shadow-violet-500/5">
+      <nav className="max-w-7xl mx-auto px-4">
+        <div className="flex justify-between h-16 items-center">
+
+          {/* Logo + Objectif */}
+          <div className="flex items-center gap-4">
+            <Link to="/" className="flex items-center group">
+              <img
+                src="/images/logo.ico"
+                alt="Logo"
+                className="h-12 w-24 sm:h-16 sm:w-32 object-contain transition-transform group-hover:scale-105"
+              />
+            </Link>
             
-            {/* Logo */}
-            <div className="flex items-center">
-              <Link to="/" className="flex-shrink-0 flex items-center group">
-                <div className="logo-container flex items-center p-1 sm:p-2 rounded-xl sm:rounded-2xl hover:bg-gradient-to-r hover:from-purple-500/10 hover:to-pink-500/10 transition-all duration-300">
-                  {/* ✅ Logo image importé */}
-                  <img
-                    src="/images/logo.ico"
-                    alt="Logo Gestion & Ventes"
-                    className="h-12 w-24 xs:h-16 xs:w-32 sm:h-20 sm:w-40 object-contain"
-                  />
-                </div>
-              </Link>
-            </div>
-
-
-            {/* Desktop Menu (texte + icônes) */}
-            <div className="hidden md:flex md:items-center md:space-x-1 lg:space-x-2">
-              {isAuthenticated && (
-                <>
-                  <Link to="/dashboard" className="group inline-flex items-center px-2 lg:px-4 py-2 rounded-lg lg:rounded-xl text-xs lg:text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200">
-                    <LayoutDashboard className="mr-1.5 lg:mr-2 h-3 w-3 lg:h-4 lg:w-4 text-blue-600 group-hover:scale-110 transition-transform" />
-                    <span className="hidden lg:inline">Tableau de Bord</span>
-                    <span className="lg:hidden">Dashboard</span>
-                  </Link>
-                  <Link to="/commandes" className="group inline-flex items-center px-2 lg:px-4 py-2 rounded-lg lg:rounded-xl text-xs lg:text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-all duration-200">
-                    <Package className="mr-1.5 lg:mr-2 h-3 w-3 lg:h-4 lg:w-4 text-indigo-600 group-hover:scale-110 transition-transform" />
-                    <span className="hidden lg:inline">Commandes</span>
-                    <span className="lg:hidden">Commandes</span>
-                  </Link>
-                  <Link to="/tendances" className="group inline-flex items-center px-2 lg:px-4 py-2 rounded-lg lg:rounded-xl text-xs lg:text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-all duration-200">
-                    <TrendingUp className="mr-1.5 lg:mr-2 h-3 w-3 lg:h-4 lg:w-4 text-emerald-600 group-hover:scale-110 transition-transform" />
-                    Tendances
-                  </Link>
-                  <Link to="/clients" className="group inline-flex items-center px-2 lg:px-4 py-2 rounded-lg lg:rounded-xl text-xs lg:text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200">
-                    <Users className="mr-1.5 lg:mr-2 h-3 w-3 lg:h-4 lg:w-4 text-purple-600 group-hover:scale-110 transition-transform" />
-                    Clients
-                  </Link>
-                </>
-              )}
-
-              {!isAuthenticated && (
-                <Link to="/about" className="group inline-flex items-center px-2 lg:px-4 py-2 rounded-lg lg:rounded-xl text-xs lg:text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-purple-600 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all duration-200">
-                  <Info className="mr-1.5 lg:mr-2 h-3 w-3 lg:h-4 lg:w-4 group-hover:scale-110 transition-transform" />
-                  <span className="hidden lg:inline">À propos</span>
-                </Link>
-              )}
-
-               <Link to="/rdv" className="group inline-flex items-center px-2 lg:px-4 py-2 rounded-lg lg:rounded-xl text-xs lg:text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-orange-600 dark:hover:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all duration-200">
-                <CalendarDays className="mr-1.5 lg:mr-2 h-3 w-3 lg:h-4 lg:w-4 text-orange-600 group-hover:scale-110 transition-transform" />
-                <span className="hidden lg:inline">Rendez-vous</span>
-                <span className="lg:hidden">RDV</span>
-              </Link>
-
-              {/* Theme toggle */}
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={toggleTheme} 
-                className="ml-1 lg:ml-2 h-8 w-8 lg:h-10 lg:w-10 rounded-lg lg:rounded-xl hover:bg-gradient-to-r hover:from-yellow-50 hover:to-orange-50 dark:hover:from-blue-900/20 dark:hover:to-purple-900/20 transition-all duration-200"
-              >
-                {theme === 'dark' ? 
-                  <Sun className="h-3 w-3 lg:h-4 lg:w-4 text-yellow-500 hover:rotate-180 transition-transform duration-500" /> : 
-                  <Moon className="h-3 w-3 lg:h-4 lg:w-4 text-blue-600 hover:rotate-180 transition-transform duration-500" />
-                }
-              </Button>
-
-              {/* User menu */}
-              {isAuthenticated ? (
-                <div className="flex items-center space-x-1.5 lg:space-x-3 ml-2 lg:ml-4">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        className="flex items-center px-2 lg:px-3 py-1.5 lg:py-2 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg lg:rounded-xl border border-purple-200/50 dark:border-purple-700/50 hover:bg-gradient-to-r hover:from-purple-100 hover:to-pink-100 dark:hover:from-purple-800/30 dark:hover:to-pink-800/30 transition-all duration-200"
-                      >
-                        <UserCircle className="h-3 w-3 lg:h-4 lg:w-4 text-purple-600 dark:text-purple-400 mr-1.5 lg:mr-2" />
-                        <span className="text-xs lg:text-sm font-semibold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent hidden md:inline">
-                          {user?.firstName} {user?.lastName}
-                        </span>
-                        <span className="text-xs lg:text-sm font-semibold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent md:hidden">
-                          {user?.firstName}
-                        </span>
-                        <ChevronDown className="h-3 w-3 lg:h-4 lg:w-4 ml-0.5 lg:ml-1 text-purple-600 dark:text-purple-400" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-40 sm:w-48 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg">
-                      <DropdownMenuItem asChild>
-                        <Link to="/messages" className="flex items-center w-full cursor-pointer text-xs sm:text-sm">
-                          <MessageSquare className="mr-2 h-3 w-3 sm:h-4 sm:w-4 text-blue-600" />
-                          Messages
-                          {unreadCount > 0 && (
-                            <Badge variant="destructive" className="ml-auto text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 min-w-[16px] sm:min-w-[20px] h-4 sm:h-5 flex items-center justify-center bg-red-500 text-white">
-                              {unreadCount}
-                            </Badge>
-                          )}
-                        </Link>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    className="h-8 lg:h-10 px-2 lg:px-4 rounded-lg lg:rounded-xl border-2 border-red-200 text-red-600 hover:bg-red-500 hover:text-white hover:border-red-500 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-500 dark:hover:border-red-500 transition-all duration-200"
-                    onClick={logout}
-                  >
-                    <LogOut className="h-3 w-3 lg:h-4 lg:w-4 lg:mr-2" />
-                    <span className="hidden lg:inline">Déconnexion</span>
-                  </Button>
-                </div>
-              ) : (
-                <Link to="/login">
-                  <Button className="h-8 lg:h-10 px-3 lg:px-6 rounded-lg lg:rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white shadow-lg hover:shadow-purple-500/25 transition-all duration-200 transform hover:scale-105 text-xs lg:text-sm">
-                    <LogIn className="h-3 w-3 lg:h-4 lg:w-4 lg:mr-2" />
-                    <span className="hidden lg:inline">Connexion</span>
-                  </Button>
-                </Link>
-              )}
-            </div>
-
-            {/* Mobile / Tablet Menu Toggle (icônes seulement) */}
-            <div className="flex md:hidden items-center space-x-2">
-              <Button variant="ghost" size="icon" onClick={toggleMobileMenu} className="h-8 w-8 sm:h-10 sm:w-10">
-                {isMobileMenuOpen ? <X className="h-4 w-4 sm:h-5 sm:w-5" /> : <Menu className="h-4 w-4 sm:h-5 sm:w-5" />}
-              </Button>
-            </div>
+            {/* Objectif - visible on all sizes */}
+            {isAuthenticated && <ObjectifIndicator />}
           </div>
 
-          {/* Mobile / Tablet Menu Items (icônes seulement) */}
-          {isMobileMenuOpen && (
-            <div className="md:hidden mt-2 grid grid-cols-2 sm:flex sm:flex-col gap-2 px-2 pb-4">
-              {isAuthenticated ? (
-                <>
-                  <Link to="/dashboard" className="w-full">
-                    <Button variant="outline" size="icon" className="w-full h-10 sm:h-12 p-0 rounded-lg sm:rounded-xl border-2 border-green-200 text-green-600 hover:bg-green-500 hover:text-white hover:border-green-500">
-                      <LayoutDashboard className="h-4 w-4 sm:h-5 sm:w-5" />
-                    </Button>
-                  </Link>
-                  <Link to="/commandes" className="w-full">
-                    <Button variant="outline" size="icon" className="w-full h-10 sm:h-12 p-0 rounded-lg sm:rounded-xl border-2 border-indigo-200 text-indigo-600 hover:bg-indigo-500 hover:text-white hover:border-indigo-500">
-                      <Package className="h-4 w-4 sm:h-5 sm:w-5" />
-                    </Button>
-                  </Link>
-                  <Link to="/tendances" className="w-full">
-                    <Button variant="outline" size="icon" className="w-full h-10 sm:h-12 p-0 rounded-lg sm:rounded-xl border-2 border-emerald-200 text-emerald-600 hover:bg-emerald-500 hover:text-white hover:border-emerald-500">
-                      <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
-                    </Button>
-                  </Link>
-                  <Link to="/clients" className="w-full">
-                    <Button variant="outline" size="icon" className="w-full h-10 sm:h-12 p-0 rounded-lg sm:rounded-xl border-2 border-purple-200 text-purple-600 hover:bg-purple-500 hover:text-white hover:border-purple-500">
-                      <Users className="h-4 w-4 sm:h-5 sm:w-5" />
-                    </Button>
-                  </Link>
-                  <Link to="/messages" className="relative w-full">
-                    <Button variant="outline" size="icon" className="w-full h-10 sm:h-12 p-0 rounded-lg sm:rounded-xl border-2 border-blue-200 text-blue-600 hover:bg-blue-500 hover:text-white hover:border-blue-500">
-                      <MessageSquare className="h-4 w-4 sm:h-5 sm:w-5" />
-                    </Button>
+          {/* ================= DESKTOP ================= */}
+          <div className="hidden lg:flex items-center space-x-1">
+            {isAuthenticated && (
+              <>
+                <Link to="/dashboard">
+                  <Button variant="ghost" className="rounded-xl hover:bg-violet-500/10 hover:text-violet-600 dark:hover:text-violet-400 transition-all duration-300">
+                    <LayoutDashboard className="mr-2 h-4 w-4 text-violet-500" />
+                    Dashboard
+                  </Button>
+                </Link>
+
+                <Link to="/commandes">
+                  <Button variant="ghost" className="rounded-xl hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-300">
+                    <Package className="mr-2 h-4 w-4 text-emerald-500" />
+                    Commandes
+                  </Button>
+                </Link>
+              </>
+            )}
+
+            <Link to="/rdv">
+              <Button variant="ghost" className="rounded-xl hover:bg-orange-500/10 hover:text-orange-600 dark:hover:text-orange-400 transition-all duration-300">
+                <CalendarDays className="mr-2 h-4 w-4 text-orange-500" />
+                Rendez-vous
+              </Button>
+            </Link>
+
+            {isAuthenticated && <RdvNotifications />}
+
+            {/* Theme */}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={toggleTheme}
+              className="rounded-xl h-9 w-9 hover:bg-amber-500/10 transition-all duration-300 hover:scale-110"
+            >
+              {theme === 'dark'
+                ? <Sun className="h-5 w-5 text-amber-500" />
+                : <Moon className="h-5 w-5 text-indigo-600" />}
+            </Button>
+
+            {/* USER MENU */}
+            {isAuthenticated ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    className="rounded-xl border-violet-200/50 dark:border-violet-800/50 hover:bg-violet-500/10 hover:border-violet-400/50 transition-all duration-300"
+                  >
+                    <div className="flex items-center justify-center w-6 h-6 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-500 mr-2">
+                      <UserCircle className="h-4 w-4 text-white" />
+                    </div>
+                    <span className="font-medium">{user?.firstName}</span>
+                    <ChevronDown className="ml-1 h-4 w-4 text-violet-500" />
+                  </Button>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent align="end" className="w-56 rounded-xl border-slate-200/50 dark:border-slate-700/50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl shadow-xl">
+
+                  <DropdownMenuItem asChild className="rounded-lg hover:bg-blue-500/10 focus:bg-blue-500/10 cursor-pointer">
+                    <Link to="/messages" className="flex items-center w-full py-2">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-500/10 mr-3">
+                        <MessageSquare className="h-4 w-4 text-blue-500" />
+                      </div>
+                      <span className="font-medium">Messages</span>
+                      {unreadCount > 0 && (
+                        <Badge className="ml-auto bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-0">
+                          {unreadCount}
+                        </Badge>
+                      )}
+                    </Link>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem asChild className="rounded-lg hover:bg-emerald-500/10 focus:bg-emerald-500/10 cursor-pointer">
+                    <Link to="/tendances" className="flex items-center w-full py-2">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-emerald-500/10 mr-3">
+                        <TrendingUp className="h-4 w-4 text-emerald-500" />
+                      </div>
+                      <span className="font-medium">Tendances</span>
+                    </Link>
+                  </DropdownMenuItem>
+
+                  <DropdownMenuItem asChild className="rounded-lg hover:bg-violet-500/10 focus:bg-violet-500/10 cursor-pointer">
+                    <Link to="/Clients" className="flex items-center w-full py-2">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-violet-500/10 mr-3">
+                        <Users className="h-4 w-4 text-violet-500" />
+                      </div>
+                      <span className="font-medium">Clients</span>
+                    </Link>
+                  </DropdownMenuItem>
+
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link to="/login">
+                <Button className="rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 shadow-lg shadow-violet-500/30 transition-all duration-300 hover:scale-105">
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Connexion
+                </Button>
+              </Link>
+            )}
+
+            {isAuthenticated && (
+              <Button 
+                variant="ghost" 
+                onClick={logout}
+                className="rounded-xl text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 transition-all duration-300"
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Déconnexion
+              </Button>
+            )}
+          </div>
+
+          {/* ================= TABLET & MOBILE ================= */}
+          <div className="lg:hidden flex items-center gap-2">
+            {isAuthenticated && <RdvNotifications />}
+
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={toggleTheme}
+              className="rounded-xl h-9 w-9 hover:bg-amber-500/10 transition-all duration-300"
+            >
+              {theme === 'dark' ? <Sun className="h-5 w-5 text-amber-500" /> : <Moon className="h-5 w-5 text-indigo-600" />}
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="rounded-xl h-9 w-9 hover:bg-violet-500/10 transition-all duration-300"
+            >
+              {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
+          </div>
+        </div>
+
+        {/* MOBILE/TABLET MENU */}
+        {isMobileMenuOpen && (
+          <div className="lg:hidden grid grid-cols-2 gap-2 pb-4 animate-in slide-in-from-top-2 duration-300">
+            {isAuthenticated && (
+              <>
+                <Link to="/dashboard" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Button variant="outline" className="w-full justify-start rounded-xl border-violet-200/50 dark:border-violet-800/50 hover:bg-violet-500/10">
+                    <LayoutDashboard className="mr-2 h-4 w-4 text-violet-500" />
+                    Dashboard
+                  </Button>
+                </Link>
+                <Link to="/commandes" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Button variant="outline" className="w-full justify-start rounded-xl border-emerald-200/50 dark:border-emerald-800/50 hover:bg-emerald-500/10">
+                    <Package className="mr-2 h-4 w-4 text-emerald-500" />
+                    Commandes
+                  </Button>
+                </Link>
+                <Link to="/clients" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Button variant="outline" className="w-full justify-start rounded-xl border-violet-200/50 dark:border-violet-800/50 hover:bg-violet-500/10">
+                    <Users className="mr-2 h-4 w-4 text-violet-500" />
+                    Clients
+                  </Button>
+                </Link>
+                <Link to="/rdv" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Button variant="outline" className="w-full justify-start rounded-xl border-orange-200/50 dark:border-orange-800/50 hover:bg-orange-500/10">
+                    <CalendarDays className="mr-2 h-4 w-4 text-orange-500" />
+                    Rendez-vous
+                  </Button>
+                </Link>
+                <Link to="/messages" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Button variant="outline" className="w-full justify-start rounded-xl border-blue-200/50 dark:border-blue-800/50 hover:bg-blue-500/10">
+                    <MessageSquare className="mr-2 h-4 w-4 text-blue-500" />
+                    Messages
                     {unreadCount > 0 && (
-                      <Badge variant="destructive" className="absolute -top-1 -right-1 text-[10px] sm:text-xs px-1 sm:px-1.5 py-0.5 min-w-[16px] sm:min-w-[18px] h-3.5 sm:h-4 flex items-center justify-center bg-red-500 text-white">
+                      <Badge className="ml-auto bg-gradient-to-r from-blue-500 to-cyan-500 text-white border-0">
                         {unreadCount}
                       </Badge>
                     )}
-                  </Link>
-                  <Button variant="outline" size="icon" className="w-full h-10 sm:h-12 p-0 rounded-lg sm:rounded-xl border-2 border-red-200 text-red-600 hover:bg-red-500 hover:text-white hover:border-red-500 col-span-2 sm:col-span-1" onClick={logout}>
-                    <LogOut className="h-4 w-4 sm:h-5 sm:w-5" />
-                  </Button>
-                </>
-              ) : (
-                <Link to="/login" className="col-span-2">
-                  <Button variant="outline" size="icon" className="w-full h-10 sm:h-12 p-0 rounded-lg sm:rounded-xl bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white">
-                    <LogIn className="h-4 w-4 sm:h-5 sm:w-5" />
                   </Button>
                 </Link>
-              )}
-            </div>
-          )}
-        </div>
+                <Link to="/tendances" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Button variant="outline" className="w-full justify-start rounded-xl border-emerald-200/50 dark:border-emerald-800/50 hover:bg-emerald-500/10">
+                    <TrendingUp className="mr-2 h-4 w-4 text-emerald-500" />
+                    Tendances
+                  </Button>
+                </Link>
+                <Button 
+                  className="col-span-2 rounded-xl bg-gradient-to-r from-rose-500 to-pink-500 hover:from-rose-600 hover:to-pink-600 shadow-lg shadow-rose-500/30" 
+                  onClick={() => { logout(); setIsMobileMenuOpen(false); }}
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Déconnexion
+                </Button>
+              </>
+            )}
+
+            {!isAuthenticated && (
+              <Link to="/login" className="col-span-2" onClick={() => setIsMobileMenuOpen(false)}>
+                <Button className="w-full rounded-xl bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 shadow-lg shadow-violet-500/30">
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Connexion
+                </Button>
+              </Link>
+            )}
+          </div>
+        )}
       </nav>
     </header>
   );

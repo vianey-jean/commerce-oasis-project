@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Rdv = require('../models/Rdv');
 const Client = require('../models/Client');
+const RdvNotification = require('../models/RdvNotification');
 const authMiddleware = require('../middleware/auth');
 
 // Get all rdvs
@@ -112,6 +113,9 @@ router.post('/', authMiddleware, async (req, res) => {
       return res.status(500).json({ message: 'Error creating rdv' });
     }
     
+    // Créer automatiquement une notification pour ce nouveau RDV
+    RdvNotification.create(newRdv);
+    
     res.status(201).json(newRdv);
   } catch (error) {
     console.error('Error creating rdv:', error);
@@ -122,10 +126,25 @@ router.post('/', authMiddleware, async (req, res) => {
 // Update rdv
 router.put('/:id', authMiddleware, async (req, res) => {
   try {
+    const oldRdv = Rdv.getById(req.params.id);
     const updatedRdv = Rdv.update(req.params.id, req.body);
     
     if (!updatedRdv) {
       return res.status(404).json({ message: 'RDV not found' });
+    }
+    
+    // Synchroniser la notification selon le statut
+    if (req.body.statut) {
+      if (req.body.statut === 'annule' || req.body.statut === 'termine' || req.body.statut === 'valide') {
+        // Désactiver la notification
+        RdvNotification.updateStatus(req.params.id, req.body.statut);
+      } else if (req.body.statut === 'reporte') {
+        // Mettre à jour la notification avec les nouvelles infos
+        RdvNotification.updateByRdvId(req.params.id, updatedRdv);
+      }
+    } else if (oldRdv && (oldRdv.date !== updatedRdv.date || oldRdv.heureDebut !== updatedRdv.heureDebut)) {
+      // Date/heure modifiée, mettre à jour la notification
+      RdvNotification.updateByRdvId(req.params.id, updatedRdv);
     }
     
     res.json(updatedRdv);
@@ -138,10 +157,22 @@ router.put('/:id', authMiddleware, async (req, res) => {
 // Update rdv by commande ID (for reservation reschedule)
 router.put('/by-commande/:commandeId', authMiddleware, async (req, res) => {
   try {
+    const oldRdv = Rdv.getByCommandeId(req.params.commandeId);
     const updatedRdv = Rdv.updateByCommandeId(req.params.commandeId, req.body);
     
     if (!updatedRdv) {
       return res.status(404).json({ message: 'RDV not found for this commande' });
+    }
+    
+    // Synchroniser la notification selon le statut
+    if (req.body.statut) {
+      if (req.body.statut === 'annule' || req.body.statut === 'termine' || req.body.statut === 'valide') {
+        RdvNotification.updateStatus(updatedRdv.id, req.body.statut);
+      } else if (req.body.statut === 'reporte') {
+        RdvNotification.updateByRdvId(updatedRdv.id, updatedRdv);
+      }
+    } else if (oldRdv && (oldRdv.date !== updatedRdv.date || oldRdv.heureDebut !== updatedRdv.heureDebut)) {
+      RdvNotification.updateByRdvId(updatedRdv.id, updatedRdv);
     }
     
     res.json(updatedRdv);
@@ -154,6 +185,9 @@ router.put('/by-commande/:commandeId', authMiddleware, async (req, res) => {
 // Delete rdv
 router.delete('/:id', authMiddleware, async (req, res) => {
   try {
+    // Supprimer d'abord la notification associée
+    RdvNotification.deleteByRdvId(req.params.id);
+    
     const success = Rdv.delete(req.params.id);
     
     if (!success) {

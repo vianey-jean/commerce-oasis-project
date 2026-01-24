@@ -1,21 +1,21 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { RDV } from '@/types/rdv';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { 
   Bell, 
   BellRing, 
   Calendar, 
   Clock, 
-  AlertTriangle,
   CheckCircle,
   X,
   Phone,
-  MapPin
+  MapPin,
+  Eye
 } from 'lucide-react';
-import { format, parseISO, isToday, isBefore, addMinutes, differenceInMinutes } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import {
@@ -25,330 +25,385 @@ import {
   SheetTitle,
   SheetTrigger,
 } from '@/components/ui/sheet';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { rdvNotificationsApi, RdvNotification } from '@/services/api/rdvNotificationsApi';
 
 interface RdvNotificationsProps {
-  rdvs: RDV[];
-  onRdvClick: (rdv: RDV) => void;
-  onMarkAsNotified: (rdvId: string) => void;
+  onCheckNotifications?: () => void;
 }
 
-interface NotificationItem {
-  rdv: RDV;
-  type: 'upcoming' | 'now' | 'passed';
-  message: string;
-}
-
-const RdvNotifications: React.FC<RdvNotificationsProps> = ({
-  rdvs,
-  onRdvClick,
-  onMarkAsNotified,
-}) => {
-  const { toast } = useToast();
-  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
-  const [isOpen, setIsOpen] = useState(false);
-
-  const checkNotifications = useCallback(() => {
-    const now = new Date();
-    const today = format(now, 'yyyy-MM-dd');
-    const currentTime = format(now, 'HH:mm');
-    
-    const newNotifications: NotificationItem[] = [];
-
-    rdvs.forEach((rdv) => {
-      if (rdv.statut === 'annule' || rdv.statut === 'termine') return;
-
-      // RDV d'aujourd'hui
-      if (rdv.date === today) {
-        const rdvDateTime = parseISO(`${rdv.date}T${rdv.heureDebut}`);
-        const minutesUntil = differenceInMinutes(rdvDateTime, now);
-
-        // RDV dans les 30 prochaines minutes
-        if (minutesUntil > 0 && minutesUntil <= 30) {
-          newNotifications.push({
-            rdv,
-            type: 'upcoming',
-            message: `Dans ${minutesUntil} minutes`,
-          });
-
-          // Notifier si pas encore fait
-          if (!rdv.rappelEnvoye) {
-            toast({
-              title: '⏰ Rappel de rendez-vous',
-              description: `"${rdv.titre}" avec ${rdv.clientNom} dans ${minutesUntil} min`,
-              duration: 10000,
-            });
-          }
-        }
-        // RDV en cours (l'heure actuelle est entre début et fin)
-        else if (rdv.heureDebut <= currentTime && currentTime < rdv.heureFin) {
-          newNotifications.push({
-            rdv,
-            type: 'now',
-            message: 'En cours maintenant',
-          });
-        }
-        // RDV passé aujourd'hui et non marqué comme terminé
-        else if (rdv.heureFin < currentTime) {
-          newNotifications.push({
-            rdv,
-            type: 'passed',
-            message: 'Terminé - À marquer comme terminé',
-          });
-
-          // Notifier si pas encore fait
-          if (!rdv.notificationEnvoyee) {
-            toast({
-              title: '📋 Rendez-vous terminé',
-              description: `"${rdv.titre}" est passé. Pensez à le marquer comme terminé.`,
-              duration: 8000,
-            });
-          }
-        }
-      }
-      // RDV passé (date antérieure) et non terminé
-      else if (rdv.date < today) {
-        newNotifications.push({
-          rdv,
-          type: 'passed',
-          message: `Passé le ${format(parseISO(rdv.date), 'd MMM', { locale: fr })}`,
-        });
-      }
-    });
-
-    setNotifications(newNotifications);
-  }, [rdvs, toast]);
-
-  // Vérifier les notifications toutes les minutes
-  useEffect(() => {
-    checkNotifications();
-    const interval = setInterval(checkNotifications, 60000);
-    return () => clearInterval(interval);
-  }, [checkNotifications]);
-
-  const getNotificationIcon = (type: NotificationItem['type']) => {
-    switch (type) {
-      case 'now':
-        return <BellRing className="h-4 w-4 text-green-500 animate-pulse" />;
-      case 'upcoming':
-        return <Clock className="h-4 w-4 text-orange-500" />;
-      case 'passed':
-        return <AlertTriangle className="h-4 w-4 text-red-500" />;
-    }
-  };
-
-  const getNotificationStyle = (type: NotificationItem['type']) => {
-    switch (type) {
-      case 'now':
-        return 'border-l-4 border-l-green-500 bg-green-50 dark:bg-green-950/20';
-      case 'upcoming':
-        return 'border-l-4 border-l-orange-500 bg-orange-50 dark:bg-orange-950/20';
-      case 'passed':
-        return 'border-l-4 border-l-red-500 bg-red-50 dark:bg-red-950/20';
-    }
-  };
-
-  const upcomingCount = notifications.filter(n => n.type === 'upcoming' || n.type === 'now').length;
-  const passedCount = notifications.filter(n => n.type === 'passed').length;
-  const totalCount = notifications.length;
-
-  return (
-    <Sheet open={isOpen} onOpenChange={setIsOpen}>
-      <SheetTrigger asChild>
-        <Button 
-          variant="outline" 
-          size="icon" 
-          className="relative"
-          aria-label={`${totalCount} notifications`}
-        >
-          {totalCount > 0 ? (
-            <BellRing className="h-5 w-5" />
-          ) : (
-            <Bell className="h-5 w-5" />
-          )}
-          {totalCount > 0 && (
-            <span className={cn(
-              "absolute -top-1 -right-1 h-5 w-5 rounded-full text-xs flex items-center justify-center text-white",
-              passedCount > 0 ? "bg-red-500" : "bg-orange-500"
-            )}>
-              {totalCount}
-            </span>
-          )}
-        </Button>
-      </SheetTrigger>
-      <SheetContent className="w-full sm:max-w-md">
-        <SheetHeader>
-          <SheetTitle className="flex items-center gap-2">
-            <BellRing className="h-5 w-5 text-primary" />
-            Notifications RDV
-            {totalCount > 0 && (
-              <Badge variant="secondary">{totalCount}</Badge>
-            )}
-          </SheetTitle>
-        </SheetHeader>
-
-        <div className="mt-6 space-y-4">
-          {notifications.length === 0 ? (
-            <Card>
-              <CardContent className="py-8 text-center">
-                <CheckCircle className="h-12 w-12 mx-auto text-green-500 mb-3" />
-                <p className="text-muted-foreground">
-                  Aucune notification en attente
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              {/* RDV en cours */}
-              {notifications.filter(n => n.type === 'now').length > 0 && (
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-green-600 flex items-center gap-2">
-                    <BellRing className="h-4 w-4" />
-                    En cours maintenant
-                  </h3>
-                  {notifications
-                    .filter(n => n.type === 'now')
-                    .map((notification) => (
-                      <NotificationCard
-                        key={notification.rdv.id}
-                        notification={notification}
-                        onClick={() => {
-                          onRdvClick(notification.rdv);
-                          setIsOpen(false);
-                        }}
-                        onDismiss={() => onMarkAsNotified(notification.rdv.id)}
-                        getIcon={getNotificationIcon}
-                        getStyle={getNotificationStyle}
-                      />
-                    ))}
-                </div>
-              )}
-
-              {/* RDV à venir */}
-              {notifications.filter(n => n.type === 'upcoming').length > 0 && (
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-orange-600 flex items-center gap-2">
-                    <Clock className="h-4 w-4" />
-                    À venir bientôt
-                  </h3>
-                  {notifications
-                    .filter(n => n.type === 'upcoming')
-                    .map((notification) => (
-                      <NotificationCard
-                        key={notification.rdv.id}
-                        notification={notification}
-                        onClick={() => {
-                          onRdvClick(notification.rdv);
-                          setIsOpen(false);
-                        }}
-                        onDismiss={() => onMarkAsNotified(notification.rdv.id)}
-                        getIcon={getNotificationIcon}
-                        getStyle={getNotificationStyle}
-                      />
-                    ))}
-                </div>
-              )}
-
-              {/* RDV passés */}
-              {notifications.filter(n => n.type === 'passed').length > 0 && (
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium text-red-600 flex items-center gap-2">
-                    <AlertTriangle className="h-4 w-4" />
-                    Passés (à traiter)
-                  </h3>
-                  {notifications
-                    .filter(n => n.type === 'passed')
-                    .map((notification) => (
-                      <NotificationCard
-                        key={notification.rdv.id}
-                        notification={notification}
-                        onClick={() => {
-                          onRdvClick(notification.rdv);
-                          setIsOpen(false);
-                        }}
-                        onDismiss={() => onMarkAsNotified(notification.rdv.id)}
-                        getIcon={getNotificationIcon}
-                        getStyle={getNotificationStyle}
-                      />
-                    ))}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </SheetContent>
-    </Sheet>
-  );
+// Fonction pour vérifier si un RDV est dans les 12h à venir ou dans les 24h passées
+const shouldBlink = (notification: RdvNotification): boolean => {
+  const now = new Date();
+  const rdvDateTime = new Date(`${notification.rdvDate}T${notification.rdvHeureDebut}:00`);
+  
+  const hoursUntilRdv = (rdvDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+  const hoursAfterRdv = (now.getTime() - rdvDateTime.getTime()) / (1000 * 60 * 60);
+  
+  // Clignote si RDV dans moins de 12h OU si RDV passé depuis moins de 24h
+  return hoursUntilRdv <= 12 || (hoursAfterRdv > 0 && hoursAfterRdv <= 24);
 };
 
-interface NotificationCardProps {
-  notification: NotificationItem;
-  onClick: () => void;
-  onDismiss: () => void;
-  getIcon: (type: NotificationItem['type']) => React.ReactNode;
-  getStyle: (type: NotificationItem['type']) => string;
-}
-
-const NotificationCard: React.FC<NotificationCardProps> = ({
-  notification,
-  onClick,
-  onDismiss,
-  getIcon,
-  getStyle,
+const RdvNotifications: React.FC<RdvNotificationsProps> = ({
+  onCheckNotifications,
 }) => {
-  const { rdv, type, message } = notification;
+  const { toast } = useToast();
+  const navigate = useNavigate();
+  const [notifications, setNotifications] = useState<RdvNotification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isOpen, setIsOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const previousCountRef = useRef<number>(0);
+  
+  // État pour le clignotement (toggle toutes les 5 secondes)
+  const [blinkState, setBlinkState] = useState(false);
+  
+  // Modal pour voir le détail d'un RDV
+  const [selectedNotification, setSelectedNotification] = useState<RdvNotification | null>(null);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+
+  // Timer pour le clignotement toutes les 5 secondes
+  useEffect(() => {
+    const blinkInterval = setInterval(() => {
+      setBlinkState(prev => !prev);
+    }, 5000);
+    
+    return () => clearInterval(blinkInterval);
+  }, []);
+
+  // Charger les notifications
+  const loadNotifications = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await rdvNotificationsApi.getUnread();
+      setNotifications(data);
+      
+      // Vérifier si le nombre a augmenté pour afficher un toast
+      if (data.length > previousCountRef.current && previousCountRef.current > 0) {
+        toast({
+          title: '🔔 Nouvelle notification RDV',
+          description: `${data.length - previousCountRef.current} nouveau(x) rendez-vous`,
+          duration: 5000,
+        });
+      }
+      
+      previousCountRef.current = data.length;
+      setUnreadCount(data.length);
+    } catch (error) {
+      console.error('Erreur chargement notifications:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
+  // Vérifier et créer des notifications pour les RDV dans 24h
+  const checkAndCreateNotifications = useCallback(async () => {
+    try {
+      const result = await rdvNotificationsApi.checkAndCreate();
+      if (result.created > 0) {
+        toast({
+          title: '🔔 Nouvelles notifications',
+          description: `${result.created} rendez-vous dans moins de 24h`,
+          duration: 800,
+        });
+        await loadNotifications();
+      }
+    } catch (error) {
+      console.error('Erreur vérification notifications:', error);
+    }
+  }, [toast, loadNotifications]);
+
+  // Polling pour la synchronisation (SSE désactivé pour éviter erreurs CORS)
+  useEffect(() => {
+    loadNotifications();
+    checkAndCreateNotifications();
+
+    // Polling toutes les 5 minutes (SSE désactivé pour éviter CORS)
+    const interval = setInterval(() => {
+      checkAndCreateNotifications();
+    }, 5 * 60 * 1000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [loadNotifications, checkAndCreateNotifications]);
+
+  // Quand on clique sur une notification, afficher le détail et marquer comme lu
+  const handleNotificationClick = async (notification: RdvNotification) => {
+    setSelectedNotification(notification);
+    setShowDetailModal(true);
+    
+    // Marquer la notification comme lue (ne pas supprimer)
+    try {
+      await rdvNotificationsApi.markAsRead(notification.id);
+      // Retirer de la liste affichée (car on affiche seulement les non lus)
+      setNotifications(prev => prev.filter(n => n.id !== notification.id));
+      setUnreadCount(prev => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error('Erreur marquage notification comme lue:', error);
+    }
+  };
+
+  // Fermer le modal de détail
+  const handleCloseDetail = () => {
+    setShowDetailModal(false);
+    setSelectedNotification(null);
+  };
+
+  // Aller à la page RDV avec le rdv à mettre en surbrillance
+  const handleGoToRdv = () => {
+    if (selectedNotification) {
+      // Naviguer vers la page RDV avec l'ID du RDV et sa date pour naviguer à la bonne semaine
+      const rdvDate = selectedNotification.rdvDate;
+      navigate(`/rdv?highlightRdv=${selectedNotification.rdvId}&date=${rdvDate}`);
+    }
+    setShowDetailModal(false);
+    setIsOpen(false);
+  };
 
   return (
-    <Card 
-      className={cn(
-        "cursor-pointer transition-all hover:shadow-md",
-        getStyle(type)
-      )}
-      onClick={onClick}
-    >
-      <CardContent className="p-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-start gap-2 flex-1 min-w-0">
-            {getIcon(type)}
-            <div className="flex-1 min-w-0">
-              <p className="font-medium truncate">{rdv.titre}</p>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
-                <span>{rdv.clientNom}</span>
-                <span>•</span>
-                <span>{rdv.heureDebut} - {rdv.heureFin}</span>
-              </div>
-              <Badge variant="outline" className="mt-1 text-xs">
-                {message}
-              </Badge>
-            </div>
-          </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6 flex-shrink-0"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDismiss();
-            }}
+    <>
+      <Sheet open={isOpen} onOpenChange={setIsOpen}>
+        <SheetTrigger asChild>
+          <Button 
+            variant="outline" 
+            size="icon" 
+            className="relative h-10 w-10 rounded-xl border-orange-200 hover:bg-orange-50 dark:hover:bg-orange-900/20"
+            aria-label={`${unreadCount} notifications`}
           >
-            <X className="h-3 w-3" />
+            {unreadCount > 0 ? (
+              <BellRing className="h-5 w-5 text-orange-600" />
+            ) : (
+              <Bell className="h-5 w-5 text-muted-foreground" />
+            )}
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full text-xs flex items-center justify-center text-white bg-red-500 animate-pulse">
+                {unreadCount > 9 ? '9+' : unreadCount}
+              </span>
+            )}
           </Button>
-        </div>
-        
-        {rdv.clientTelephone && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2">
-            <Phone className="h-3 w-3" />
-            <span>{rdv.clientTelephone}</span>
+        </SheetTrigger>
+        <SheetContent className="w-full sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <BellRing className="h-5 w-5 text-orange-600" />
+              Notifications RDV
+              {unreadCount > 0 && (
+                <Badge variant="destructive">{unreadCount}</Badge>
+              )}
+            </SheetTitle>
+          </SheetHeader>
+
+          <div className="mt-6 space-y-4">
+            {loading ? (
+              <Card>
+                <CardContent className="py-8 text-center">
+                  <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-3" />
+                  <p className="text-muted-foreground">Chargement...</p>
+                </CardContent>
+              </Card>
+            ) : notifications.length === 0 ? (
+              <Card>
+                <CardContent className="py-8 text-center">
+                  <CheckCircle className="h-12 w-12 mx-auto text-green-500 mb-3" />
+                  <p className="text-muted-foreground">
+                    Aucun rendez-vous dans les prochaines 24h
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-orange-600 flex items-center gap-2">
+                  <Clock className="h-4 w-4" />
+                  Rendez-vous dans moins de 24h
+                </p>
+                {notifications.map((notification) => {
+                  const shouldBlinkNow = shouldBlink(notification) && blinkState;
+                  
+                  return (
+                    <Card 
+                      key={notification.id}
+                      className={cn(
+                        "cursor-pointer transition-all hover:shadow-md border-l-4",
+                        shouldBlink(notification) 
+                          ? shouldBlinkNow 
+                            ? "border-l-red-600 bg-red-100 dark:bg-red-950/40" 
+                            : "border-l-red-500 bg-red-50 dark:bg-red-950/20"
+                          : "border-l-orange-500 bg-orange-50 dark:bg-orange-950/20"
+                      )}
+                      onClick={() => handleNotificationClick(notification)}
+                    >
+                      <CardContent className="p-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-start gap-2 flex-1 min-w-0">
+                            <Clock className={cn(
+                              "h-4 w-4 mt-0.5",
+                              shouldBlink(notification) 
+                                ? shouldBlinkNow 
+                                  ? "text-red-600" 
+                                  : "text-red-500"
+                                : "text-orange-500"
+                            )} />
+                            <div className="flex-1 min-w-0">
+                              <p className={cn(
+                                "font-medium truncate",
+                                shouldBlink(notification) && shouldBlinkNow && "text-red-700 dark:text-red-400"
+                              )}>{notification.rdvTitre}</p>
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
+                                <span>{notification.rdvClientNom}</span>
+                                <span>:</span>
+                                <span>{notification.rdvHeureDebut} - {notification.rdvHeureFin}</span>
+                              </div>
+                              <Badge 
+                                variant="outline" 
+                                className={cn(
+                                  "mt-1 text-xs",
+                                  shouldBlink(notification) && "border-red-500 text-red-600"
+                                )}
+                              >
+                                {format(parseISO(notification.rdvDate), 'EEEE d MMM', { locale: fr })}
+                              </Badge>
+                            </div>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={cn(
+                              "h-8 w-8 flex-shrink-0",
+                              shouldBlink(notification)
+                                ? "text-red-600 hover:bg-red-100"
+                                : "text-orange-600 hover:bg-orange-100"
+                            )}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        
+                        {notification.rdvClientTelephone && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2">
+                            <Phone className="h-3 w-3" />
+                            <span>{notification.rdvClientTelephone}</span>
+                          </div>
+                        )}
+                        
+                        {notification.rdvLieu && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                            <MapPin className="h-3 w-3" />
+                            <span className="truncate">{notification.rdvLieu}</span>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        )}
-        
-        {rdv.lieu && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-            <MapPin className="h-3 w-3" />
-            <span className="truncate">{rdv.lieu}</span>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        </SheetContent>
+      </Sheet>
+
+      {/* Modal détail du RDV */}
+      <Dialog open={showDetailModal} onOpenChange={setShowDetailModal}>
+        <DialogContent className="sm:max-w-lg bg-gradient-to-br from-background via-background to-orange-500/5">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3 text-xl">
+              <div className="p-2 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600">
+                <Calendar className="h-5 w-5 text-white" />
+              </div>
+              {selectedNotification?.rdvTitre}
+            </DialogTitle>
+            <DialogDescription>
+              Rendez-vous dans moins de 24 heures
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedNotification && (
+            <div className="space-y-4 py-4">
+              {/* Client Info */}
+              <div className="p-4 rounded-xl bg-muted/50 space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30">
+                    <Calendar className="h-5 w-5 text-orange-600" />
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Date</div>
+                    <div className="font-semibold">
+                      {format(parseISO(selectedNotification.rdvDate), 'EEEE d MMMM yyyy', { locale: fr })}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+                    <Clock className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Horaire</div>
+                    <div className="font-semibold">
+                      {selectedNotification.rdvHeureDebut} - {selectedNotification.rdvHeureFin}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-purple-100 dark:bg-purple-900/30">
+                    <Phone className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <div className="text-sm text-muted-foreground">Client</div>
+                    <div className="font-semibold">{selectedNotification.rdvClientNom}</div>
+                    {selectedNotification.rdvClientTelephone && (
+                      <a 
+                        href={`tel:${selectedNotification.rdvClientTelephone}`}
+                        className="text-sm text-primary hover:underline"
+                      >
+                        {selectedNotification.rdvClientTelephone}
+                      </a>
+                    )}
+                  </div>
+                </div>
+                
+                {selectedNotification.rdvLieu && (
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
+                      <MapPin className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div>
+                      <div className="text-sm text-muted-foreground">Lieu</div>
+                      <div className="font-semibold">{selectedNotification.rdvLieu}</div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={handleCloseDetail}
+                >
+                  <X className="h-4 w-4 mr-2" />
+                  Fermer
+                </Button>
+                <Button
+                  className="flex-1 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700"
+                  onClick={handleGoToRdv}
+                >
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Voir le calendrier
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 

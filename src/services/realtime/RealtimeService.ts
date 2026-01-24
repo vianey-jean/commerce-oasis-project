@@ -28,26 +28,29 @@ class RealtimeService {
     );
   }
 
+  private fallbackInterval: NodeJS.Timeout | null = null;
+
   private handleConnectionChange(connected: boolean) {
     this.isConnected = connected;
-    console.log('🔗 Changement de statut de connexion:', connected);
     
-    if (!connected) {
+    // Démarrer le polling si non connecté
+    if (!connected && !this.fallbackInterval) {
       this.startFallbackSync();
     }
   }
 
   private startFallbackSync() {
-    console.log('🔄 Démarrage du mode de synchronisation de secours');
+    // Éviter les intervalles multiples
+    if (this.fallbackInterval) {
+      return;
+    }
     
-    const fallbackInterval = setInterval(async () => {
-      if (!this.isConnected) {
-        console.log('📡 Sync de secours en cours...');
-        await this.syncCurrentMonthData();
-      } else {
-        console.log('✅ Connexion rétablie, arrêt du mode de secours');
-        clearInterval(fallbackInterval);
-      }
+    // Sync initial silencieux
+    this.syncCurrentMonthData();
+    
+    // Polling périodique silencieux
+    this.fallbackInterval = setInterval(async () => {
+      await this.syncCurrentMonthData();
     }, this.config.fallbackSyncInterval);
   }
 
@@ -135,44 +138,42 @@ class RealtimeService {
 
   // Public API methods
   connect(token?: string) {
-    console.log('🔌 Connexion au service en temps réel');
     this.eventSourceManager.connect(token);
   }
 
   disconnect() {
-    console.log('🔌 Déconnexion du service en temps réel');
+    if (this.fallbackInterval) {
+      clearInterval(this.fallbackInterval);
+      this.fallbackInterval = null;
+    }
     this.eventSourceManager.disconnect();
   }
 
   async syncCurrentMonthData(): Promise<SyncData | null> {
     try {
-      console.log('🔄 Synchronisation complète des données...');
-      
       const currentDate = new Date();
       const currentMonth = currentDate.getMonth() + 1;
       const currentYear = currentDate.getFullYear();
       
       const [products, sales, pretFamilles, pretProduits, depenses, clients, messages] = await Promise.all([
-        api.get('/products').catch(() => ({ data: [] })),
-        api.get(`/sales/by-month?month=${currentMonth}&year=${currentYear}`).catch(() => ({ data: [] })),
-        api.get('/pretfamilles').catch(() => ({ data: [] })),
-        api.get('/pretproduits').catch(() => ({ data: [] })),
-        api.get('/depenses/mouvements').catch(() => ({ data: [] })),
-        api.get('/clients').catch(() => ({ data: [] })),
-        api.get('/messages').catch(() => ({ data: [] }))
-      ]);
+        api.get('/api/products').catch(() => ({ data: [] })),
+        api.get(`/api/sales/by-month?month=${currentMonth}&year=${currentYear}`).catch(() => ({ data: [] })),
+        api.get('/api/pretfamilles').catch(() => ({ data: [] })),
+        api.get('/api/pretproduits').catch(() => ({ data: [] })),
+        api.get('/api/depenses/mouvements').catch(() => ({ data: [] })),
+        api.get('/api/clients').catch(() => ({ data: [] })),
+        api.get('/api/messages').catch(() => ({ data: [] }))
+      ]).catch(() => [{ data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }, { data: [] }]);
 
       const syncData: SyncData = {
-        products: products.data,
-        sales: sales.data,
-        pretFamilles: pretFamilles.data,
-        pretProduits: pretProduits.data,
-        depenses: depenses.data,
-        clients: clients.data,
-        messages: messages.data
+        products: products.data || [],
+        sales: sales.data || [],
+        pretFamilles: pretFamilles.data || [],
+        pretProduits: pretProduits.data || [],
+        depenses: depenses.data || [],
+        clients: clients.data || [],
+        messages: messages.data || []
       };
-
-      console.log('📊 Données synchronisées:', syncData);
 
       // Mettre à jour le cache
       this.dataCacheManager.updateCache('products', products.data);
@@ -246,7 +247,7 @@ class RealtimeService {
   async forceSync(): Promise<void> {
     try {
       console.log('🚀 Force sync demandé via API');
-      await api.post('/sync/force-sync');
+      await api.post('/api/sync/force-sync');
     } catch (error) {
       console.error('❌ Erreur lors du force sync, fallback vers sync local');
       await this.syncCurrentMonthData();

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { RDV } from '@/types/rdv';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,7 +13,9 @@ import {
   Phone,
   Edit,
   Trash2,
-  X
+  X,
+  AlertTriangle,
+  Lock
 } from 'lucide-react';
 import { format, addDays, startOfWeek, isSameDay, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -29,7 +31,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { motion } from 'framer-motion';
+import { ConfirmDialog } from '@/components/shared';
+import axios from 'axios';
+import { toast } from 'sonner';
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://server-gestion-ventes.onrender.com';
 
 interface RdvCalendarProps {
   rdvs: RDV[];
@@ -37,6 +45,10 @@ interface RdvCalendarProps {
   onSlotClick: (date: string, time: string) => void;
   onRdvDrop: (rdv: RDV, newDate: string, newTime: string) => void;
   onRdvDelete?: (rdv: RDV) => void;
+  onOpenFormWithDateTime?: (rdv: RDV, date: string, time: string) => void;
+  highlightRdvId?: string | null;
+  highlightDate?: string | null;
+  onHighlightComplete?: () => void;
 }
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 8);
@@ -46,6 +58,7 @@ const statusColors: Record<string, { bg: string; border: string; text: string }>
   confirme: { bg: 'bg-gradient-to-r from-emerald-500 to-green-600', border: 'border-green-400', text: 'text-green-600' },
   annule: { bg: 'bg-gradient-to-r from-red-500 to-rose-600', border: 'border-red-400', text: 'text-red-600' },
   termine: { bg: 'bg-gradient-to-r from-gray-500 to-slate-600', border: 'border-gray-400', text: 'text-gray-600' },
+  reporte: { bg: 'bg-gradient-to-r from-amber-500 to-orange-600', border: 'border-amber-400', text: 'text-amber-600' },
 };
 
 const statusLabels: Record<string, string> = {
@@ -53,6 +66,7 @@ const statusLabels: Record<string, string> = {
   confirme: 'Confirmé',
   annule: 'Annulé',
   termine: 'Terminé',
+  reporte: 'Reporté',
 };
 
 const RdvCalendar: React.FC<RdvCalendarProps> = ({
@@ -61,17 +75,37 @@ const RdvCalendar: React.FC<RdvCalendarProps> = ({
   onSlotClick,
   onRdvDrop,
   onRdvDelete,
+  onOpenFormWithDateTime,
+  highlightRdvId,
+  highlightDate,
+  onHighlightComplete,
 }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [draggedRdv, setDraggedRdv] = useState<RDV | null>(null);
   const [dropTarget, setDropTarget] = useState<{ date: string; hour: number } | null>(null);
   const [showTimeDialog, setShowTimeDialog] = useState(false);
-  const [pendingDrop, setPendingDrop] = useState<{ rdv: RDV; date: string } | null>(null);
+  const [pendingDrop, setPendingDrop] = useState<{ rdv: RDV; date: string; time: string } | null>(null);
   const [newTime, setNewTime] = useState('09:00');
+  const [newDate, setNewDate] = useState('');
+  
+  // Drop conflict checking
+  const [dropConflicts, setDropConflicts] = useState<RDV[]>([]);
+  const [isCheckingDropConflict, setIsCheckingDropConflict] = useState(false);
+  const [hasDropConflict, setHasDropConflict] = useState(false);
   
   // RDV Detail Modal
   const [selectedRdvDetail, setSelectedRdvDetail] = useState<RDV | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  
+  // Confirm dialogs
+  const [confirmModifyOpen, setConfirmModifyOpen] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [rdvToModify, setRdvToModify] = useState<RDV | null>(null);
+  const [rdvToDelete, setRdvToDelete] = useState<RDV | null>(null);
+  
+  // État pour le clignotement du RDV highlight
+  const [blinkingRdvId, setBlinkingRdvId] = useState<string | null>(null);
+  const [blinkCount, setBlinkCount] = useState(0);
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
@@ -86,6 +120,86 @@ const RdvCalendar: React.FC<RdvCalendarProps> = ({
     return map;
   }, [rdvs]);
 
+  // Effet pour naviguer à la semaine du RDV quand on reçoit highlightDate
+  React.useEffect(() => {
+    if (highlightDate) {
+      // Naviguer vers la semaine contenant cette date
+      const targetDate = parseISO(highlightDate);
+      setCurrentDate(targetDate);
+    }
+  }, [highlightDate]);
+
+  // Effet pour le clignotement quand on reçoit un highlightRdvId
+  React.useEffect(() => {
+    if (highlightRdvId) {
+      setBlinkingRdvId(highlightRdvId);
+      setBlinkCount(0);
+    }
+  }, [highlightRdvId]);
+
+  // Effet pour gérer le clignotement 4 fois
+  React.useEffect(() => {
+    if (blinkingRdvId && blinkCount < 8) { // 8 = 4 cycles (on/off)
+      const timer = setTimeout(() => {
+        setBlinkCount(prev => prev + 1);
+      }, 300);
+      return () => clearTimeout(timer);
+    } else if (blinkCount >= 8) {
+      // Après 4 clignotements, garder stable (pas rouge)
+      setBlinkingRdvId(null);
+      onHighlightComplete?.();
+    }
+  }, [blinkingRdvId, blinkCount, onHighlightComplete]);
+
+  // Check for drop conflicts when newDate or newTime changes in dialog
+  useEffect(() => {
+    const checkDropConflict = async () => {
+      if (!showTimeDialog || !newDate || !newTime || !pendingDrop) {
+        setDropConflicts([]);
+        setHasDropConflict(false);
+        return;
+      }
+
+      // Calculate end time (same duration as original rdv)
+      const originalStart = pendingDrop.rdv.heureDebut.split(':').map(Number);
+      const originalEnd = pendingDrop.rdv.heureFin.split(':').map(Number);
+      const durationMinutes = (originalEnd[0] * 60 + originalEnd[1]) - (originalStart[0] * 60 + originalStart[1]);
+      
+      const newStartParts = newTime.split(':').map(Number);
+      const newEndMinutes = newStartParts[0] * 60 + newStartParts[1] + durationMinutes;
+      const newEndHour = Math.floor(newEndMinutes / 60) % 24;
+      const newEndMin = newEndMinutes % 60;
+      const newHeureFin = `${newEndHour.toString().padStart(2, '0')}:${newEndMin.toString().padStart(2, '0')}`;
+
+      setIsCheckingDropConflict(true);
+      try {
+        const token = localStorage.getItem('token');
+        const params = new URLSearchParams({
+          date: newDate,
+          heureDebut: newTime,
+          heureFin: newHeureFin,
+          excludeId: pendingDrop.rdv.id // Exclude the rdv being moved
+        });
+        
+        const response = await axios.get(`${API_BASE_URL}/api/rdv/conflicts?${params.toString()}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        setDropConflicts(response.data);
+        setHasDropConflict(response.data.length > 0);
+      } catch (error) {
+        console.error('Error checking drop conflicts:', error);
+        setDropConflicts([]);
+        setHasDropConflict(false);
+      } finally {
+        setIsCheckingDropConflict(false);
+      }
+    };
+
+    const debounce = setTimeout(checkDropConflict, 300);
+    return () => clearTimeout(debounce);
+  }, [showTimeDialog, newDate, newTime, pendingDrop]);
+
   const navigateWeek = (direction: 'prev' | 'next') => {
     setCurrentDate(prev => addDays(prev, direction === 'prev' ? -7 : 7));
   };
@@ -93,6 +207,12 @@ const RdvCalendar: React.FC<RdvCalendarProps> = ({
   const goToToday = () => setCurrentDate(new Date());
 
   const handleDragStart = (e: React.DragEvent, rdv: RDV) => {
+    // Bloquer le drag pour les RDV créés depuis la page Commandes (synchronisés)
+    if (rdv.commandeId) {
+      e.preventDefault();
+      toast.error("Ce rendez-vous ne peut pas être déplacé par la page Commandes");
+      return;
+    }
     setDraggedRdv(rdv);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', rdv.id);
@@ -108,11 +228,15 @@ const RdvCalendar: React.FC<RdvCalendarProps> = ({
     setDropTarget(null);
   };
 
-  const handleDrop = (e: React.DragEvent, date: string) => {
+  const handleDrop = (e: React.DragEvent, date: string, hour: number) => {
     e.preventDefault();
     if (draggedRdv) {
-      setPendingDrop({ rdv: draggedRdv, date });
-      setNewTime(draggedRdv.heureDebut);
+      const timeStr = `${hour.toString().padStart(2, '0')}:00`;
+      setPendingDrop({ rdv: draggedRdv, date, time: timeStr });
+      setNewDate(date);
+      setNewTime(timeStr);
+      setDropConflicts([]);
+      setHasDropConflict(false);
       setShowTimeDialog(true);
     }
     setDraggedRdv(null);
@@ -120,11 +244,19 @@ const RdvCalendar: React.FC<RdvCalendarProps> = ({
   };
 
   const confirmTimeChange = () => {
-    if (pendingDrop) {
-      onRdvDrop(pendingDrop.rdv, pendingDrop.date, newTime);
+    if (hasDropConflict) return; // Prevent if there's a conflict
+    
+    if (pendingDrop && onOpenFormWithDateTime) {
+      // Ouvrir le formulaire avec les nouvelles valeurs pré-remplies
+      onOpenFormWithDateTime(pendingDrop.rdv, newDate, newTime);
+    } else if (pendingDrop) {
+      // Fallback: mise à jour directe
+      onRdvDrop(pendingDrop.rdv, newDate, newTime);
     }
     setShowTimeDialog(false);
     setPendingDrop(null);
+    setDropConflicts([]);
+    setHasDropConflict(false);
   };
 
   const handleRdvClick = (e: React.MouseEvent, rdv: RDV) => {
@@ -135,16 +267,34 @@ const RdvCalendar: React.FC<RdvCalendarProps> = ({
 
   const handleEditFromDetail = () => {
     if (selectedRdvDetail) {
-      onRdvClick(selectedRdvDetail);
-      setShowDetailModal(false);
+      setRdvToModify(selectedRdvDetail);
+      setConfirmModifyOpen(true);
     }
   };
 
-  const handleDeleteFromDetail = () => {
-    if (selectedRdvDetail && onRdvDelete) {
-      onRdvDelete(selectedRdvDetail);
+  const confirmModify = () => {
+    if (rdvToModify) {
+      onRdvClick(rdvToModify);
       setShowDetailModal(false);
     }
+    setConfirmModifyOpen(false);
+    setRdvToModify(null);
+  };
+
+  const handleDeleteFromDetail = () => {
+    if (selectedRdvDetail) {
+      setRdvToDelete(selectedRdvDetail);
+      setConfirmDeleteOpen(true);
+    }
+  };
+
+  const confirmDelete = () => {
+    if (rdvToDelete && onRdvDelete) {
+      onRdvDelete(rdvToDelete);
+      setShowDetailModal(false);
+    }
+    setConfirmDeleteOpen(false);
+    setRdvToDelete(null);
   };
 
   const getRdvPosition = (rdv: RDV) => {
@@ -172,17 +322,17 @@ const RdvCalendar: React.FC<RdvCalendarProps> = ({
               variant="outline" 
               size="sm" 
               onClick={goToToday}
-              className="border-primary/30 hover:bg-primary/10"
+              className="border-blue-800 hover:bg-primary/10"
             >
               Aujourd'hui
             </Button>
-            <Button variant="outline" size="icon" onClick={() => navigateWeek('prev')} className="border-primary/30">
+            <Button variant="outline" size="icon" onClick={() => navigateWeek('prev')} className="border-red-800">
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <span className="text-sm font-semibold min-w-[200px] text-center px-3 py-2 bg-primary/10 rounded-lg">
               {format(weekDays[0], 'd MMM', { locale: fr })} - {format(weekDays[6], 'd MMM yyyy', { locale: fr })}
             </span>
-            <Button variant="outline" size="icon" onClick={() => navigateWeek('next')} className="border-primary/30">
+            <Button variant="outline" size="icon" onClick={() => navigateWeek('next')} className="border-green-800">
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -239,7 +389,7 @@ const RdvCalendar: React.FC<RdvCalendarProps> = ({
                       onClick={() => onSlotClick(dateStr, `${hour.toString().padStart(2, '0')}:00`)}
                       onDragOver={(e) => handleDragOver(e, dateStr, hour)}
                       onDragLeave={handleDragLeave}
-                      onDrop={(e) => handleDrop(e, dateStr)}
+                      onDrop={(e) => handleDrop(e, dateStr, hour)}
                     />
                   );
                 })}
@@ -255,22 +405,31 @@ const RdvCalendar: React.FC<RdvCalendarProps> = ({
                 const pos = getRdvPosition(rdv);
                 const leftPercent = (dayIdx + 1) * (100 / 8);
                 const widthPercent = 100 / 8 - 0.5;
-                const colors = statusColors[rdv.statut];
+                const colors = statusColors[rdv.statut] || statusColors.planifie;
+                
+                // Vérifier si ce RDV doit clignoter
+                const isBlinking = blinkingRdvId === rdv.id;
+                const showRedBlink = isBlinking && blinkCount % 2 === 0;
+                
+                // Vérifier si le RDV est créé depuis Commandes (non déplaçable)
+                const isFromCommande = !!rdv.commandeId;
                 
                 return (
                   <motion.div
                     key={rdv.id}
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    draggable
+                    draggable={!isFromCommande}
                     onDragStart={(e) => handleDragStart(e as any, rdv)}
                     onClick={(e) => handleRdvClick(e, rdv)}
                     className={cn(
-                      "absolute rounded-lg border-l-4 px-2 py-1.5 cursor-grab active:cursor-grabbing",
+                      "absolute rounded-lg border-l-4 px-2 py-1.5",
+                      isFromCommande ? "cursor-not-allowed" : "cursor-grab active:cursor-grabbing",
                       "text-white text-xs overflow-hidden shadow-lg",
                       "transition-all duration-200 hover:shadow-xl hover:z-20 hover:scale-[1.02]",
-                      colors.bg,
-                      colors.border
+                      showRedBlink ? "bg-gradient-to-r from-red-600 to-red-700 border-red-400" : colors.bg,
+                      showRedBlink ? "border-red-400" : colors.border,
+                      isBlinking && "z-30 scale-105"
                     )}
                     style={{
                       top: pos.top,
@@ -280,7 +439,11 @@ const RdvCalendar: React.FC<RdvCalendarProps> = ({
                     }}
                   >
                     <div className="flex items-center gap-1">
-                      <GripVertical className="h-3 w-3 opacity-60 flex-shrink-0" />
+                      {isFromCommande ? (
+                        <Lock className="h-3 w-3 opacity-60 flex-shrink-0" />
+                      ) : (
+                        <GripVertical className="h-3 w-3 opacity-60 flex-shrink-0" />
+                      )}
                       <span className="font-semibold truncate">{rdv.titre}</span>
                     </div>
                     <div className="flex items-center gap-1 mt-0.5 opacity-90">
@@ -301,19 +464,63 @@ const RdvCalendar: React.FC<RdvCalendarProps> = ({
         </div>
       </CardContent>
 
-      {/* Time Change Dialog */}
+      {/* Time Change Dialog - Opens form with pre-filled date/time */}
       <Dialog open={showTimeDialog} onOpenChange={setShowTimeDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Clock className="h-5 w-5 text-primary" />
-              Modifier l'horaire
+              Modifier la date et l'horaire
             </DialogTitle>
             <DialogDescription>
-              Vous déplacez "{pendingDrop?.rdv.titre}" vers le {pendingDrop?.date && format(parseISO(pendingDrop.date), 'EEEE d MMMM', { locale: fr })}.
+              {pendingDrop?.rdv?.titre && (
+                <span className="text-green-600 font-bold">
+                  {pendingDrop.rdv.titre.toUpperCase()}
+                </span>
+              )}
             </DialogDescription>
           </DialogHeader>
+          
+          {/* Conflict Alert */}
+          {hasDropConflict && dropConflicts.length > 0 && (
+            <Alert variant="destructive" className="border-red-500/50 bg-red-500/10">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                <span className="font-bold">Cette horaire de cette date est déjà prise !</span>
+                <div className="mt-2 space-y-1">
+                  {dropConflicts.map(c => (
+                    <div key={c.id} className="text-sm font-medium flex items-center gap-2">
+                      <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                      {c.titre} - {c.clientNom} ({c.heureDebut} - {c.heureFin})
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-2 text-xs">
+                  Veuillez choisir une autre date ou un autre horaire.
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Checking conflict indicator */}
+          {isCheckingDropConflict && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <div className="h-4 w-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+              Vérification de la disponibilité...
+            </div>
+          )}
+
           <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="newDate">Nouvelle date</Label>
+              <Input
+                id="newDate"
+                type="date"
+                value={newDate}
+                onChange={(e) => setNewDate(e.target.value)}
+                className="h-12 text-blue-800 font-bold"
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="newTime">Nouvelle heure de début</Label>
               <Input
@@ -321,7 +528,7 @@ const RdvCalendar: React.FC<RdvCalendarProps> = ({
                 type="time"
                 value={newTime}
                 onChange={(e) => setNewTime(e.target.value)}
-                className="h-12"
+                className="h-12 text-red-800 font-bold"
               />
             </div>
           </div>
@@ -329,8 +536,24 @@ const RdvCalendar: React.FC<RdvCalendarProps> = ({
             <Button variant="outline" onClick={() => setShowTimeDialog(false)}>
               Annuler
             </Button>
-            <Button onClick={confirmTimeChange} className="bg-gradient-to-r from-primary to-primary/80">
-              Confirmer
+            <Button 
+              onClick={confirmTimeChange} 
+              disabled={hasDropConflict || isCheckingDropConflict}
+              className={cn(
+                "transition-all",
+                hasDropConflict 
+                  ? "bg-gray-400 cursor-not-allowed" 
+                  : "bg-gradient-to-r from-primary to-primary/80"
+              )}
+            >
+              {hasDropConflict ? (
+                <span className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  Créneau non disponible
+                </span>
+              ) : (
+                "Porter ce RDV"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -343,7 +566,7 @@ const RdvCalendar: React.FC<RdvCalendarProps> = ({
             <DialogTitle className="flex items-center gap-3 text-xl">
               <div className={cn(
                 "p-2 rounded-xl",
-                selectedRdvDetail && statusColors[selectedRdvDetail.statut].bg
+                selectedRdvDetail && (statusColors[selectedRdvDetail.statut]?.bg || statusColors.planifie.bg)
               )}>
                 <Calendar className="h-5 w-5 text-white" />
               </div>
@@ -358,10 +581,10 @@ const RdvCalendar: React.FC<RdvCalendarProps> = ({
                 <Badge 
                   className={cn(
                     "text-white",
-                    statusColors[selectedRdvDetail.statut].bg
+                    statusColors[selectedRdvDetail.statut]?.bg || statusColors.planifie.bg
                   )}
                 >
-                  {statusLabels[selectedRdvDetail.statut]}
+                  {statusLabels[selectedRdvDetail.statut] || 'Inconnu'}
                 </Badge>
               </div>
 
@@ -443,7 +666,14 @@ const RdvCalendar: React.FC<RdvCalendarProps> = ({
             </Button>
             <Button 
               onClick={handleEditFromDetail}
-              className="bg-gradient-to-r from-primary to-primary/80 gap-2"
+              className={cn(
+                "gap-2",
+                selectedRdvDetail?.statut === 'confirme'
+                  ? "bg-gray-400 cursor-not-allowed opacity-50"
+                  : "bg-gradient-to-r from-primary to-primary/80"
+              )}
+              disabled={selectedRdvDetail?.statut === 'confirme'}
+              title={selectedRdvDetail?.statut === 'confirme' ? "Impossible de modifier un rendez-vous confirmé" : "Modifier le rendez-vous"}
             >
               <Edit className="h-4 w-4" />
               Modifier
@@ -451,6 +681,30 @@ const RdvCalendar: React.FC<RdvCalendarProps> = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Confirm Modify Dialog */}
+      <ConfirmDialog
+        open={confirmModifyOpen}
+        onOpenChange={setConfirmModifyOpen}
+        title="Modifier le rendez-vous"
+        description={`Êtes-vous sûr de vouloir modifier le rendez-vous "${rdvToModify?.titre}" ?`}
+        confirmText="Modifier"
+        cancelText="Annuler"
+        onConfirm={confirmModify}
+        variant="info"
+      />
+
+      {/* Confirm Delete Dialog */}
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        onOpenChange={setConfirmDeleteOpen}
+        title="Supprimer le rendez-vous"
+        description={`Êtes-vous sûr de vouloir supprimer le rendez-vous "${rdvToDelete?.titre}" ? Cette action est irréversible.`}
+        confirmText="Supprimer"
+        cancelText="Annuler"
+        onConfirm={confirmDelete}
+        variant="danger"
+      />
     </Card>
   );
 };

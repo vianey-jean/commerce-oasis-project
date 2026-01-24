@@ -10,7 +10,7 @@ export interface RDV {
   heureDebut: string; // Format: HH:mm
   heureFin: string; // Format: HH:mm
   lieu?: string;
-  statut: 'planifie' | 'confirme' | 'annule' | 'termine';
+  statut: 'planifie' | 'confirme' | 'annule' | 'termine' | 'reporte';
   // Informations produit (si créé depuis une réservation)
   produits?: RDVProduit[];
   // Lien avec la commande/réservation
