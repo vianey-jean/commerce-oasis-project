@@ -30,6 +30,7 @@ import {
 import { useApp } from '@/contexts/AppContext';
 import useCurrencyFormatter from '@/hooks/use-currency-formatter';
 import nouvelleAchatApiService from '@/services/api/nouvelleAchatApi';
+import nouvelleDepenseApiService from '@/services/api/nouvelleDepenseApi';
 import productApiService from '@/services/api/productApi';
 import { ProductFormData } from '@/types/product';
 import comptaApiService from '@/services/api/comptaApi';
@@ -360,14 +361,14 @@ const ComptabiliteModule: React.FC<ComptabiliteModuleProps> = ({ className }) =>
         return;
       }
 
-      await nouvelleAchatApiService.addDepense(depenseForm);
+      // Utiliser le nouveau service API pour les dépenses
+      await nouvelleDepenseApiService.create(depenseForm);
       
-     toast({
-  title: 'Succès',
-  description: 'Dépense enregistrée avec succès',
-  className: 'bg-green-600 text-white border-green-700'
-})
-
+      toast({
+        title: 'Succès',
+        description: 'Dépense enregistrée avec succès',
+        className: 'bg-green-600 text-white border-green-700'
+      });
       
       setDepenseForm({
         description: '',
@@ -376,10 +377,8 @@ const ComptabiliteModule: React.FC<ComptabiliteModuleProps> = ({ className }) =>
         categorie: 'divers'
       });
 
-      // ✅ FERMETURE DE LA MODALE
-    setShowDepenseForm(false);
-      // Garder le formulaire ouvert pour permettre des saisies multiples
-      // L'utilisateur peut fermer manuellement avec le bouton "Annuler" ou "X"
+      // Fermeture de la modale
+      setShowDepenseForm(false);
       
       loadAchats();
     } catch (error) {
