@@ -442,5 +442,74 @@
     "createdAt": "2025-12-17T11:39:08.586Z",
     "saleId": null,
     "updatedAt": "2025-12-20T03:39:40.832Z"
+  },
+  {
+    "id": "1769502151122",
+    "clientNom": "Clara Miandry",
+    "clientPhone": "0693818716",
+    "clientAddress": "La Marie Saint-André",
+    "type": "reservation",
+    "produits": [
+      {
+        "nom": "perruque bouclé frange blonde miel14 pouces",
+        "prixUnitaire": 36.79,
+        "quantite": 1,
+        "prixVente": 90
+      }
+    ],
+    "dateCommande": "2026-01-27T08:22:31.074Z",
+    "statut": "annule",
+    "dateEcheance": "2026-01-28",
+    "horaire": "10:00",
+    "createdAt": "2026-01-27T08:22:31.122Z",
+    "saleId": null,
+    "updatedAt": "2026-02-01T12:52:58.784Z"
+  },
+  {
+    "id": "1769951334071",
+    "clientNom": "Naellyah Bgd",
+    "clientPhone": "0692509767",
+    "clientAddress": "La banque postale le port",
+    "type": "reservation",
+    "produits": [
+      {
+        "nom": "Perruque bouclé blonde miel 26 pouces",
+        "prixUnitaire": 60.6,
+        "quantite": 1,
+        "prixVente": 170
+      },
+      {
+        "nom": "Colle",
+        "prixUnitaire": 3,
+        "quantite": 1,
+        "prixVente": 10
+      }
+    ],
+    "dateCommande": "2026-02-02T16:56:51.720Z",
+    "statut": "en_attente",
+    "dateEcheance": "2026-02-06",
+    "horaire": "08:30",
+    "createdAt": "2026-02-01T13:08:54.071Z",
+    "updatedAt": "2026-02-02T16:56:51.822Z"
+  },
+  {
+    "id": "1769951490361",
+    "clientNom": "Ma Warren Chaudron",
+    "clientPhone": "0693647609",
+    "clientAddress": "Mail Chaudron",
+    "type": "reservation",
+    "produits": [
+      {
+        "nom": "Perruque lisse bleu 24 pouces",
+        "prixUnitaire": 62.61,
+        "quantite": 1,
+        "prixVente": 170
+      }
+    ],
+    "dateCommande": "2026-02-01T13:11:30.275Z",
+    "statut": "en_attente",
+    "dateEcheance": "2026-02-06",
+    "horaire": "11:00",
+    "createdAt": "2026-02-01T13:11:30.361Z"
   }
 ]

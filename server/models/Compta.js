@@ -2,7 +2,6 @@ const fs = require('fs');
 const path = require('path');
 const Sale = require('./Sale');
 const NouvelleAchat = require('./NouvelleAchat');
-const NouvelleDepense = require('./NouvelleDepense');
 
 const comptaPath = path.join(__dirname, '../db/compta.json');
 
@@ -76,20 +75,14 @@ const Compta = {
         }
       });
 
-      // Récupérer les achats du mois depuis nouvelle_achat.json
+      // Récupérer les achats et dépenses du mois
       const monthlyAchats = NouvelleAchat.getByMonthYear(month, year);
+      
       const achatsProducts = monthlyAchats.filter(a => a.type === 'achat_produit');
-      const achatsTotal = achatsProducts.reduce((sum, a) => sum + (a.totalCost || 0), 0);
+      const depenses = monthlyAchats.filter(a => a.type !== 'achat_produit');
 
-      // Récupérer les dépenses du mois depuis nouvelle_depense.json
-      const monthlyDepenses = NouvelleDepense.getByMonthYear(month, year);
-      const depensesFromFile = monthlyDepenses.reduce((sum, d) => sum + (d.montant || 0), 0);
-      
-      // Ajouter les dépenses de l'ancien système (dans nouvelle_achat.json)
-      const oldDepenses = monthlyAchats.filter(a => a.type !== 'achat_produit');
-      const depensesFromOldSystem = oldDepenses.reduce((sum, a) => sum + (a.totalCost || 0), 0);
-      
-      const depensesTotal = depensesFromFile + depensesFromOldSystem;
+      const achatsTotal = achatsProducts.reduce((sum, a) => sum + (a.totalCost || 0), 0);
+      const depensesTotal = depenses.reduce((sum, a) => sum + (a.totalCost || 0), 0);
 
       // Calcul du bénéfice réel
       const beneficeReel = salesProfit - (achatsTotal + depensesTotal);
@@ -116,7 +109,7 @@ const Compta = {
         totalDebit,
         soldeNet,
         achatsCount: achatsProducts.length,
-        depensesCount: monthlyDepenses.length + oldDepenses.length
+        depensesCount: depenses.length
       };
 
       // Sauvegarder

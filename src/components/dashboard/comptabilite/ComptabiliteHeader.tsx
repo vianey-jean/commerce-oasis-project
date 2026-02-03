@@ -1,36 +1,37 @@
+/**
+ * ComptabiliteHeader - En-tête du module comptabilité
+ * 
+ * Contient le titre, les sélecteurs de période et les boutons d'action.
+ */
+
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calculator, ShoppingCart, Receipt } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calculator, ShoppingCart, Receipt, FileDown } from 'lucide-react';
+import { MONTHS } from '@/hooks/useComptabilite';
 
-const MONTHS = [
-  'Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
-  'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
-];
-
-interface ComptaHeaderProps {
+export interface ComptabiliteHeaderProps {
   selectedMonth: number;
   selectedYear: number;
-  onMonthChange: (month: number) => void;
-  onYearChange: (year: number) => void;
+  onMonthChange: (value: string) => void;
+  onYearChange: (value: string) => void;
   onNewAchat: () => void;
   onNewDepense: () => void;
-  className?: string;
+  onExport: () => void;
 }
 
-export const ComptaHeader: React.FC<ComptaHeaderProps> = ({
+const ComptabiliteHeader: React.FC<ComptabiliteHeaderProps> = ({
   selectedMonth,
   selectedYear,
   onMonthChange,
   onYearChange,
   onNewAchat,
   onNewDepense,
-  className = ''
+  onExport
 }) => {
   return (
-    <Card className={`bg-gradient-to-br from-emerald-900/40 via-teal-900/30 to-green-900/40 border-emerald-500/30 shadow-2xl backdrop-blur-sm ${className}`}>
+    <Card className="bg-gradient-to-br from-emerald-900/40 via-teal-900/30 to-green-900/40 border-emerald-500/30 shadow-2xl backdrop-blur-sm">
       <CardHeader className="text-center pb-4">
         <div className="flex items-center justify-center gap-3 mb-4">
           <div className="p-3 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 shadow-xl">
@@ -40,22 +41,25 @@ export const ComptaHeader: React.FC<ComptaHeaderProps> = ({
             Module Comptabilité
           </CardTitle>
         </div>
+        <CardDescription className="text-black-300 text-lg">
+          Gérez vos achats, dépenses et analysez votre rentabilité
+        </CardDescription>
       </CardHeader>
       
       <CardContent>
         <div className="flex flex-wrap items-center justify-center gap-4">
-          <Select value={selectedMonth.toString()} onValueChange={(v) => onMonthChange(parseInt(v))}>
+          <Select value={selectedMonth.toString()} onValueChange={onMonthChange}>
             <SelectTrigger className="w-40 bg-white/10 border-white/20 text-red-600">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className='text-red-800'>
+            <SelectContent className="text-red-800">
               {MONTHS.map((month, index) => (
                 <SelectItem key={index} value={(index + 1).toString()}>{month}</SelectItem>
               ))}
             </SelectContent>
           </Select>
           
-          <Select value={selectedYear.toString()} onValueChange={(v) => onYearChange(parseInt(v))}>
+          <Select value={selectedYear.toString()} onValueChange={onYearChange}>
             <SelectTrigger className="w-32 bg-white/10 border-white/20 text-red-600">
               <SelectValue />
             </SelectTrigger>
@@ -81,10 +85,18 @@ export const ComptaHeader: React.FC<ComptaHeaderProps> = ({
             <Receipt className="h-4 w-4 mr-2" />
             Nouvelle Dépense
           </Button>
+          
+          <Button
+            onClick={onExport}
+            className="bg-gradient-to-r from-purple-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700 text-white shadow-xl"
+          >
+            <FileDown className="h-4 w-4 mr-2" />
+            Exporter
+          </Button>
         </div>
       </CardContent>
     </Card>
   );
 };
 
-export default ComptaHeader;
+export default ComptabiliteHeader;

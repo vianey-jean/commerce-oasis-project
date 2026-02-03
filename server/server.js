@@ -239,7 +239,6 @@ const rdvRoutes = require('./routes/rdv');
 const rdvNotificationsRoutes = require('./routes/rdvNotifications');
 const objectifRoutes = require('./routes/objectif');
 const nouvelleAchatRoutes = require('./routes/nouvelleAchat');
-const nouvelleDepenseRoutes = require('./routes/nouvelleDepense');
 const comptaRoutes = require('./routes/compta');
 
 // Use routes
@@ -259,7 +258,6 @@ app.use('/api/rdv', rdvRoutes);
 app.use('/api/rdv-notifications', rdvNotificationsRoutes);
 app.use('/api/objectif', objectifRoutes);
 app.use('/api/nouvelle-achat', nouvelleAchatRoutes);
-app.use('/api/nouvelle-depense', nouvelleDepenseRoutes);
 app.use('/api/compta', comptaRoutes);
 
 // Static file serving for uploaded files
