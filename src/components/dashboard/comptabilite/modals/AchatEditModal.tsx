@@ -110,10 +110,16 @@ const AchatEditModal: React.FC<AchatEditModalProps> = ({
 
   useEffect(() => {
     if (achat) {
+      // Pour les dépenses, on utilise totalCost car elles n'ont pas de purchasePrice
+      const isDepense = achat.type !== 'achat_produit';
+      const price = isDepense 
+        ? (achat.totalCost || 0) 
+        : (achat.purchasePrice || achat.totalCost || 0);
+      
       setFormData({
         productDescription: achat.productDescription || '',
         description: achat.description || '',
-        purchasePrice: achat.purchasePrice || achat.totalCost || 0,
+        purchasePrice: price,
         quantity: achat.quantity || 1,
         fournisseur: achat.fournisseur || '',
         date: achat.date ? new Date(achat.date) : new Date()
