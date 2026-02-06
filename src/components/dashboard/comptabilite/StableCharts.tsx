@@ -59,22 +59,24 @@ export const StableBarChart = memo<StableBarChartProps>(({ data, formatEuro }) =
   const labelStyle = useMemo(() => ({ color: '#fff' }), []);
 
   return (
-    <ResponsiveContainer width="100%" height={400}>
-      <BarChart data={stableData}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-        <XAxis dataKey="name" stroke="#9CA3AF" />
-        <YAxis stroke="#9CA3AF" />
-        <Tooltip 
-          formatter={tooltipFormatter}
-          contentStyle={tooltipStyle}
-          labelStyle={labelStyle}
-        />
-        <Legend />
-        <Bar dataKey="beneficeVentes" name="Bénéfice Ventes" fill="#10B981" radius={[4, 4, 0, 0]} />
-        <Bar dataKey="depenses" name="Dépenses" fill="#EF4444" radius={[4, 4, 0, 0]} />
-        <Bar dataKey="beneficeReel" name="Bénéfice Réel" fill="#3B82F6" radius={[4, 4, 0, 0]} />
-      </BarChart>
-    </ResponsiveContainer>
+    <div style={{ width: '100%', minWidth: 0, minHeight: 300, height: 400 }}>
+      <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+        <BarChart data={stableData}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+          <XAxis dataKey="name" stroke="#9CA3AF" />
+          <YAxis stroke="#9CA3AF" />
+          <Tooltip 
+            formatter={tooltipFormatter}
+            contentStyle={tooltipStyle}
+            labelStyle={labelStyle}
+          />
+          <Legend />
+          <Bar dataKey="beneficeVentes" name="Bénéfice Ventes" fill="#10B981" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="depenses" name="Dépenses" fill="#EF4444" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="beneficeReel" name="Bénéfice Réel" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
   );
 }, (prevProps, nextProps) => {
   // Comparaison personnalisée pour éviter les re-renders inutiles
@@ -115,29 +117,31 @@ export const StablePieChart = memo<StablePieChartProps>(({ data, formatEuro }) =
   }), []);
 
   return (
-    <ResponsiveContainer width="100%" height={400}>
-      <PieChart>
-        <Pie
-          data={stableData}
-          cx="50%"
-          cy="50%"
-          labelLine={false}
-          label={renderPieLabel}
-          outerRadius={150}
-          fill="#8884d8"
-          dataKey="value"
-        >
-          {stableData.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-          ))}
-        </Pie>
-        <Tooltip 
-          formatter={tooltipFormatter}
-          contentStyle={tooltipStyle}
-        />
-        <Legend />
-      </PieChart>
-    </ResponsiveContainer>
+    <div style={{ width: '100%', minWidth: 0, minHeight: 300, height: 400 }}>
+      <ResponsiveContainer width="100%" height="100%" minWidth={1} minHeight={1}>
+        <PieChart>
+          <Pie
+            data={stableData}
+            cx="50%"
+            cy="50%"
+            labelLine={false}
+            label={renderPieLabel}
+            outerRadius={150}
+            fill="#8884d8"
+            dataKey="value"
+          >
+            {stableData.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            ))}
+          </Pie>
+          <Tooltip 
+            formatter={tooltipFormatter}
+            contentStyle={tooltipStyle}
+          />
+          <Legend />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
   );
 }, (prevProps, nextProps) => {
   // Comparaison personnalisée
