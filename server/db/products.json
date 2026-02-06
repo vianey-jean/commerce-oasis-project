@@ -499,7 +499,7 @@
   {
     "id": "1752213159276",
     "description": "Perruque lisse marron 20 pouces",
-    "purchasePrice": 51.42,
+    "purchasePrice": 49.89,
     "quantity": 0,
     "code": "P-20-IXBPTW"
   },
@@ -717,7 +717,7 @@
     "id": "1758025491344",
     "description": "Colle",
     "purchasePrice": 3,
-    "quantity": 1,
+    "quantity": 0,
     "code": "X-XC-MBQCHJ"
   },
   {
@@ -947,8 +947,8 @@
   {
     "id": "1766226403095",
     "description": "Perruque crépus lisse noir 24 pouces",
-    "purchasePrice": 55.87,
-    "quantity": 0,
+    "purchasePrice": 54.71,
+    "quantity": 1,
     "code": "P-24-KPTRJN"
   },
   {
@@ -991,7 +991,7 @@
     "id": "1769950715068",
     "description": "Perruque bouclé blonde miel 26 pouces",
     "purchasePrice": 60.6,
-    "quantity": 1,
+    "quantity": 0,
     "code": "P-26-RWYWBJ"
   },
   {
@@ -1005,7 +1005,7 @@
     "id": "1769950834094",
     "description": "Perruque bouclé blonde marron 30 pouces",
     "purchasePrice": 56.9,
-    "quantity": 1,
+    "quantity": 0,
     "code": "P-30-RVFUXJ"
   },
   {
@@ -1035,5 +1035,12 @@
     "purchasePrice": 52.17,
     "quantity": 0,
     "code": "P-24-GPBGLB"
+  },
+  {
+    "id": "1770376072749",
+    "code": "T-30-MMCUSI",
+    "description": "Tissages bouclé noir 30 pouces",
+    "purchasePrice": 33.89,
+    "quantity": 0
   }
 ]

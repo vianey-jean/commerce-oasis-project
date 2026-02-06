@@ -11,12 +11,21 @@ import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import PremiumLoading from '@/components/ui/premium-loading';
 import { motion } from "framer-motion";
+import { 
+  VentesTotalesModal, 
+  BeneficesModal, 
+  ProduitsVendusModal, 
+  MeilleurRoiModal 
+} from '@/components/tendances/TendancesStatsModals';
 
 const TendancesPage = () => {
   const { allSales, products, loading } = useApp();
   const [selectedPeriod, setSelectedPeriod] = useState('all');
   const [activeTab, setActiveTab] = useState('overview');
   const isMobile = useIsMobile();
+  
+  // Stats modals state
+  const [activeModal, setActiveModal] = useState<'ventes' | 'benefices' | 'produits' | 'roi' | null>(null);
 
   // Fonction pour déterminer la catégorie d'un produit (exclure les avances)
   const getProductCategory = (description: string | undefined | null) => {
@@ -404,91 +413,114 @@ const TendancesPage = () => {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-slate-900">
         <div className="container mx-auto px-4 py-8">
           {/* Hero Header */}
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center px-4 py-2 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-full text-emerald-600 dark:text-emerald-400 text-sm font-medium mb-6 border border-emerald-200 dark:border-emerald-800">
-              <TrendingUp className="h-4 w-4 mr-2 animate-pulse" />
-              Analyse des tendances en temps réel
-            </div>
-            
-            
-             <motion.h1
-                              initial={{ opacity: 0, y: 60, scale: 0.9 }}   // Apparition douce avec léger zoom
-                              animate={{ opacity: 1, y: 0, scale: 1 }}      // Monte + grossit légèrement
-                              transition={{ duration: 0.9, ease: "easeOut" }}
-                              className="text-5xl md:text-6xl font-extrabold 
-                                        bg-gradient-to-r from-purple-600 via-red-600 to-indigo-600 
-                                        bg-[length:200%_200%] animate-gradient 
-                                        bg-clip-text text-transparent mb-6 text-center text-3d"
-                            >
-                               Tendances & Analytics
-                            </motion.h1>
-            <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Découvrez vos performances, identifiez les opportunités et optimisez vos ventes
-            </p>
-          </div>
+   <div className="text-center mb-12">
+  {/* Badge premium avec icône animée */}
+  <div className="inline-flex items-center px-5 py-3 bg-gradient-to-r from-emerald-200 via-emerald-300 to-emerald-400/40 dark:from-emerald-700/50 dark:via-emerald-600/50 dark:to-emerald-500/30 backdrop-blur-xl rounded-full text-emerald-800 dark:text-emerald-200 text-sm font-semibold mb-6 border border-emerald-300 dark:border-emerald-700 shadow-lg">
+    <TrendingUp className="h-5 w-5 mr-2 animate-pulse text-emerald-600 dark:text-emerald-300" />
+    Analyse des tendances en temps réel
+  </div>
+
+  {/* Titre animé et luxueux */}
+  <motion.h1
+    initial={{ opacity: 0, y: 60, scale: 0.9 }}
+    animate={{ opacity: 1, y: 0, scale: 1 }}
+    transition={{ duration: 0.9, ease: "easeOut" }}
+    className="text-5xl md:text-6xl font-extrabold 
+               bg-gradient-to-r from-purple-600 via-pink-600 to-indigo-600 
+               bg-[length:200%_200%] animate-gradient bg-clip-text text-transparent 
+               mb-6 text-center text-3d drop-shadow-xl"
+  >
+    Tendances & Analytics
+  </motion.h1>
+
+  {/* Description luxueuse */}
+  <p className="text-xl md:text-2xl text-gray-700 dark:text-gray-300 max-w-2xl mx-auto 
+                bg-gradient-to-r from-gray-100/50 via-white/30 to-gray-100/50 dark:from-gray-800/30 dark:via-gray-700/30 dark:to-gray-800/30 
+                backdrop-blur-sm rounded-xl px-6 py-4 shadow-inner">
+    Découvrez vos performances, identifiez les opportunités et optimisez vos ventes
+  </p>
+</div>
+
 
           {/* Stats Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-none shadow-xl">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Ventes Totales</CardTitle>
-                <DollarSign className="h-4 w-4" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {formatCurrency(salesData.totals.revenue)}
-                </div>
-                <p className="text-xs text-purple-100">
-                  +{salesData.totals.sales} transactions historiques
-                </p>
-              </CardContent>
-            </Card>
+  {/* Ventes Totales */}
+  <motion.div whileHover={{ scale: 1.03, y: -5 }} whileTap={{ scale: 0.98 }} onClick={() => setActiveModal('ventes')} className="cursor-pointer">
+  <Card className="bg-gradient-to-br from-purple-600 via-purple-500 to-indigo-600 text-white border-none shadow-2xl rounded-3xl relative overflow-hidden cursor-pointer hover:shadow-[0_30px_60px_-15px_rgba(147,51,234,0.7)] transition-all">
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-sm font-semibold tracking-wide uppercase">Ventes Totales</CardTitle>
+      <DollarSign className="h-6 w-6 text-yellow-400 drop-shadow-xl animate-pulse" />
+    </CardHeader>
+    <CardContent>
+      <div className="text-2xl md:text-3xl font-extrabold drop-shadow-md">
+        {formatCurrency(salesData.totals.revenue)}
+      </div>
+      <p className="text-xs md:text-sm text-purple-100/80 mt-1">
+        +{salesData.totals.sales} transactions historiques
+      </p>
+     <p className="text-xs text-purple-200/60 mt-2 flex items-center gap-1"><Sparkles className="h-3 w-3" /> Cliquez pour détails</p>
+    </CardContent>
+  </Card>
+  </motion.div>
 
-            <Card className="bg-gradient-to-br from-emerald-500 to-emerald-600 text-white border-none shadow-xl">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Bénéfices</CardTitle>
-                <TrendingUp className="h-4 w-4" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {formatCurrency(salesData.totals.profit)}
-                </div>
-                <p className="text-xs text-emerald-100">
-                  Marge moyenne: {salesData.totals.revenue > 0 ? ((salesData.totals.profit / salesData.totals.revenue) * 100).toFixed(1) : 0}%
-                </p>
-              </CardContent>
-            </Card>
+  {/* Bénéfices */}
+  <motion.div whileHover={{ scale: 1.03, y: -5 }} whileTap={{ scale: 0.98 }} onClick={() => setActiveModal('benefices')} className="cursor-pointer">
+  <Card className="bg-gradient-to-br from-emerald-600 via-emerald-500 to-teal-500 text-white border-none shadow-2xl rounded-3xl relative overflow-hidden cursor-pointer hover:shadow-[0_30px_60px_-15px_rgba(16,185,129,0.7)] transition-all">
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-sm font-semibold tracking-wide uppercase">Bénéfices</CardTitle>
+      <TrendingUp className="h-6 w-6 text-green-300 drop-shadow-xl animate-bounce" />
+    </CardHeader>
+    <CardContent>
+      <div className="text-2xl md:text-3xl font-extrabold drop-shadow-md">
+        {formatCurrency(salesData.totals.profit)}
+      </div>
+      <p className="text-xs md:text-sm text-emerald-100/80 mt-1">
+        Marge moyenne: {salesData.totals.revenue > 0 ? ((salesData.totals.profit / salesData.totals.revenue) * 100).toFixed(1) : 0}%
+      </p>
+     <p className="text-xs text-emerald-200/60 mt-2 flex items-center gap-1"><Sparkles className="h-3 w-3" /> Cliquez pour détails</p>
+    </CardContent>
+  </Card>
+  </motion.div>
 
-            <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white border-none shadow-xl">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Produits Vendus</CardTitle>
-                <Package className="h-4 w-4" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {salesData.totals.quantity}
-                </div>
-                <p className="text-xs text-orange-100">
-                  {salesByProduct.length} produits différents
-                </p>
-              </CardContent>
-            </Card>
+  {/* Produits Vendus */}
+  <motion.div whileHover={{ scale: 1.03, y: -5 }} whileTap={{ scale: 0.98 }} onClick={() => setActiveModal('produits')} className="cursor-pointer">
+  <Card className="bg-gradient-to-br from-orange-600 via-orange-500 to-yellow-500 text-white border-none shadow-2xl rounded-3xl relative overflow-hidden cursor-pointer hover:shadow-[0_30px_60px_-15px_rgba(249,115,22,0.7)] transition-all">
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-sm font-semibold tracking-wide uppercase">Produits Vendus</CardTitle>
+      <Package className="h-6 w-6 text-yellow-300 drop-shadow-xl animate-pulse" />
+    </CardHeader>
+    <CardContent>
+      <div className="text-2xl md:text-3xl font-extrabold drop-shadow-md">
+        {salesData.totals.quantity}
+      </div>
+      <p className="text-xs md:text-sm text-orange-100/80 mt-1">
+        {salesByProduct.length} produits différents
+      </p>
+     <p className="text-xs text-orange-200/60 mt-2 flex items-center gap-1"><Sparkles className="h-3 w-3" /> Cliquez pour détails</p>
+    </CardContent>
+  </Card>
+  </motion.div>
 
-            <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-none shadow-xl">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Meilleur ROI</CardTitle>
-                <Award className="h-4 w-4" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">
-                  {buyingRecommendations.length > 0 ? buyingRecommendations[0].roi : '0'}%
-                </div>
-                <p className="text-xs text-blue-100">
-                  {buyingRecommendations.length > 0 ? buyingRecommendations[0].name.slice(0, 20) + '...' : 'Aucune donnée'}
-                </p>
-              </CardContent>
-            </Card>
-          </div>
+  {/* Meilleur ROI */}
+  <motion.div whileHover={{ scale: 1.03, y: -5 }} whileTap={{ scale: 0.98 }} onClick={() => setActiveModal('roi')} className="cursor-pointer">
+  <Card className="bg-gradient-to-br from-blue-600 via-indigo-500 to-purple-500 text-white border-none shadow-2xl rounded-3xl relative overflow-hidden cursor-pointer hover:shadow-[0_30px_60px_-15px_rgba(99,102,241,0.7)] transition-all">
+    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <CardTitle className="text-sm font-semibold tracking-wide uppercase">Meilleur ROI</CardTitle>
+      <Award className="h-6 w-6 text-yellow-400 drop-shadow-xl animate-bounce" />
+    </CardHeader>
+    <CardContent>
+      <div className="text-2xl md:text-3xl font-extrabold drop-shadow-md">
+        {buyingRecommendations.length > 0 ? buyingRecommendations[0].roi : '0'}%
+      </div>
+      <p className="text-xs md:text-sm text-blue-100/80 mt-1">
+        {buyingRecommendations.length > 0 ? buyingRecommendations[0].name.slice(0, 20) + '...' : 'Aucune donnée'}
+      </p>
+     <p className="text-xs text-blue-200/60 mt-2 flex items-center gap-1"><Sparkles className="h-3 w-3" /> Cliquez pour détails</p>
+    </CardContent>
+  </Card>
+  </motion.div>
+</div>
+
 
           {/* Main Charts */}
           <Tabs defaultValue="overview" onValueChange={setActiveTab} className="space-y-8">
@@ -992,6 +1024,34 @@ const TendancesPage = () => {
           </Tabs>
         </div>
       </div>
+
+      {/* Stats Modals */}
+      <VentesTotalesModal
+        isOpen={activeModal === 'ventes'}
+        onClose={() => setActiveModal(null)}
+        revenue={salesData.totals.revenue}
+        sales={salesData.totals.sales}
+        salesByProduct={salesByProduct}
+      />
+      <BeneficesModal
+        isOpen={activeModal === 'benefices'}
+        onClose={() => setActiveModal(null)}
+        profit={salesData.totals.profit}
+        margin={salesData.totals.revenue > 0 ? (salesData.totals.profit / salesData.totals.revenue) * 100 : 0}
+        salesByProduct={salesByProduct}
+      />
+      <ProduitsVendusModal
+        isOpen={activeModal === 'produits'}
+        onClose={() => setActiveModal(null)}
+        quantity={salesData.totals.quantity}
+        uniqueProducts={salesByProduct.length}
+        salesByProduct={salesByProduct}
+      />
+      <MeilleurRoiModal
+        isOpen={activeModal === 'roi'}
+        onClose={() => setActiveModal(null)}
+        buyingRecommendations={buyingRecommendations}
+      />
     </Layout>
   );
 };

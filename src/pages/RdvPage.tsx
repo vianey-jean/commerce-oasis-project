@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { RdvCalendar, RdvForm, RdvCard } from '@/components/rdv';
+ import RdvStatsDetailsModal from '@/components/rdv/RdvStatsDetailsModal';
 import { ConfirmDialog } from '@/components/shared';
 import { useRdv } from '@/hooks/useRdv';
 import { RDV, RDVFormData } from '@/types/rdv';
@@ -59,6 +60,12 @@ const RdvPage: React.FC = () => {
   const [highlightRdvId, setHighlightRdvId] = useState<string | null>(null);
   const [highlightDate, setHighlightDate] = useState<string | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
+ 
+   // Stats modal state
+   const [statsModalOpen, setStatsModalOpen] = useState(false);
+   const [statsModalTitle, setStatsModalTitle] = useState('');
+   const [statsModalRdvs, setStatsModalRdvs] = useState<RDV[]>([]);
+   const [statsModalColor, setStatsModalColor] = useState('from-primary to-primary');
 
   // Fermer les suggestions au clic extérieur
   useEffect(() => {
@@ -260,6 +267,66 @@ const RdvPage: React.FC = () => {
     return groups;
   }, [upcomingRdvs]);
 
+  // RDV d'aujourd'hui
+  const todayRdvs = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0];
+    return rdvs.filter(r => r.date === today && r.statut !== 'annule');
+  }, [rdvs]);
+
+  // RDV en attente (planifiés) du mois
+  const pendingRdvsForStats = useMemo(() => {
+    const now = new Date();
+    return rdvs.filter(r => {
+      const rdvDate = parseISO(r.date);
+      return isSameMonth(rdvDate, now) && r.statut === 'planifie';
+    });
+  }, [rdvs]);
+
+  // Tous les RDV du mois
+  const allMonthRdvs = useMemo(() => {
+    const now = new Date();
+    return rdvs.filter(r => {
+      const rdvDate = parseISO(r.date);
+      return isSameMonth(rdvDate, now);
+    }).sort((a, b) => {
+      const dateCompare = a.date.localeCompare(b.date);
+      if (dateCompare !== 0) return dateCompare;
+      return a.heureDebut.localeCompare(b.heureDebut);
+    });
+  }, [rdvs]);
+
+  // Handler pour ouvrir la modale stats
+  const handleOpenStatsModal = useCallback((type: 'today' | 'month' | 'pending' | 'total') => {
+    switch (type) {
+      case 'today':
+        setStatsModalTitle("Rendez-vous d'aujourd'hui");
+        setStatsModalRdvs(todayRdvs);
+        setStatsModalColor('from-blue-500 to-blue-600');
+        break;
+      case 'month':
+        setStatsModalTitle('Rendez-vous ce mois');
+        setStatsModalRdvs(currentMonthRdvs);
+        setStatsModalColor('from-emerald-500 to-emerald-600');
+        break;
+      case 'pending':
+        setStatsModalTitle('Rendez-vous en attente');
+        setStatsModalRdvs(pendingRdvsForStats);
+        setStatsModalColor('from-amber-500 to-orange-500');
+        break;
+      case 'total':
+        setStatsModalTitle('Total du mois');
+        setStatsModalRdvs(allMonthRdvs);
+        setStatsModalColor('from-purple-500 to-purple-600');
+        break;
+    }
+    setStatsModalOpen(true);
+  }, [todayRdvs, currentMonthRdvs, pendingRdvsForStats, allMonthRdvs]);
+
+  const handleStatsModalRdvClick = useCallback((rdv: RDV) => {
+    setStatsModalOpen(false);
+    handleOpenForm(rdv);
+  }, [handleOpenForm]);
+
   const statusColors: Record<string, string> = {
     planifie: 'bg-blue-500',
     confirme: 'bg-green-500',
@@ -341,7 +408,10 @@ const RdvPage: React.FC = () => {
               transition={{ delay: 0.1 }}
               whileHover={{ scale: 1.02, y: -5 }}
             >
-              <Card className="relative overflow-hidden bg-gradient-to-br from-blue-500/15 via-blue-400/10 to-blue-600/5 border-blue-300/50 dark:border-blue-700/50 shadow-lg hover:shadow-xl transition-all duration-300">
+              <Card 
+                className="relative overflow-hidden bg-gradient-to-br from-blue-500/15 via-blue-400/10 to-blue-600/5 border-blue-300/50 dark:border-blue-700/50 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
+                onClick={() => handleOpenStatsModal('today')}
+              >
                 <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-400/20 to-transparent rounded-bl-full"></div>
                 <CardContent className="p-5 relative">
                   <div className="flex items-center justify-between">
@@ -363,7 +433,10 @@ const RdvPage: React.FC = () => {
               transition={{ delay: 0.2 }}
               whileHover={{ scale: 1.02, y: -5 }}
             >
-              <Card className="relative overflow-hidden bg-gradient-to-br from-emerald-500/15 via-emerald-400/10 to-emerald-600/5 border-emerald-300/50 dark:border-emerald-700/50 shadow-lg hover:shadow-xl transition-all duration-300">
+              <Card 
+                className="relative overflow-hidden bg-gradient-to-br from-emerald-500/15 via-emerald-400/10 to-emerald-600/5 border-emerald-300/50 dark:border-emerald-700/50 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
+                onClick={() => handleOpenStatsModal('month')}
+              >
                 <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-emerald-400/20 to-transparent rounded-bl-full"></div>
                 <CardContent className="p-5 relative">
                   <div className="flex items-center justify-between">
@@ -385,7 +458,10 @@ const RdvPage: React.FC = () => {
               transition={{ delay: 0.3 }}
               whileHover={{ scale: 1.02, y: -5 }}
             >
-              <Card className="relative overflow-hidden bg-gradient-to-br from-amber-500/15 via-amber-400/10 to-orange-600/5 border-amber-300/50 dark:border-amber-700/50 shadow-lg hover:shadow-xl transition-all duration-300">
+              <Card 
+                className="relative overflow-hidden bg-gradient-to-br from-amber-500/15 via-amber-400/10 to-orange-600/5 border-amber-300/50 dark:border-amber-700/50 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
+                onClick={() => handleOpenStatsModal('pending')}
+              >
                 <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-amber-400/20 to-transparent rounded-bl-full"></div>
                 <CardContent className="p-5 relative">
                   <div className="flex items-center justify-between">
@@ -407,7 +483,10 @@ const RdvPage: React.FC = () => {
               transition={{ delay: 0.4 }}
               whileHover={{ scale: 1.02, y: -5 }}
             >
-              <Card className="relative overflow-hidden bg-gradient-to-br from-purple-500/15 via-purple-400/10 to-purple-600/5 border-purple-300/50 dark:border-purple-700/50 shadow-lg hover:shadow-xl transition-all duration-300">
+              <Card 
+                className="relative overflow-hidden bg-gradient-to-br from-purple-500/15 via-purple-400/10 to-purple-600/5 border-purple-300/50 dark:border-purple-700/50 shadow-lg hover:shadow-xl transition-all duration-300 cursor-pointer"
+                onClick={() => handleOpenStatsModal('total')}
+              >
                 <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-purple-400/20 to-transparent rounded-bl-full"></div>
                 <CardContent className="p-5 relative">
                   <div className="flex items-center justify-between">
@@ -778,6 +857,16 @@ const RdvPage: React.FC = () => {
           onConfirm={handleDelete}
           variant="danger"
         />
+ 
+         {/* Stats Details Modal */}
+         <RdvStatsDetailsModal
+           isOpen={statsModalOpen}
+           onClose={() => setStatsModalOpen(false)}
+           title={statsModalTitle}
+           rdvs={statsModalRdvs}
+           onRdvClick={handleStatsModalRdvClick}
+           accentColor={statsModalColor}
+         />
       </div>
     </Layout>
   );
