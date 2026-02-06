@@ -78,6 +78,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const storedToken = localStorage.getItem('token');
       const storedUser = localStorage.getItem('user');
       
+      // Si pas de token stocké, c'est une première visite - pas de notification
       if (!storedToken || !storedUser) {
         setIsLoading(false);
         return;
@@ -87,7 +88,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // MANDATORY: Verify account exists in database before allowing access
         const verified = await verifySession();
         
-        if (!verified) {
+        // Afficher la notification UNIQUEMENT si l'utilisateur avait une session valide avant
+        // et qu'elle est maintenant expirée (token existait mais vérification a échoué)
+        if (!verified && storedToken) {
           toast({
             title: "Session expirée",
             description: "Votre session a expiré. Veuillez vous reconnecter.",
@@ -96,6 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       } catch (error) {
         console.error('Auth initialization error:', error);
+        // Ne pas afficher de notification si c'est une erreur réseau ou serveur
         localStorage.removeItem('token');
         localStorage.removeItem('user');
       } finally {
