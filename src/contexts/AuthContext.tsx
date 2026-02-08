@@ -177,11 +177,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const registerData = {
         email: data.email,
         password: data.password,
+        confirmPassword: data.confirmPassword,
         firstName: data.firstName,
         lastName: data.lastName,
         gender: data.gender,
         address: data.address,
         phone: data.phone,
+        acceptTerms: data.acceptTerms,
       };
       
       const result = await authService.register(registerData);
@@ -193,7 +195,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         toast({
           title: "Inscription réussie",
           description: `Bienvenue ${result.user.firstName} ${result.user.lastName}`,
-          className: "notification-success",
+          className: "bg-green-600 text-white border-green-600",
         });
         return true;
       } else {
@@ -204,10 +206,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         return false;
       }
-    } catch (error) {
+    } catch (error: any) {
+      const message = error?.response?.data?.message || "Une erreur s'est produite lors de l'inscription";
       toast({
         title: "Erreur",
-        description: "Une erreur s'est produite lors de l'inscription",
+        description: message,
         variant: "destructive",
         className: "notification-erreur",
       });
@@ -229,17 +232,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const resetPasswordRequest = async (data: PasswordResetRequest): Promise<boolean> => {
     try {
       setIsLoading(true);
-      const exists = await authService.resetPasswordRequest(data);
+      const result = await authService.resetPasswordRequest(data);
       
-      if (!exists) {
+      if (!result.exists) {
         toast({
           title: "Échec de la réinitialisation",
           description: "Cet email n'existe pas dans notre système",
           variant: "destructive",
         });
+        return false;
       }
       
-      return exists;
+      toast({
+        title: "Email vérifié",
+        description: "Vous pouvez maintenant créer un nouveau mot de passe",
+        className: "bg-green-600 text-white border-green-600",
+      });
+      
+      return true;
     } catch (error) {
       toast({
         title: "Erreur",
@@ -256,13 +266,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const resetPassword = async (data: PasswordResetData): Promise<boolean> => {
     try {
       setIsLoading(true);
-      const result = await authService.resetPassword(data.email);
+      const result = await authService.resetPassword({
+        email: data.email,
+        newPassword: data.newPassword,
+        confirmPassword: data.confirmPassword,
+      });
       
       if (result.success) {
         toast({
           title: "Réinitialisation réussie",
           description: "Votre mot de passe a été réinitialisé avec succès",
-          className: "notification-success",
+          className: "bg-green-600 text-white border-green-600",
         });
         return true;
       } else {
@@ -273,10 +287,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
         return false;
       }
-    } catch (error) {
+    } catch (error: any) {
+      const message = error?.response?.data?.message || "Une erreur s'est produite lors de la réinitialisation";
       toast({
         title: "Erreur",
-        description: "Une erreur s'est produite lors de la réinitialisation",
+        description: message,
         variant: "destructive",
         className: "notification-erreur",
       });

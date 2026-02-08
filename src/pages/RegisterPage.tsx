@@ -124,7 +124,7 @@ const RegisterPage: React.FC = () => {
     const hasUpperCase = /[A-Z]/.test(formData.password);
     const hasNumber = /[0-9]/.test(formData.password);
     const hasSpecialChar = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(formData.password);
-    const hasMinLength = formData.password.length >= 8;
+    const hasMinLength = formData.password.length >= 6;
 
     return hasLowerCase && hasUpperCase && hasNumber && hasSpecialChar && hasMinLength;
   };
