@@ -23,7 +23,9 @@ import {
 } from '@/components/tendances/TendancesStatsModals';
 
 // Composants extraits
-import { TendancesHero, useTendancesData } from '@/pages/tendances';
+import  TendancesHero  from '@/pages/tendances/TendancesHero';
+
+import { useTendancesData } from '@/pages/tendances/useTendancesData';
 import TendancesStatsCards from '@/pages/tendances/TendancesStatsCards';
 import TendancesTabNavigation from '@/pages/tendances/TendancesTabNavigation';
 import TendancesOverviewTab from '@/pages/tendances/TendancesOverviewTab';
@@ -66,7 +68,7 @@ const TendancesPage = () => {
 
   return (
     <Layout requireAuth>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-gray-900 dark:via-purple-900/20 dark:to-slate-900">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-emerald-50/20 to-purple-50/30 dark:from-[#030014] dark:via-[#0a0020]/80 dark:to-[#0e0030]">
         <div className="container mx-auto px-4 py-8">
           {/* Hero */}
           <TendancesHero />
