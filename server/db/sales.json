@@ -3844,5 +3844,149 @@
     "clientPhone": "0692571158",
     "reste": 0,
     "nextPaymentDate": null
+  },
+  {
+    "id": "1771728952540",
+    "date": "2026-02-22",
+    "products": [
+      {
+        "productId": "1771728868780",
+        "description": "Perruque bouclé noir 22 pouces",
+        "quantitySold": 1,
+        "purchasePrice": 45.46,
+        "sellingPrice": 130,
+        "profit": 84.53999999999999,
+        "deliveryFee": 0,
+        "deliveryLocation": "Saint-Denis"
+      }
+    ],
+    "totalPurchasePrice": 45.46,
+    "totalSellingPrice": 130,
+    "totalProfit": 84.53999999999999,
+    "clientName": "MCie Fortuna",
+    "clientAddress": "MacDo Saint-Pierre",
+    "clientPhone": "0692810595",
+    "reste": 0,
+    "nextPaymentDate": null
+  },
+  {
+    "id": "1771754655709",
+    "date": "2026-02-22",
+    "products": [
+      {
+        "productId": "1771754602552",
+        "description": "Tissages lisse ondulé  noir 18 pouces",
+        "quantitySold": 2,
+        "purchasePrice": 26.72,
+        "sellingPrice": 100,
+        "profit": 73.28,
+        "deliveryFee": 0,
+        "deliveryLocation": "Saint-Denis"
+      }
+    ],
+    "totalPurchasePrice": 26.72,
+    "totalSellingPrice": 100,
+    "totalProfit": 73.28,
+    "clientName": "Anaelle Aveam",
+    "clientAddress": "Gare routière St Paul",
+    "clientPhone": "0693401505",
+    "reste": 0,
+    "nextPaymentDate": null
+  },
+  {
+    "id": "1772040033592",
+    "date": "2026-02-25",
+    "products": [
+      {
+        "productId": "1769950767834",
+        "description": "Perruque bouclé blonde miel 30 pouces",
+        "quantitySold": 1,
+        "purchasePrice": 74.91,
+        "sellingPrice": 160,
+        "profit": 85.09,
+        "deliveryFee": 0,
+        "deliveryLocation": "Saint-Denis"
+      }
+    ],
+    "totalPurchasePrice": 74.91,
+    "totalSellingPrice": 160,
+    "totalProfit": 85.09,
+    "clientName": "Marie Amourany",
+    "clientAddress": "22 rue des muscadier Apt 3 saint Clotilde",
+    "clientPhone": "0693821738",
+    "reste": 0,
+    "nextPaymentDate": null
+  },
+  {
+    "id": "1772092367557",
+    "date": "2026-02-26",
+    "products": [
+      {
+        "productId": "1756486622500",
+        "description": "Perruque bouclé blonde miel blanche 24 pouces",
+        "quantitySold": 1,
+        "purchasePrice": 64.84,
+        "sellingPrice": 170,
+        "profit": 105.16,
+        "deliveryFee": 0,
+        "deliveryLocation": "Saint-Denis"
+      }
+    ],
+    "totalPurchasePrice": 64.84,
+    "totalSellingPrice": 170,
+    "totalProfit": 105.16,
+    "clientName": "Orchidée Angela",
+    "clientAddress": "22 rue du génértal de gaulle saint louis",
+    "clientPhone": "0693818015",
+    "reste": 0,
+    "nextPaymentDate": null
+  },
+  {
+    "id": "1772362829991",
+    "date": "2026-03-01",
+    "products": [
+      {
+        "productId": "1753356444320",
+        "description": "Tissages bouclé blonde miel 18 pouces",
+        "quantitySold": 1,
+        "purchasePrice": 15.49,
+        "sellingPrice": 45,
+        "profit": 29.51,
+        "deliveryFee": 0,
+        "deliveryLocation": "Saint-Denis"
+      }
+    ],
+    "totalPurchasePrice": 15.49,
+    "totalSellingPrice": 45,
+    "totalProfit": 29.51,
+    "clientName": "Latifa Olga",
+    "clientAddress": "Parking Gymnase Cazal Saint Denis",
+    "clientPhone": "0693497257",
+    "reste": 0,
+    "nextPaymentDate": null
+  },
+  {
+    "id": "1772533708447",
+    "date": "2026-03-03",
+    "products": [
+      {
+        "productId": "1772265753721",
+        "description": "Perruque bouclé mèche blonde gasy",
+        "quantitySold": 1,
+        "purchasePrice": 50,
+        "sellingPrice": 100,
+        "profit": 50,
+        "deliveryFee": 10,
+        "deliveryLocation": "Autres"
+      }
+    ],
+    "totalPurchasePrice": 50,
+    "totalSellingPrice": 110,
+    "totalProfit": 50,
+    "clientName": "Patty Rgm",
+    "clientAddress": "22 Allée des poudriers Appt 13 jolie Fond Saint-Pierre",
+    "clientPhone": "0692157371",
+    "reste": 0,
+    "nextPaymentDate": null
   }
 ]

@@ -705,5 +705,26 @@
     "phone": "0692571158",
     "adresse": "173 rue général de Gaule",
     "dateCreation": "2026-02-18T14:02:37.212Z"
+  },
+  {
+    "id": "1771586696795",
+    "nom": "MCie Fortuna",
+    "phone": "0692810595",
+    "adresse": "MacDo Saint-Pierre",
+    "dateCreation": "2026-02-20T11:24:56.795Z"
+  },
+  {
+    "id": "1772265866234",
+    "nom": "Patty Rgm",
+    "phone": "0692157371",
+    "adresse": "22 Allée des poudriers Appt 13 jolie Fond Saint-Pierre",
+    "dateCreation": "2026-02-28T08:04:26.234Z"
+  },
+  {
+    "id": "1772533879271",
+    "nom": "Mxlle Crain Pa Personne",
+    "phone": "0693510011",
+    "adresse": "9 rue rose des bois Sainte-Marie",
+    "dateCreation": "2026-03-03T10:31:19.271Z"
   }
 ]

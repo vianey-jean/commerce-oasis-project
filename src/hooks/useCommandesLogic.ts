@@ -205,17 +205,21 @@ export const useCommandesLogic = () => {
 
   const filteredProducts = useMemo(() => {
     if (productSearch.length < 3) return [];
-    const usedProductNames = new Set<string>();
+    // Calculer la quantité réservée par produit (par nom) dans les commandes actives
+    const reservedQuantityByName = new Map<string, number>();
     commandes.forEach(commande => {
       if (editingCommande && commande.id === editingCommande.id) return;
       if (commande.statut === 'valide' || commande.statut === 'annule') return;
-      commande.produits.forEach(produit => usedProductNames.add(produit.nom.toLowerCase()));
+      commande.produits.forEach(produit => {
+        const key = produit.nom.toLowerCase();
+        reservedQuantityByName.set(key, (reservedQuantityByName.get(key) || 0) + produit.quantite);
+      });
     });
     return products.filter(product => {
       const matchesSearch = product.description.toLowerCase().includes(productSearch.toLowerCase());
-      const isNotUsed = !usedProductNames.has(product.description.toLowerCase());
-      const hasStock = product.quantity > 0;
-      return matchesSearch && isNotUsed && hasStock;
+      const reservedQty = reservedQuantityByName.get(product.description.toLowerCase()) || 0;
+      const availableQty = product.quantity - reservedQty;
+      return matchesSearch && availableQty > 0;
     });
   }, [productSearch, products, commandes, editingCommande]);
 
@@ -269,13 +273,35 @@ export const useCommandesLogic = () => {
     setShowClientSuggestions(false);
   }, []);
 
+  // Calculer la quantité disponible d'un produit (stock - réservations actives)
+  const getAvailableQuantityForProduct = useCallback((productDescription: string): number => {
+    const product = products.find(p => p.description.toLowerCase() === productDescription.toLowerCase());
+    if (!product) return 0;
+    let reservedQty = 0;
+    commandes.forEach(c => {
+      if (editingCommande && c.id === editingCommande.id) return;
+      if (c.statut === 'valide' || c.statut === 'annule') return;
+      if (c.type !== 'reservation') return;
+      c.produits.forEach(p => {
+        if (p.nom.toLowerCase() === productDescription.toLowerCase()) {
+          reservedQty += p.quantite;
+        }
+      });
+    });
+    return Math.max(0, product.quantity - reservedQty);
+  }, [products, commandes, editingCommande]);
+
+  const [availableQuantityForSelected, setAvailableQuantityForSelected] = useState<number | null>(null);
+
   const handleProductSelect = useCallback((product: Product) => {
     setProduitNom(product.description);
     setPrixUnitaire(product.purchasePrice.toString());
     setProductSearch(product.description);
     setShowProductSuggestions(false);
     setSelectedProduct(product);
-  }, []);
+    const availQty = getAvailableQuantityForProduct(product.description);
+    setAvailableQuantityForSelected(availQty);
+  }, [getAvailableQuantityForProduct]);
 
   // =========================================================================
   // Validation et reset
@@ -292,11 +318,12 @@ export const useCommandesLogic = () => {
     setDateArrivagePrevue(''); setDateEcheance(''); setHoraire('');
     setType('commande'); setClientSearch(''); setProductSearch('');
     setProduitsListe([]); setEditingCommande(null); setSelectedProduct(null); setEditingProductIndex(null);
+    setAvailableQuantityForSelected(null);
   }, []);
 
   const resetProductFields = useCallback(() => {
     setProduitNom(''); setPrixUnitaire(''); setQuantite('1'); setPrixVente('');
-    setProductSearch(''); setEditingProductIndex(null); setSelectedProduct(null);
+    setProductSearch(''); setEditingProductIndex(null); setSelectedProduct(null); setAvailableQuantityForSelected(null);
   }, []);
 
   // =========================================================================
@@ -311,12 +338,13 @@ export const useCommandesLogic = () => {
     const quantiteInt = parseInt(quantite);
     const existingProduct = products.find(p => p.description.toLowerCase() === produitNom.toLowerCase());
     if (existingProduct) {
-      if (existingProduct.quantity <= 0) {
-        toast({ title: 'Stock insuffisant', description: `${produitNom} n'a plus de stock disponible`, className: "bg-app-red text-white", variant: 'destructive' });
+      const availableQty = getAvailableQuantityForProduct(produitNom);
+      if (availableQty <= 0) {
+        toast({ title: 'Stock insuffisant', description: `${produitNom} n'a plus de stock disponible (tout est réservé)`, className: "bg-app-red text-white", variant: 'destructive' });
         return;
       }
-      if (quantiteInt > existingProduct.quantity) {
-        toast({ title: 'Quantité insuffisante', description: `Stock disponible: ${existingProduct.quantity} unités`, className: "bg-app-red text-white", variant: 'destructive' });
+      if (quantiteInt > availableQty) {
+        toast({ title: 'Quantité insuffisante', description: `Quantité disponible: ${availableQty} unité(s) (stock: ${existingProduct.quantity}, réservé: ${existingProduct.quantity - availableQty})`, className: "bg-app-red text-white", variant: 'destructive' });
         return;
       }
     }
@@ -331,7 +359,7 @@ export const useCommandesLogic = () => {
       toast({ title: 'Produit ajouté', description: `${nouveauProduit.nom} ajouté au panier` });
     }
     resetProductFields();
-  }, [produitNom, prixUnitaire, quantite, prixVente, products, editingProductIndex, produitsListe, resetProductFields]);
+  }, [produitNom, prixUnitaire, quantite, prixVente, products, editingProductIndex, produitsListe, resetProductFields, getAvailableQuantityForProduct]);
 
   const handleEditProduit = useCallback((index: number) => {
     const produit = produitsListe[index];
@@ -359,6 +387,21 @@ export const useCommandesLogic = () => {
       toast({ title: 'Erreur', description: 'Veuillez remplir tous les champs et ajouter au moins un produit', className: "bg-app-red text-white", variant: 'destructive' });
       return;
     }
+    // Vérifier doublon : même produit, même client, même date pour les réservations
+    if (type === 'reservation' && !editingCommande) {
+      const dateToCheck = dateEcheance;
+      const isDuplicate = commandes.some(c => {
+        if (c.statut === 'valide' || c.statut === 'annule') return false;
+        if (c.type !== 'reservation') return false;
+        if (c.clientNom.toLowerCase() !== clientNom.toLowerCase()) return false;
+        if (c.dateEcheance !== dateToCheck) return false;
+        return c.produits.some(cp => produitsListe.some(pl => pl.nom.toLowerCase() === cp.nom.toLowerCase()));
+      });
+      if (isDuplicate) {
+        toast({ title: 'Doublon détecté', description: 'Ce client a déjà une réservation avec ce produit à cette date', className: "bg-app-red text-white", variant: 'destructive' });
+        return;
+      }
+    }
     const commandeData: Partial<Commande> = { clientNom, clientPhone, clientAddress, type, produits: produitsListe, dateCommande: new Date().toISOString(), statut: type === 'commande' ? 'en_route' : 'en_attente' };
     if (type === 'commande') commandeData.dateArrivagePrevue = dateArrivagePrevue;
     else commandeData.dateEcheance = dateEcheance;
@@ -374,8 +417,20 @@ export const useCommandesLogic = () => {
       await fetchProducts();
 
       if (editingCommande) {
+        // Dé-réserver les anciens produits qui ne sont plus dans la liste
+        if (editingCommande.type === 'reservation') {
+          for (const oldProduit of editingCommande.produits) {
+            const stillInList = produitsListe.some(p => p.nom.toLowerCase() === oldProduit.nom.toLowerCase());
+            if (!stillInList) {
+              const existingProduct = products.find(p => p.description.toLowerCase() === oldProduit.nom.toLowerCase());
+              if (existingProduct) {
+                try { await api.put(`/api/products/${existingProduct.id}`, { reserver: 'non' }); } catch (err) { console.error('Erreur dé-réservation ancien produit:', err); }
+              }
+            }
+          }
+        }
         await api.put(`/api/commandes/${editingCommande.id}`, commandeData);
-        // Marquer les produits comme réservés si c'est une réservation
+        // Marquer les nouveaux produits comme réservés si c'est une réservation
         if (type === 'reservation') {
           for (const produit of produitsListe) {
             const existingProduct = products.find(p => p.description.toLowerCase() === produit.nom.toLowerCase());
@@ -476,7 +531,16 @@ export const useCommandesLogic = () => {
     try {
       if (commande && commande.statut === 'valide' && commande.saleId) await api.delete(`/api/sales/${commande.saleId}`);
       await api.put(`/api/commandes/${cancellingId}`, { statut: 'annule', saleId: null });
-      if (commande && commande.type === 'reservation') { try { await api.put(`/api/rdv/by-commande/${cancellingId}`, { statut: 'annule' }); } catch (rdvError) { console.log('RDV non trouvé:', rdvError); } }
+      // Dé-réserver tous les produits de cette réservation annulée
+      if (commande && commande.type === 'reservation') {
+        for (const produit of commande.produits) {
+          const existingProduct = products.find(p => p.description.toLowerCase() === produit.nom.toLowerCase());
+          if (existingProduct) {
+            try { await api.put(`/api/products/${existingProduct.id}`, { reserver: 'non' }); } catch (err) { console.error('Erreur dé-réservation produit:', err); }
+          }
+        }
+        try { await api.put(`/api/rdv/by-commande/${cancellingId}`, { statut: 'annule' }); } catch (rdvError) { console.log('RDV non trouvé:', rdvError); }
+      }
       toast({ title: 'Succès', description: 'Commande annulée', className: "bg-app-green text-white" });
       await Promise.all([fetchCommandes(), fetchProducts()]); setCancellingId(null);
     } catch (error) { console.error('Error cancelling:', error); toast({ title: 'Erreur', description: "Impossible d'annuler", className: "bg-app-red text-white", variant: 'destructive' }); }
@@ -511,6 +575,16 @@ export const useCommandesLogic = () => {
       const saleResponse = await api.post('/api/sales', saleData);
       const createdSale = saleResponse.data;
       await api.put(`/api/commandes/${validatingId}`, { statut: 'valide', saleId: createdSale.id });
+      // Dé-réserver les produits et déduire la quantité réservée du stock
+      if (commandeToValidate.type === 'reservation') {
+        for (const p of commandeToValidate.produits) {
+          const existingProduct = products.find(prod => prod.description.toLowerCase() === p.nom.toLowerCase());
+          if (existingProduct) {
+            const newQuantity = Math.max(0, existingProduct.quantity - p.quantite);
+            try { await api.put(`/api/products/${existingProduct.id}`, { reserver: 'non', quantity: newQuantity }); } catch (err) { console.error('Erreur dé-réservation/stock produit:', err); }
+          }
+        }
+      }
       toast({ title: 'Succès', description: 'Commande validée et enregistrée comme vente', className: "bg-app-green text-white" });
       await Promise.all([fetchCommandes(), fetchProducts()]); setValidatingId(null);
     } catch (error) { console.error('Error validating:', error); toast({ title: 'Erreur', description: 'Impossible de valider', className: "bg-app-red text-white", variant: 'destructive' }); }
@@ -636,7 +710,7 @@ export const useCommandesLogic = () => {
     type, setType, dateArrivagePrevue, setDateArrivagePrevue, dateEcheance, setDateEcheance, horaire, setHoraire,
     produitNom, setProduitNom, prixUnitaire, setPrixUnitaire, quantite, setQuantite, prixVente, setPrixVente,
     productSearch, setProductSearch, showProductSuggestions, setShowProductSuggestions,
-    selectedProduct, produitsListe, editingProductIndex,
+    selectedProduct, produitsListe, editingProductIndex, availableQuantityForSelected,
     // États recherche/tri
     commandeSearch, setCommandeSearch, sortDateAsc, setSortDateAsc,
     // États modales

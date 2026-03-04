@@ -5,24 +5,26 @@ import { Button } from '@/components/ui/button';
 import { useApp } from '@/contexts/AppContext';
 import { Product, Sale } from '@/types';
 import { useToast } from '@/hooks/use-toast';
-import { Trash2 } from 'lucide-react';
+import { Trash2, RotateCcw } from 'lucide-react';
 import ConfirmDeleteDialog from './forms/ConfirmDeleteDialog';
 import { useSaleForm } from './forms/hooks/useSaleForm';
 import { calculateSaleProfit } from './forms/utils/saleCalculations';
 import SaleFormFields from './forms/SaleFormFields';
 import axios from 'axios';
+import remboursementApiService from '@/services/api/remboursementApi';
 
 interface AddSaleFormProps {
   isOpen: boolean;
   onClose: () => void;
   editSale?: Sale;
+  onRefund?: (sale: Sale) => void;
 }
 
 /**
  * Formulaire pour ajouter ou modifier une vente
  */
-const AddSaleForm: React.FC<AddSaleFormProps> = ({ isOpen, onClose, editSale }) => {
-  const { products, addSale, updateSale, deleteSale } = useApp();
+const AddSaleForm: React.FC<AddSaleFormProps> = ({ isOpen, onClose, editSale, onRefund }) => {
+  const { products, addSale, updateSale, deleteSale, refreshData } = useApp();
   const { toast } = useToast();
   
   const {
@@ -370,7 +372,34 @@ const AddSaleForm: React.FC<AddSaleFormProps> = ({ isOpen, onClose, editSale }) 
     
     setIsSubmitting(true);
     try {
-      // Gérer le client avant la suppression
+      const isRefund = (editSale as any).isRefund || (editSale.totalSellingPrice ?? editSale.sellingPrice ?? 0) < 0;
+
+      // If deleting a refund sale, handle stock reversal via remboursement API
+      if (isRefund && (editSale as any).originalSaleId) {
+        // Find the remboursement linked to this negative sale
+        try {
+          const allRemboursements = await remboursementApiService.getAll();
+          const linkedRemboursement = allRemboursements.find((r: any) => r.negativeSaleId === editSale.id);
+          if (linkedRemboursement) {
+            await remboursementApiService.delete(linkedRemboursement.id);
+            // The backend handles stock reversal and negative sale deletion
+            if (refreshData) refreshData();
+            toast({
+              title: "Succès",
+              description: "Le remboursement a été supprimé avec succès" + 
+                (linkedRemboursement.stockRestored ? " (stock ajusté)" : ""),
+              variant: "default",
+              className: "notification-success",
+            });
+            onClose();
+            return;
+          }
+        } catch (err) {
+          console.error('Error deleting linked remboursement:', err);
+        }
+      }
+
+      // Normal sale deletion
       if (editSale.clientName) {
         await handleClientForDeletion(
           editSale.clientName, 
@@ -470,6 +499,18 @@ const AddSaleForm: React.FC<AddSaleFormProps> = ({ isOpen, onClose, editSale }) 
                   Supprimer
                 </Button>
               )}
+
+              {editSale && onRefund && (
+                <Button
+                  type="button"
+                  onClick={() => onRefund(editSale)}
+                  disabled={isSubmitting}
+                  className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold"
+                >
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Rembourser
+                </Button>
+              )}
               
               <Button
                 type="button"
@@ -496,8 +537,10 @@ const AddSaleForm: React.FC<AddSaleFormProps> = ({ isOpen, onClose, editSale }) 
         isOpen={showDeleteConfirm}
         onClose={() => setShowDeleteConfirm(false)}
         onConfirm={handleDelete}
-        title="Supprimer la vente"
-        description="Êtes-vous sûr de vouloir supprimer cette vente ? Cette action ne peut pas être annulée."
+        title={editSale && ((editSale as any).isRefund || (editSale.totalSellingPrice ?? editSale.sellingPrice ?? 0) < 0) ? "Supprimer le remboursement" : "Supprimer la vente"}
+        description={editSale && ((editSale as any).isRefund || (editSale.totalSellingPrice ?? editSale.sellingPrice ?? 0) < 0) 
+          ? "Êtes-vous sûr de vouloir supprimer ce remboursement ? Si le stock avait été restauré, les quantités seront diminuées."
+          : "Êtes-vous sûr de vouloir supprimer cette vente ? Cette action ne peut pas être annulée."}
       />
     </>
   );

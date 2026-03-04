@@ -381,6 +381,65 @@ router.put('/:id', authMiddleware, async (req, res) => {
       console.log('❌ Erreur retournée:', updatedSale.error);
       return res.status(400).json({ message: updatedSale.error });
     }
+
+    // Si c'est un remboursement, synchroniser remboursement.json
+    if (originalSale.isRefund || updatedSale.isRefund) {
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const remboursementPath = path.join(__dirname, '../db/remboursement.json');
+        const remboursements = JSON.parse(fs.readFileSync(remboursementPath, 'utf8'));
+        const idx = remboursements.findIndex(r => r.negativeSaleId === req.params.id);
+
+        if (idx !== -1) {
+          const saleProducts = Array.isArray(updatedSale.products) && updatedSale.products.length > 0
+            ? updatedSale.products
+            : [{
+                productId: updatedSale.productId || null,
+                description: updatedSale.description || '',
+                quantitySold: Number(updatedSale.quantitySold) || 0,
+                sellingPrice: Number(updatedSale.sellingPrice) || 0,
+                purchasePrice: Number(updatedSale.purchasePrice) || 0,
+                profit: Number(updatedSale.profit) || 0
+              }];
+
+          const remboursementProducts = saleProducts.map((p) => {
+            const quantityRefunded = Number(p.quantitySold) || 0;
+            const quantityAbs = Math.abs(quantityRefunded);
+            const totalRefundPricePerProduct = Math.abs(Number(p.sellingPrice) || 0);
+            const totalPurchasePricePerProduct = -Math.abs(Number(p.purchasePrice) || 0);
+
+            return {
+              productId: p.productId,
+              description: p.description,
+              quantityRefunded,
+              refundPriceUnit: quantityAbs > 0 ? totalRefundPricePerProduct / quantityAbs : 0,
+              totalRefundPrice: totalRefundPricePerProduct,
+              purchasePriceUnit: quantityAbs > 0 ? totalPurchasePricePerProduct / quantityAbs : 0,
+              totalPurchasePrice: totalPurchasePricePerProduct,
+              profit: Number(p.profit) || 0
+            };
+          });
+
+          remboursements[idx] = {
+            ...remboursements[idx],
+            date: updatedSale.date,
+            clientName: updatedSale.clientName || null,
+            clientPhone: updatedSale.clientPhone || null,
+            clientAddress: updatedSale.clientAddress || null,
+            products: remboursementProducts,
+            totalRefundPrice: Math.abs(updatedSale.totalSellingPrice || updatedSale.sellingPrice || 0),
+            totalPurchasePrice: -Math.abs(updatedSale.totalPurchasePrice || updatedSale.purchasePrice || 0),
+            totalProfit: Math.abs(updatedSale.totalProfit || updatedSale.profit || 0)
+          };
+
+          fs.writeFileSync(remboursementPath, JSON.stringify(remboursements, null, 2));
+          console.log('✅ Remboursement synchronisé avec la vente mise à jour');
+        }
+      } catch (error) {
+        console.error('Erreur lors de la synchronisation du remboursement:', error);
+      }
+    }
     
     // Gérer le prêt produit associé si reste > 0
     if (updatedSale.reste && updatedSale.reste > 0 && updatedSale.clientName) {
@@ -479,6 +538,31 @@ router.delete('/:id', authMiddleware, async (req, res) => {
       return res.status(404).json({ message: 'Sale not found' });
     }
     
+    // Si c'est un remboursement (isRefund), supprimer aussi dans remboursement.json
+    if (sale.isRefund) {
+      try {
+        const Remboursement = require('../models/Remboursement');
+        const allRemboursements = Remboursement.getAll();
+        const remboursement = allRemboursements.find(r => r.negativeSaleId === req.params.id);
+        if (remboursement) {
+          // Si le stock avait été restauré, le diminuer
+          if (remboursement.stockRestored && remboursement.productsRestored && remboursement.productsRestored.length > 0) {
+            for (const product of remboursement.products) {
+              const quantityToDecrease = Math.abs(Number(product.quantityRefunded) || 0);
+              if (product.productId && remboursement.productsRestored.includes(product.productId) && quantityToDecrease > 0) {
+                console.log(`📦 Diminution stock après suppression remboursement via sale: ${product.description} -${quantityToDecrease}`);
+                Product.updateQuantity(product.productId, -quantityToDecrease);
+              }
+            }
+          }
+          Remboursement.delete(remboursement.id);
+          console.log('✅ Remboursement associé supprimé avec la vente');
+        }
+      } catch (error) {
+        console.error('Erreur lors de la suppression du remboursement associé:', error);
+      }
+    }
+
     // Supprimer la vente
     const success = Sale.delete(req.params.id);
     

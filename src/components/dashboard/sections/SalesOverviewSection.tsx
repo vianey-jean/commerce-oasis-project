@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import ModernContainer from '@/components/dashboard/forms/ModernContainer';
 import { DollarSign, TrendingUp, Package, BarChart3, Warehouse, Crown, Diamond, Sparkles, Gem, Zap, X, Calendar, Target, ShoppingCart, Box, Layers } from 'lucide-react';
 import useCurrencyFormatter from '@/hooks/use-currency-formatter';
@@ -25,6 +26,7 @@ const SalesOverviewSection: React.FC<SalesOverviewSectionProps> = ({
   currentYear
 }) => {
   const { formatEuro } = useCurrencyFormatter();
+  const navigate = useNavigate();
   const [selectedStat, setSelectedStat] = useState<string | null>(null);
 
   // Fonction pour vérifier si le produit est une avance
@@ -237,11 +239,11 @@ const SalesOverviewSection: React.FC<SalesOverviewSectionProps> = ({
                   <Sparkles className="h-3 w-3 text-purple-500" />
                 </div>
               </div>
-              
+
               {/* Decorative Elements */}
               <div className="absolute top-0 right-0 w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-white/20 to-transparent rounded-bl-full opacity-50 group-hover:opacity-100 transition-opacity" />
               <div className="absolute -bottom-4 -left-4 w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-tr from-white/10 to-transparent rounded-full blur-xl" />
-              
+
               <div className="relative z-10">
                 <div className="flex items-center justify-between mb-3 sm:mb-4">
                   <div className={`p-2 sm:p-3 rounded-lg sm:rounded-xl bg-gradient-to-br ${stat.gradient} text-white shadow-lg`}>
@@ -249,11 +251,11 @@ const SalesOverviewSection: React.FC<SalesOverviewSectionProps> = ({
                   </div>
                   <stat.luxeIcon className="h-4 w-4 sm:h-5 sm:w-5 text-gray-400 dark:text-gray-500 opacity-50 group-hover:opacity-100 group-hover:text-purple-500 transition-all animate-pulse" />
                 </div>
-                
+
                 <p className="text-xs sm:text-sm font-bold text-gray-600 dark:text-gray-400 mb-1 truncate">
                   {stat.title}
                 </p>
-                <p 
+                <p
                   className={`text-lg sm:text-xl md:text-2xl lg:text-3xl font-black bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent`}
                   aria-label={`${stat.title}: ${stat.value}`}
                 >
@@ -263,7 +265,7 @@ const SalesOverviewSection: React.FC<SalesOverviewSectionProps> = ({
                   {stat.description}
                 </p>
               </div>
-              
+
               {/* Hover effect pour indiquer qu'on peut cliquer */}
               <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/5 to-white/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
             </div>
@@ -275,7 +277,7 @@ const SalesOverviewSection: React.FC<SalesOverviewSectionProps> = ({
       <AnimatePresence>
         {selectedStat && selectedStatDetails && (
           <Dialog open={!!selectedStat} onOpenChange={() => setSelectedStat(null)}>
-            <DialogContent className="bg-gradient-to-br from-white via-gray-50 to-white dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 border-0 shadow-2xl rounded-3xl max-w-md mx-auto overflow-hidden">
+            <DialogContent className="bg-gradient-to-br from-white via-gray-50 to-white dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 border-0 shadow-2xl rounded-3xl max-w-md mx-auto max-h-[90vh] overflow-y-auto">
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -287,7 +289,7 @@ const SalesOverviewSection: React.FC<SalesOverviewSectionProps> = ({
                   <div className="absolute inset-0 bg-black/10" />
                   <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16" />
                   <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-12 -translate-x-12" />
-                  
+
                   <div className="relative z-10 flex items-center gap-4">
                     <div className="p-4 bg-white/20 rounded-2xl backdrop-blur-sm shadow-xl">
                       <selectedStatDetails.icon className="h-8 w-8 text-white" />
@@ -318,7 +320,19 @@ const SalesOverviewSection: React.FC<SalesOverviewSectionProps> = ({
                       initial={{ opacity: 0, x: -20 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: idx * 0.1 }}
-                      className="flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-xl shadow-sm hover:shadow-md transition-shadow"
+                      onClick={() => {
+                        if ((selectedStat === 'produits-disponibles' || selectedStat === 'stock-total') && 
+                            (detail.label === 'Références en stock' || detail.label === 'Stock total unités' || detail.label === 'Inventaire actif' || detail.label === 'Unités en stock' || detail.label === 'Références')) {
+                          setSelectedStat(null);
+                          navigate('/produits');
+                        }
+                      }}
+                      className={`flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700 rounded-xl shadow-sm hover:shadow-md transition-shadow ${
+                        (selectedStat === 'produits-disponibles' || selectedStat === 'stock-total') && 
+                        (detail.label === 'Références en stock' || detail.label === 'Stock total unités' || detail.label === 'Inventaire actif' || detail.label === 'Unités en stock' || detail.label === 'Références')
+                          ? 'cursor-pointer hover:ring-2 hover:ring-purple-400 dark:hover:ring-purple-500'
+                          : ''
+                      }`}
                     >
                       <div className="flex items-center gap-3">
                         <div className={`p-2 rounded-lg bg-gradient-to-br ${selectedStatDetails.gradient} shadow-md`}>
