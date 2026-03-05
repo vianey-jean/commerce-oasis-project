@@ -9,6 +9,8 @@ export interface Tache {
   importance: 'pertinent' | 'optionnel';
   travailleurId: string;
   travailleurNom: string;
+  completed?: boolean;
+  parentId?: string;
   createdAt?: string;
 }
 

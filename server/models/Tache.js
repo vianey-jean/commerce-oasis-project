@@ -80,11 +80,20 @@ const Tache = {
       let items = JSON.parse(data);
       const index = items.findIndex(item => item.id === id);
       if (index === -1) return null;
-      // Si la tâche est pertinente, on ne peut pas modifier date/horaire
       const existing = items[index];
+      
+      // Allow marking as completed for any task (pertinent or optionnel)
+      if (itemData.completed !== undefined) {
+        items[index] = { ...existing, completed: itemData.completed };
+        if (Object.keys(itemData).length === 1) {
+          fs.writeFileSync(tachePath, JSON.stringify(items, null, 2));
+          return items[index];
+        }
+      }
+      
       if (existing.importance === 'pertinent') {
         // On ne peut modifier que la description de la tâche, pas date/heure/suppression
-        items[index] = { ...existing, description: itemData.description || existing.description };
+        items[index] = { ...items[index], description: itemData.description || existing.description };
       } else {
         items[index] = { ...items[index], ...itemData };
         // Une optionnelle peut devenir pertinente mais pas l'inverse

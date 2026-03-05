@@ -1,8 +1,8 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Clock, Plus, Pencil, Trash2, GripVertical, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Clock, Plus, Pencil, Trash2, GripVertical, AlertTriangle, CheckCircle, Timer, Check } from 'lucide-react';
 import { Tache } from '@/services/api/tacheApi';
 
 interface TacheDayModalProps {
@@ -14,14 +14,74 @@ interface TacheDayModalProps {
   onDelete: (id: string) => void;
   onAddTache: () => void;
   onMoveTache: (id: string, newHeure: string) => void;
+  onValidateTache: (t: Tache) => void;
   premiumBtnClass: string;
   mirrorShine: string;
 }
 
 const HOURS = Array.from({ length: 20 }, (_, i) => i + 4); // 4h to 23h
 
+// Hook for countdown timer
+const useCountdown = (heureFin: string, date: string, open: boolean) => {
+  const [remaining, setRemaining] = useState<number>(0);
+
+  useEffect(() => {
+    if (!open) return;
+    const calc = () => {
+      const now = new Date();
+      const [h, m] = heureFin.split(':').map(Number);
+      const end = new Date(date + 'T00:00:00');
+      end.setHours(h, m, 0, 0);
+      return Math.max(0, Math.floor((end.getTime() - now.getTime()) / 1000));
+    };
+    setRemaining(calc());
+    const interval = setInterval(() => setRemaining(calc()), 1000);
+    return () => clearInterval(interval);
+  }, [heureFin, date, open]);
+
+  return remaining;
+};
+
+const CountdownDisplay: React.FC<{ heureFin: string; date: string; open: boolean; onExpired: () => void; tacheId: string }> = ({
+  heureFin, date, open, onExpired, tacheId
+}) => {
+  const remaining = useCountdown(heureFin, date, open);
+  const expiredRef = useRef(false);
+
+  useEffect(() => {
+    if (remaining === 0 && !expiredRef.current && open) {
+      expiredRef.current = true;
+      onExpired();
+    }
+    if (remaining > 0) {
+      expiredRef.current = false;
+    }
+  }, [remaining, open, onExpired]);
+
+  if (remaining <= 0) {
+    return <span className="text-[10px] font-black text-red-400 animate-pulse">⏰ Terminé</span>;
+  }
+
+  const hours = Math.floor(remaining / 3600);
+  const mins = Math.floor((remaining % 3600) / 60);
+  const secs = remaining % 60;
+  const isUrgent = remaining < 3600; // < 1h
+
+  return (
+    <span className={cn(
+      'text-[10px] font-mono font-black flex items-center gap-1 px-1.5 py-0.5 rounded-lg',
+      isUrgent
+        ? 'text-red-400 bg-red-500/10 border border-red-500/20 animate-pulse'
+        : 'text-emerald-400 bg-emerald-500/10 border border-emerald-500/20'
+    )}>
+      <Timer className="h-3 w-3" />
+      {String(hours).padStart(2, '0')}:{String(mins).padStart(2, '0')}:{String(secs).padStart(2, '0')}
+    </span>
+  );
+};
+
 const TacheDayModal: React.FC<TacheDayModalProps> = ({
-  open, onOpenChange, selectedDay, taches, onEdit, onDelete, onAddTache, onMoveTache, premiumBtnClass, mirrorShine
+  open, onOpenChange, selectedDay, taches, onEdit, onDelete, onAddTache, onMoveTache, onValidateTache, premiumBtnClass, mirrorShine
 }) => {
   const dayTaches = taches.filter(t => t.date === selectedDay);
   const dragRef = useRef<{ tacheId: string; originHeure: string } | null>(null);
@@ -33,7 +93,6 @@ const TacheDayModal: React.FC<TacheDayModalProps> = ({
   };
 
   const getTachesAtHour = (hour: number) => {
-    const h = String(hour).padStart(2, '0');
     return dayTaches.filter(t => {
       const tHour = parseInt(t.heureDebut.split(':')[0]);
       return tHour === hour;
@@ -59,6 +118,13 @@ const TacheDayModal: React.FC<TacheDayModalProps> = ({
     if (tacheId) {
       const newHeure = `${String(hour).padStart(2, '0')}:00`;
       onMoveTache(tacheId, newHeure);
+    }
+  };
+
+  const handleTimerExpired = (tache: Tache) => {
+    // Trigger validation via parent
+    if (!tache.completed) {
+      onValidateTache(tache);
     }
   };
 
@@ -105,6 +171,7 @@ const TacheDayModal: React.FC<TacheDayModalProps> = ({
                       onDragStart={(e) => handleDragStart(e, tache)}
                       className={cn(
                         'flex items-center gap-2 px-3 py-2 rounded-xl border transition-all group',
+                        tache.completed && 'opacity-60',
                         tache.importance === 'pertinent'
                           ? 'bg-red-500/15 border-red-500/30 shadow-lg shadow-red-500/10'
                           : 'bg-emerald-500/15 border-emerald-500/30 shadow-lg shadow-emerald-500/10 cursor-grab active:cursor-grabbing'
@@ -118,28 +185,62 @@ const TacheDayModal: React.FC<TacheDayModalProps> = ({
                         tache.importance === 'pertinent' ? 'bg-red-500' : 'bg-emerald-500'
                       )} />
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-bold text-white truncate">{tache.description}</p>
-                        <p className="text-[10px] text-white/50">
-                          {tache.heureDebut} - {tache.heureFin}
-                          {tache.travailleurNom && ` • ${tache.travailleurNom}`}
+                        <p className={cn(
+                          'text-xs font-bold text-white truncate',
+                          tache.completed && 'line-through text-white/50'
+                        )}>
+                          {tache.description}
                         </p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <p className="text-[10px] text-white/50">
+                            {tache.heureDebut} - {tache.heureFin}
+                            {tache.travailleurNom && ` • ${tache.travailleurNom}`}
+                          </p>
+                          {selectedDay && !tache.completed && (
+                            <CountdownDisplay
+                              heureFin={tache.heureFin}
+                              date={selectedDay}
+                              open={open}
+                              onExpired={() => handleTimerExpired(tache)}
+                              tacheId={tache.id}
+                            />
+                          )}
+                          {tache.completed && (
+                            <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-0.5">
+                              <CheckCircle className="h-3 w-3" /> Terminée
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        {tache.importance === 'pertinent' ? (
-                          <AlertTriangle className="h-3.5 w-3.5 text-red-400" />
-                        ) : (
-                          <CheckCircle className="h-3.5 w-3.5 text-emerald-400" />
+                      <div className="flex items-center gap-1 shrink-0">
+                        {/* Validate button - always visible */}
+                        {!tache.completed && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); onValidateTache(tache); }}
+                            className={cn(
+                              'p-1.5 rounded-lg transition-all',
+                              'bg-emerald-500/20 hover:bg-emerald-500/40 border border-emerald-500/30'
+                            )}
+                            title="Valider cette tâche"
+                          >
+                            <Check className="h-3.5 w-3.5 text-emerald-400" />
+                          </button>
                         )}
-                        {tache.importance !== 'pertinent' && (
-                          <>
-                            <button onClick={() => onEdit(tache)} className="p-1 rounded-lg hover:bg-white/10">
-                              <Pencil className="h-3 w-3 text-blue-400" />
-                            </button>
-                            <button onClick={() => onDelete(tache.id)} className="p-1 rounded-lg hover:bg-white/10">
-                              <Trash2 className="h-3 w-3 text-red-400" />
-                            </button>
-                          </>
-                        )}
+                        {/* Edit/Delete - on hover for non-pertinent */}
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          {tache.importance === 'pertinent' ? (
+                            <AlertTriangle className="h-3.5 w-3.5 text-red-400" />
+                          ) : (
+                            <>
+                              <button onClick={() => onEdit(tache)} className="p-1 rounded-lg hover:bg-white/10">
+                                <Pencil className="h-3 w-3 text-blue-400" />
+                              </button>
+                              <button onClick={() => onDelete(tache.id)} className="p-1 rounded-lg hover:bg-white/10">
+                                <Trash2 className="h-3 w-3 text-red-400" />
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   ))}
