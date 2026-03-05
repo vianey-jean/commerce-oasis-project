@@ -55,9 +55,15 @@ router.put('/:id', (req, res) => {
   const existing = Tache.getById(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Tâche non trouvée' });
   
+  // Allow marking as completed for any task
+  if (req.body.completed !== undefined && Object.keys(req.body).length === 1) {
+    const updated = Tache.update(req.params.id, { completed: req.body.completed });
+    if (!updated) return res.status(500).json({ error: 'Erreur mise à jour' });
+    return res.json(updated);
+  }
+  
   // Vérifier les règles d'importance
   if (existing.importance === 'pertinent') {
-    // On ne peut modifier que la description
     const updated = Tache.update(req.params.id, { description: req.body.description });
     if (!updated) return res.status(500).json({ error: 'Erreur mise à jour' });
     return res.json(updated);

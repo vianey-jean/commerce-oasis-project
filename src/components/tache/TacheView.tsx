@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import tacheApi, { Tache } from '@/services/api/tacheApi';
 import travailleurApi, { Travailleur } from '@/services/api/travailleurApi';
@@ -8,6 +8,9 @@ import TacheDayModal from './TacheDayModal';
 import TacheFormModal from './TacheFormModal';
 import TacheWeekModal from './TacheWeekModal';
 import TacheConfirmDialog from './TacheConfirmDialog';
+import TacheNotificationBar, { TacheNotification } from './TacheNotificationBar';
+import TacheValidationModal from './TacheValidationModal';
+import TravailleurModal from '@/components/pointage/modals/TravailleurModal';
 
 const premiumBtnClass = "group relative overflow-hidden rounded-xl sm:rounded-2xl backdrop-blur-xl border transition-all duration-300 hover:scale-105 px-4 py-2 sm:px-5 sm:py-3 text-xs sm:text-sm font-semibold";
 const mirrorShine = "absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500";
@@ -30,6 +33,21 @@ const TacheView: React.FC = () => {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [moveConfirm, setMoveConfirm] = useState<{ tacheId: string; newDate: string; newHeure: string } | null>(null);
 
+  // Validation modal
+  const [validationTache, setValidationTache] = useState<Tache | null>(null);
+  const [showValidationModal, setShowValidationModal] = useState(false);
+
+  // Notifications
+  const [notifications, setNotifications] = useState<TacheNotification[]>([]);
+  const notifiedRef = useRef<Set<string>>(new Set());
+
+  // Travailleur modal
+  const [showTravailleurModal, setShowTravailleurModal] = useState(false);
+  const [travailleurForm, setTravailleurForm] = useState({ nom: '', prenom: '', adresse: '', phone: '', genre: 'homme' as 'homme' | 'femme' });
+
+  // Follow-up form (pre-filled)
+  const [followUpTache, setFollowUpTache] = useState<Tache | null>(null);
+
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
@@ -51,12 +69,43 @@ const TacheView: React.FC = () => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Check for expired taches periodically and add notifications
+  useEffect(() => {
+    const checkExpired = () => {
+      const now = new Date();
+      const todayStr = now.toISOString().split('T')[0];
+      taches.forEach(tache => {
+        if (tache.completed) return;
+        if (tache.date !== todayStr) return;
+        if (notifiedRef.current.has(tache.id)) return;
+
+        const [h, m] = tache.heureFin.split(':').map(Number);
+        const end = new Date(tache.date + 'T00:00:00');
+        end.setHours(h, m, 0, 0);
+
+        if (now >= end) {
+          notifiedRef.current.add(tache.id);
+          setNotifications(prev => [...prev, {
+            id: `notif-${tache.id}-${Date.now()}`,
+            tache,
+            message: 'Vérifiez si cette tâche est terminée !'
+          }]);
+        }
+      });
+    };
+
+    const interval = setInterval(checkExpired, 5000);
+    checkExpired();
+    return () => clearInterval(interval);
+  }, [taches]);
+
   const handleAddTache = async (data: Omit<Tache, 'id' | 'createdAt'>) => {
     try {
       await tacheApi.create(data);
       toast({ title: '✅ Tâche ajoutée' });
       setShowFormModal(false);
       setEditingTache(null);
+      setFollowUpTache(null);
       fetchData();
     } catch {
       toast({ title: 'Erreur', description: "Impossible d'ajouter la tâche", variant: 'destructive' });
@@ -118,6 +167,76 @@ const TacheView: React.FC = () => {
     setMoveConfirm({ tacheId, newDate, newHeure: tache.heureDebut });
   };
 
+  // Validate task as completed
+  const handleValidateTache = (tache: Tache) => {
+    setValidationTache(tache);
+    setShowValidationModal(true);
+  };
+
+  const handleConfirmValidation = async (tache: Tache) => {
+    try {
+      await tacheApi.update(tache.id, { completed: true });
+      // Also mark all related parent/child tasks as completed
+      const relatedTaches = taches.filter(t =>
+        t.parentId === tache.id || t.id === tache.parentId ||
+        (tache.parentId && t.parentId === tache.parentId)
+      );
+      for (const rt of relatedTaches) {
+        if (!rt.completed) {
+          await tacheApi.update(rt.id, { completed: true });
+        }
+      }
+      toast({ title: '✅ Tâche validée comme terminée' });
+      setShowValidationModal(false);
+      setValidationTache(null);
+      // Remove related notifications
+      setNotifications(prev => prev.filter(n => n.tache.id !== tache.id));
+      fetchData();
+    } catch {
+      toast({ title: 'Erreur', variant: 'destructive' });
+    }
+  };
+
+  const handleCreateFollowUp = (tache: Tache) => {
+    setShowValidationModal(false);
+    setValidationTache(null);
+    // Remove notification
+    setNotifications(prev => prev.filter(n => n.tache.id !== tache.id));
+    // Open form pre-filled with tache data but empty date/time
+    setFollowUpTache(tache);
+    setEditingTache(null);
+    setShowDayModal(false);
+    setShowFormModal(true);
+  };
+
+  const handleNotificationClick = (notif: TacheNotification) => {
+    setNotifications(prev => prev.filter(n => n.id !== notif.id));
+    handleValidateTache(notif.tache);
+  };
+
+  const handleDismissNotification = (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
+
+  // Travailleur
+  const handleAddTravailleur = async () => {
+    if (!travailleurForm.nom || !travailleurForm.prenom) {
+      toast({ title: 'Erreur', description: 'Nom et prénom requis', variant: 'destructive' });
+      return;
+    }
+    try {
+      await travailleurApi.create(travailleurForm);
+      toast({ title: '✅ Travailleur ajouté' });
+      setShowTravailleurModal(false);
+      setTravailleurForm({ nom: '', prenom: '', adresse: '', phone: '', genre: 'homme' });
+      // Refresh travailleurs
+      const travRes = await travailleurApi.getAll();
+      setTravailleurs(travRes.data);
+    } catch {
+      toast({ title: 'Erreur', variant: 'destructive' });
+    }
+  };
+
   const getWeekDates = () => {
     const today = new Date();
     const dayOfWeek = today.getDay();
@@ -136,6 +255,18 @@ const TacheView: React.FC = () => {
   const pertinentCount = taches.filter(t => t.importance === 'pertinent').length;
   const optionnelCount = taches.filter(t => t.importance === 'optionnel').length;
 
+  // Build form default for follow-up
+  const followUpDefaults = followUpTache ? {
+    ...followUpTache,
+    id: undefined,
+    createdAt: undefined,
+    completed: undefined,
+    parentId: followUpTache.id,
+    date: '',
+    heureDebut: '',
+    heureFin: '',
+  } : null;
+
   return (
     <>
       <TacheHero
@@ -145,9 +276,10 @@ const TacheView: React.FC = () => {
         optionnelCount={optionnelCount}
         premiumBtnClass={premiumBtnClass}
         mirrorShine={mirrorShine}
-        onAddTache={() => { setEditingTache(null); setShowFormModal(true); }}
+        onAddTache={() => { setEditingTache(null); setFollowUpTache(null); setShowFormModal(true); }}
         onShowToday={() => { setSelectedDay(todayStr); setShowDayModal(true); }}
         onShowWeek={() => setShowWeekModal(true)}
+        onAddTravailleur={() => setShowTravailleurModal(true)}
       />
 
       <div className="max-w-7xl mx-auto px-4 pb-12">
@@ -166,9 +298,9 @@ const TacheView: React.FC = () => {
         onOpenChange={setShowDayModal}
         selectedDay={selectedDay}
         taches={taches}
-        onEdit={(t) => { setEditingTache(t); setShowDayModal(false); setShowFormModal(true); }}
+        onEdit={(t) => { setEditingTache(t); setFollowUpTache(null); setShowDayModal(false); setShowFormModal(true); }}
         onDelete={(id) => setDeleteConfirm(id)}
-        onAddTache={() => { setEditingTache(null); setShowDayModal(false); setShowFormModal(true); }}
+        onAddTache={() => { setEditingTache(null); setFollowUpTache(null); setShowDayModal(false); setShowFormModal(true); }}
         onMoveTache={(id, newHeure) => {
           const tache = taches.find(t => t.id === id);
           if (!tache || tache.importance === 'pertinent') {
@@ -177,6 +309,7 @@ const TacheView: React.FC = () => {
           }
           setMoveConfirm({ tacheId: id, newDate: selectedDay || '', newHeure });
         }}
+        onValidateTache={handleValidateTache}
         premiumBtnClass={premiumBtnClass}
         mirrorShine={mirrorShine}
       />
@@ -185,8 +318,11 @@ const TacheView: React.FC = () => {
         open={showFormModal}
         onOpenChange={setShowFormModal}
         travailleurs={travailleurs}
-        editingTache={editingTache}
-        onSubmit={editingTache ? (data) => handleUpdateTache(editingTache.id, data) : handleAddTache}
+        editingTache={followUpTache ? ({ ...followUpTache, id: '', date: '', heureDebut: '', heureFin: '' } as any) : editingTache}
+        onSubmit={editingTache
+          ? (data) => handleUpdateTache(editingTache.id, data)
+          : (data) => handleAddTache(followUpTache ? { ...data, parentId: followUpTache.id } : data)
+        }
         premiumBtnClass={premiumBtnClass}
         mirrorShine={mirrorShine}
         defaultDate={selectedDay || undefined}
@@ -213,6 +349,32 @@ const TacheView: React.FC = () => {
         onMoveConfirm={handleMoveTache}
         premiumBtnClass={premiumBtnClass}
         mirrorShine={mirrorShine}
+      />
+
+      <TacheValidationModal
+        open={showValidationModal}
+        onOpenChange={setShowValidationModal}
+        tache={validationTache}
+        onValidate={handleConfirmValidation}
+        onCreateFollowUp={handleCreateFollowUp}
+        premiumBtnClass={premiumBtnClass}
+        mirrorShine={mirrorShine}
+      />
+
+      <TravailleurModal
+        open={showTravailleurModal}
+        onOpenChange={setShowTravailleurModal}
+        form={travailleurForm}
+        setForm={setTravailleurForm}
+        onSubmit={handleAddTravailleur}
+        premiumBtnClass={premiumBtnClass}
+        mirrorShine={mirrorShine}
+      />
+
+      <TacheNotificationBar
+        notifications={notifications}
+        onClickNotification={handleNotificationClick}
+        onDismiss={handleDismissNotification}
       />
     </>
   );

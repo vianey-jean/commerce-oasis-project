@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import { ListTodo, Plus, CalendarDays, Eye, Sparkles } from 'lucide-react';
+import { ListTodo, Plus, CalendarDays, Eye, Sparkles, UserPlus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface TacheHeroProps {
@@ -14,12 +14,13 @@ interface TacheHeroProps {
   onAddTache: () => void;
   onShowToday: () => void;
   onShowWeek: () => void;
+  onAddTravailleur?: () => void;
 }
 
 const TacheHero: React.FC<TacheHeroProps> = ({
   totalTaches, todayCount, pertinentCount, optionnelCount,
   premiumBtnClass, mirrorShine,
-  onAddTache, onShowToday, onShowWeek
+  onAddTache, onShowToday, onShowWeek, onAddTravailleur
 }) => {
   return (
     <div className="relative overflow-hidden py-8 sm:py-12">
@@ -73,6 +74,13 @@ const TacheHero: React.FC<TacheHeroProps> = ({
                 <span className={mirrorShine} />
                 <span className="relative flex items-center"><CalendarDays className="h-4 w-4 sm:h-5 sm:w-5 mr-2" /> Tâches de la semaine</span>
               </Button>
+              {onAddTravailleur && (
+                <Button onClick={onAddTravailleur}
+                  className={cn(premiumBtnClass, "bg-gradient-to-br from-rose-500 via-pink-600 to-red-700 border-rose-300/40 text-white shadow-[0_20px_70px_rgba(244,63,94,0.5)]")}>
+                  <span className={mirrorShine} />
+                  <span className="relative flex items-center"><UserPlus className="h-4 w-4 sm:h-5 sm:w-5 mr-2" /> Ajouter Travailleur</span>
+                </Button>
+              )}
             </div>
           </div>
         </motion.div>
