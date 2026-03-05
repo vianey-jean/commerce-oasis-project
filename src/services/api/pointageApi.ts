@@ -10,12 +10,15 @@ export interface PointageEntry {
   prixJournalier: number;
   prixHeure: number;
   montantTotal: number;
+  travailleurId?: string;
+  travailleurNom?: string;
   createdAt?: string;
 }
 
 const pointageApi = {
   getAll: () => api.get<PointageEntry[]>('/api/pointages'),
   getByMonth: (year: number, month: number) => api.get<PointageEntry[]>(`/api/pointages?year=${year}&month=${month}`),
+  getByYear: (year: number) => api.get<PointageEntry[]>(`/api/pointages?year=${year}`),
   getByDate: (date: string) => api.get<PointageEntry[]>(`/api/pointages?date=${date}`),
   getById: (id: string) => api.get<PointageEntry>(`/api/pointages/${id}`),
   create: (data: Omit<PointageEntry, 'id' | 'createdAt'>) => api.post<PointageEntry>('/api/pointages', data),

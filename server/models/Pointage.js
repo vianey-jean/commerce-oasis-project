@@ -26,6 +26,19 @@ const Pointage = {
     }
   },
 
+  getByYear: (year) => {
+    try {
+      const data = fs.readFileSync(pointagePath, 'utf8');
+      const items = JSON.parse(data);
+      return items.filter(item => {
+        const d = new Date(item.date);
+        return d.getFullYear() === parseInt(year);
+      });
+    } catch (error) {
+      return [];
+    }
+  },
+
   getByDate: (date) => {
     try {
       const data = fs.readFileSync(pointagePath, 'utf8');

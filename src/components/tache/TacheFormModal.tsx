@@ -1,0 +1,214 @@
+import React, { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+import { ListTodo, CalendarDays, Clock, FileText, AlertTriangle, X } from 'lucide-react';
+import { Tache } from '@/services/api/tacheApi';
+import { Travailleur } from '@/services/api/travailleurApi';
+import TravailleurSearchInput from '@/components/pointage/TravailleurSearchInput';
+
+interface TacheFormModalProps {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  travailleurs: Travailleur[];
+  editingTache: Tache | null;
+  onSubmit: (data: any) => void;
+  premiumBtnClass: string;
+  mirrorShine: string;
+  defaultDate?: string;
+}
+
+const TacheFormModal: React.FC<TacheFormModalProps> = ({
+  open, onOpenChange, travailleurs, editingTache, onSubmit, premiumBtnClass, mirrorShine, defaultDate
+}) => {
+  const [form, setForm] = useState({
+    travailleurId: '',
+    travailleurNom: '',
+    date: defaultDate || new Date().toISOString().split('T')[0],
+    heureDebut: '08:00',
+    heureFin: '09:00',
+    description: '',
+    importance: 'optionnel' as 'pertinent' | 'optionnel'
+  });
+
+  useEffect(() => {
+    if (editingTache) {
+      setForm({
+        travailleurId: editingTache.travailleurId || '',
+        travailleurNom: editingTache.travailleurNom || '',
+        date: editingTache.date,
+        heureDebut: editingTache.heureDebut,
+        heureFin: editingTache.heureFin,
+        description: editingTache.description,
+        importance: editingTache.importance
+      });
+    } else {
+      setForm({
+        travailleurId: '',
+        travailleurNom: '',
+        date: defaultDate || new Date().toISOString().split('T')[0],
+        heureDebut: '08:00',
+        heureFin: '09:00',
+        description: '',
+        importance: 'optionnel'
+      });
+    }
+  }, [editingTache, open, defaultDate]);
+
+  const isPertinentEdit = editingTache?.importance === 'pertinent';
+
+  const handleSubmit = () => {
+    if (!form.date || !form.heureDebut || !form.description) return;
+    onSubmit(form);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="bg-gradient-to-br from-slate-900 via-violet-900/30 to-purple-900/20 backdrop-blur-2xl border border-white/10 shadow-2xl rounded-3xl max-w-md">
+        <DialogHeader className="text-center space-y-3 pb-4">
+          <div className="mx-auto w-14 h-14 bg-gradient-to-br from-violet-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-xl shadow-violet-500/30">
+            <ListTodo className="h-7 w-7 text-white" />
+          </div>
+          <DialogTitle className="text-xl font-black bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
+            {editingTache ? '✏️ Modifier la Tâche' : '✨ Nouvelle Tâche'}
+          </DialogTitle>
+          {isPertinentEdit && (
+            <p className="text-xs text-red-400 font-bold flex items-center justify-center gap-1">
+              <AlertTriangle className="h-3 w-3" /> Tâche pertinente : seule la description est modifiable
+            </p>
+          )}
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <TravailleurSearchInput
+            travailleurs={travailleurs}
+            selectedId={form.travailleurId}
+            selectedNom={form.travailleurNom}
+            onSelect={(id, nom) => setForm({ ...form, travailleurId: id, travailleurNom: nom })}
+            onClear={() => setForm({ ...form, travailleurId: '', travailleurNom: '' })}
+            minChars={3}
+          />
+
+          <div className="space-y-2">
+            <Label className="text-sm font-bold text-white/80 flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-cyan-400" /> Date
+            </Label>
+            <Input
+              type="date"
+              value={form.date}
+              onChange={e => setForm({ ...form, date: e.target.value })}
+              disabled={isPertinentEdit}
+              className="bg-white/10 border border-white/20 focus:border-cyan-400 rounded-xl text-white disabled:opacity-50"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label className="text-sm font-bold text-white/80 flex items-center gap-2">
+                <Clock className="h-4 w-4 text-blue-400" /> Début
+              </Label>
+              <Input
+                type="time"
+                value={form.heureDebut}
+                onChange={e => setForm({ ...form, heureDebut: e.target.value })}
+                disabled={isPertinentEdit}
+                className="bg-white/10 border border-white/20 focus:border-blue-400 rounded-xl text-white disabled:opacity-50"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-sm font-bold text-white/80 flex items-center gap-2">
+                <Clock className="h-4 w-4 text-blue-400" /> Fin
+              </Label>
+              <Input
+                type="time"
+                value={form.heureFin}
+                onChange={e => setForm({ ...form, heureFin: e.target.value })}
+                disabled={isPertinentEdit}
+                className="bg-white/10 border border-white/20 focus:border-blue-400 rounded-xl text-white disabled:opacity-50"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm font-bold text-white/80 flex items-center gap-2">
+              <FileText className="h-4 w-4 text-amber-400" /> Tâche à faire
+            </Label>
+            <Textarea
+              value={form.description}
+              onChange={e => setForm({ ...form, description: e.target.value })}
+              placeholder="Décrivez la tâche à effectuer..."
+              rows={3}
+              className="bg-white/10 border border-white/20 focus:border-amber-400 rounded-xl text-white placeholder:text-white/40 resize-none"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-sm font-bold text-white/80 flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-red-400" /> Importance
+            </Label>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  // Si c'est une édition pertinente, on ne peut pas changer en optionnel
+                  if (isPertinentEdit) return;
+                  setForm({ ...form, importance: 'pertinent' });
+                }}
+                disabled={isPertinentEdit && form.importance === 'optionnel'}
+                className={cn(
+                  'flex-1 py-3 rounded-xl font-bold text-sm transition-all border',
+                  form.importance === 'pertinent'
+                    ? 'bg-red-500/20 border-red-500/50 text-red-400 shadow-lg shadow-red-500/20'
+                    : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10'
+                )}
+              >
+                🔴 Pertinent
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  // Une tâche pertinente ne peut pas redevenir optionnelle
+                  if (editingTache?.importance === 'pertinent') return;
+                  setForm({ ...form, importance: 'optionnel' });
+                }}
+                disabled={editingTache?.importance === 'pertinent'}
+                className={cn(
+                  'flex-1 py-3 rounded-xl font-bold text-sm transition-all border',
+                  form.importance === 'optionnel'
+                    ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 shadow-lg shadow-emerald-500/20'
+                    : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10',
+                  editingTache?.importance === 'pertinent' && 'opacity-30 cursor-not-allowed'
+                )}
+              >
+                🟢 Optionnel
+              </button>
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <Button
+              onClick={handleSubmit}
+              disabled={!form.date || !form.heureDebut || !form.description}
+              className={cn(premiumBtnClass, "flex-1 bg-gradient-to-br from-violet-500 via-violet-600 to-purple-700 border-violet-300/40 text-white shadow-[0_20px_70px_rgba(139,92,246,0.6)] disabled:opacity-50 disabled:hover:scale-100")}
+            >
+              <span className={mirrorShine} />
+              <span className="relative flex items-center justify-center w-full">
+                ✅ {editingTache ? 'Modifier' : 'Enregistrer'}
+              </span>
+            </Button>
+            <Button onClick={() => onOpenChange(false)}
+              className={cn(premiumBtnClass, "flex-1 bg-gradient-to-br from-white/20 to-white/5 border-white/20 text-white/90")}>
+              <span className={mirrorShine} />
+              <span className="relative flex items-center justify-center w-full"><X className="h-4 w-4 mr-2" /> Annuler</span>
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
+
+export default TacheFormModal;
