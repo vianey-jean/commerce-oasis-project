@@ -326,6 +326,7 @@ const TacheView: React.FC = () => {
         premiumBtnClass={premiumBtnClass}
         mirrorShine={mirrorShine}
         defaultDate={selectedDay || undefined}
+        isFollowUp={!!followUpTache}
       />
 
       <TacheWeekModal

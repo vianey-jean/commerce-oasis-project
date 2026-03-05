@@ -19,10 +19,11 @@ interface TacheFormModalProps {
   premiumBtnClass: string;
   mirrorShine: string;
   defaultDate?: string;
+  isFollowUp?: boolean;
 }
 
 const TacheFormModal: React.FC<TacheFormModalProps> = ({
-  open, onOpenChange, travailleurs, editingTache, onSubmit, premiumBtnClass, mirrorShine, defaultDate
+  open, onOpenChange, travailleurs, editingTache, onSubmit, premiumBtnClass, mirrorShine, defaultDate, isFollowUp
 }) => {
   const [form, setForm] = useState({
     travailleurId: '',
@@ -59,6 +60,7 @@ const TacheFormModal: React.FC<TacheFormModalProps> = ({
   }, [editingTache, open, defaultDate]);
 
   const isPertinentEdit = editingTache?.importance === 'pertinent';
+  const isFieldDisabledByFollowUp = !!isFollowUp;
 
   const handleSubmit = () => {
     if (!form.date || !form.heureDebut || !form.description) return;
@@ -73,9 +75,14 @@ const TacheFormModal: React.FC<TacheFormModalProps> = ({
             <ListTodo className="h-7 w-7 text-white" />
           </div>
           <DialogTitle className="text-xl font-black bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
-            {editingTache ? '✏️ Modifier la Tâche' : '✨ Nouvelle Tâche'}
+            {isFollowUp ? '📅 Reporter la Tâche' : editingTache ? '✏️ Modifier la Tâche' : '✨ Nouvelle Tâche'}
           </DialogTitle>
-          {isPertinentEdit && (
+          {isFollowUp && (
+            <p className="text-xs text-amber-400 font-bold flex items-center justify-center gap-1">
+              ⚠️ Choisissez une nouvelle date et horaire pour reporter cette tâche
+            </p>
+          )}
+          {isPertinentEdit && !isFollowUp && (
             <p className="text-xs text-red-400 font-bold flex items-center justify-center gap-1">
               <AlertTriangle className="h-3 w-3" /> Tâche pertinente : seule la description est modifiable
             </p>
@@ -83,14 +90,16 @@ const TacheFormModal: React.FC<TacheFormModalProps> = ({
         </DialogHeader>
 
         <div className="space-y-4">
-          <TravailleurSearchInput
-            travailleurs={travailleurs}
-            selectedId={form.travailleurId}
-            selectedNom={form.travailleurNom}
-            onSelect={(id, nom) => setForm({ ...form, travailleurId: id, travailleurNom: nom })}
-            onClear={() => setForm({ ...form, travailleurId: '', travailleurNom: '' })}
-            minChars={3}
-          />
+          <div className={cn(isFieldDisabledByFollowUp && 'opacity-50 pointer-events-none')}>
+            <TravailleurSearchInput
+              travailleurs={travailleurs}
+              selectedId={form.travailleurId}
+              selectedNom={form.travailleurNom}
+              onSelect={(id, nom) => setForm({ ...form, travailleurId: id, travailleurNom: nom })}
+              onClear={() => setForm({ ...form, travailleurId: '', travailleurNom: '' })}
+              minChars={3}
+            />
+          </div>
 
           <div className="space-y-2">
             <Label className="text-sm font-bold text-white/80 flex items-center gap-2">
@@ -100,7 +109,7 @@ const TacheFormModal: React.FC<TacheFormModalProps> = ({
               type="date"
               value={form.date}
               onChange={e => setForm({ ...form, date: e.target.value })}
-              disabled={isPertinentEdit}
+              disabled={isPertinentEdit && !isFollowUp}
               className="bg-white/10 border border-white/20 focus:border-cyan-400 rounded-xl text-white disabled:opacity-50"
             />
           </div>
@@ -114,7 +123,7 @@ const TacheFormModal: React.FC<TacheFormModalProps> = ({
                 type="time"
                 value={form.heureDebut}
                 onChange={e => setForm({ ...form, heureDebut: e.target.value })}
-                disabled={isPertinentEdit}
+                disabled={isPertinentEdit && !isFollowUp}
                 className="bg-white/10 border border-white/20 focus:border-blue-400 rounded-xl text-white disabled:opacity-50"
               />
             </div>
@@ -126,7 +135,7 @@ const TacheFormModal: React.FC<TacheFormModalProps> = ({
                 type="time"
                 value={form.heureFin}
                 onChange={e => setForm({ ...form, heureFin: e.target.value })}
-                disabled={isPertinentEdit}
+                disabled={isPertinentEdit && !isFollowUp}
                 className="bg-white/10 border border-white/20 focus:border-blue-400 rounded-xl text-white disabled:opacity-50"
               />
             </div>
@@ -141,11 +150,12 @@ const TacheFormModal: React.FC<TacheFormModalProps> = ({
               onChange={e => setForm({ ...form, description: e.target.value })}
               placeholder="Décrivez la tâche à effectuer..."
               rows={3}
-              className="bg-white/10 border border-white/20 focus:border-amber-400 rounded-xl text-white placeholder:text-white/40 resize-none"
+              disabled={isFieldDisabledByFollowUp}
+              className="bg-white/10 border border-white/20 focus:border-amber-400 rounded-xl text-white placeholder:text-white/40 resize-none disabled:opacity-50"
             />
           </div>
 
-          <div className="space-y-2">
+          <div className={cn("space-y-2", isFieldDisabledByFollowUp && 'opacity-50 pointer-events-none')}>
             <Label className="text-sm font-bold text-white/80 flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-red-400" /> Importance
             </Label>
@@ -153,11 +163,10 @@ const TacheFormModal: React.FC<TacheFormModalProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  // Si c'est une édition pertinente, on ne peut pas changer en optionnel
-                  if (isPertinentEdit) return;
+                  if (isPertinentEdit || isFieldDisabledByFollowUp) return;
                   setForm({ ...form, importance: 'pertinent' });
                 }}
-                disabled={isPertinentEdit && form.importance === 'optionnel'}
+                disabled={(isPertinentEdit && form.importance === 'optionnel') || isFieldDisabledByFollowUp}
                 className={cn(
                   'flex-1 py-3 rounded-xl font-bold text-sm transition-all border',
                   form.importance === 'pertinent'
@@ -170,17 +179,16 @@ const TacheFormModal: React.FC<TacheFormModalProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  // Une tâche pertinente ne peut pas redevenir optionnelle
-                  if (editingTache?.importance === 'pertinent') return;
+                  if (editingTache?.importance === 'pertinent' || isFieldDisabledByFollowUp) return;
                   setForm({ ...form, importance: 'optionnel' });
                 }}
-                disabled={editingTache?.importance === 'pertinent'}
+                disabled={editingTache?.importance === 'pertinent' || isFieldDisabledByFollowUp}
                 className={cn(
                   'flex-1 py-3 rounded-xl font-bold text-sm transition-all border',
                   form.importance === 'optionnel'
                     ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-400 shadow-lg shadow-emerald-500/20'
                     : 'bg-white/5 border-white/10 text-white/50 hover:bg-white/10',
-                  editingTache?.importance === 'pertinent' && 'opacity-30 cursor-not-allowed'
+                  (editingTache?.importance === 'pertinent' || isFieldDisabledByFollowUp) && 'opacity-30 cursor-not-allowed'
                 )}
               >
                 🟢 Optionnel
