@@ -30,6 +30,15 @@ const ObjectifChangesModal: React.FC<ObjectifChangesModalProps> = ({
   currentObjectif,
   annee
 }) => {
+  const now = new Date();
+  const currentMonth = now.getMonth() + 1; // 1-indexed
+  const currentYear = now.getFullYear();
+
+  // Filter only changes for the current month
+  const currentMonthChanges = objectifChanges.filter(change => {
+    return change.mois === currentMonth && change.annee === currentYear;
+  });
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('fr-FR', {
       style: 'currency',
@@ -58,7 +67,7 @@ const ObjectifChangesModal: React.FC<ObjectifChangesModalProps> = ({
               <History className="h-5 w-5 text-white" />
             </div>
             <span className="bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
-              Historique Objectifs {annee}
+              Objectifs {MOIS_NOMS[currentMonth - 1]} {currentYear}
             </span>
             <Sparkles className="h-4 w-4 text-amber-500 animate-pulse" />
           </DialogTitle>
@@ -72,7 +81,7 @@ const ObjectifChangesModal: React.FC<ObjectifChangesModalProps> = ({
                 <Target className="h-6 w-6 text-white" />
               </div>
               <div>
-                <p className="text-sm text-violet-600 dark:text-violet-400">Objectif actuel</p>
+                <p className="text-sm text-violet-600 dark:text-violet-400">Objectif actuel - {MOIS_NOMS[currentMonth - 1]}</p>
                 <p className="text-2xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
                   {formatCurrency(currentObjectif)}
                 </p>
@@ -82,13 +91,13 @@ const ObjectifChangesModal: React.FC<ObjectifChangesModalProps> = ({
 
           {/* Timeline */}
           <div className="max-h-[300px] overflow-y-auto pr-1">
-            {objectifChanges.length > 0 ? (
+            {currentMonthChanges.length > 0 ? (
               <div className="relative">
                 {/* Timeline line */}
                 <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-gradient-to-b from-violet-500 to-purple-500 rounded-full" />
                 
                 <div className="space-y-4">
-                  {objectifChanges.map((change, index) => (
+                  {currentMonthChanges.map((change, index) => (
                     <div
                       key={index}
                       className={cn(
@@ -128,7 +137,8 @@ const ObjectifChangesModal: React.FC<ObjectifChangesModalProps> = ({
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <Target className="h-12 w-12 mx-auto mb-2 opacity-30" />
-                <p>Aucun changement d'objectif</p>
+                <p>Aucun changement d'objectif ce mois-ci</p>
+                <p className="text-xs mt-1 opacity-60">Les statistiques se réinitialisent chaque 1er du mois</p>
               </div>
             )}
           </div>
