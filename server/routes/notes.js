@@ -17,9 +17,12 @@ router.post('/upload-drawing', auth, (req, res) => {
     const { dataUrl } = req.body;
     if (!dataUrl) return res.status(400).json({ error: 'No drawing data' });
 
-    // Extract base64 data
-    const matches = dataUrl.match(/^data:image\/(png|jpeg|jpg);base64,(.+)$/);
-    if (!matches) return res.status(400).json({ error: 'Invalid image data' });
+    // Extract base64 data - support any image format
+    const matches = dataUrl.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)/);
+    if (!matches) {
+      console.error('Drawing upload: regex did not match. dataUrl starts with:', dataUrl.substring(0, 50));
+      return res.status(400).json({ error: 'Invalid image data' });
+    }
 
     const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
     const buffer = Buffer.from(matches[2], 'base64');
