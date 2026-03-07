@@ -4,12 +4,17 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Clock, Plus, Pencil, Trash2, GripVertical, AlertTriangle, CheckCircle, Timer, Check } from 'lucide-react';
 import { Tache } from '@/services/api/tacheApi';
+import tacheApi from '@/services/api/tacheApi';
+import rdvApiService from '@/services/api/rdvApi';
+import { Travailleur } from '@/services/api/travailleurApi';
+import { useToast } from '@/hooks/use-toast';
 
 interface TacheDayModalProps {
   open: boolean;
   onOpenChange: (v: boolean) => void;
   selectedDay: string | null;
   taches: Tache[];
+  travailleurs: Travailleur[];
   onEdit: (t: Tache) => void;
   onDelete: (id: string) => void;
   onAddTache: () => void;
@@ -21,7 +26,21 @@ interface TacheDayModalProps {
 
 const HOURS = Array.from({ length: 20 }, (_, i) => i + 4); // 4h to 23h
 
-// Hook for countdown timer
+const isAdminTravailleur = (name: string, travailleursList: Travailleur[]) => {
+  if (!name) return false;
+  const nameLower = name.trim().toLowerCase();
+  return travailleursList.some(t => {
+    const fullName = `${t.prenom} ${t.nom}`.trim().toLowerCase();
+    const fullNameReverse = `${t.nom} ${t.prenom}`.trim().toLowerCase();
+    return (fullName === nameLower || fullNameReverse === nameLower) && t.role === 'administrateur';
+  });
+};
+
+const timeToMinutes = (time: string) => {
+  const [hours, minutes] = time.split(':').map(Number);
+  return hours * 60 + minutes;
+};
+
 const useCountdown = (heureFin: string, date: string, open: boolean) => {
   const [remaining, setRemaining] = useState<number>(0);
 
@@ -42,30 +61,19 @@ const useCountdown = (heureFin: string, date: string, open: boolean) => {
   return remaining;
 };
 
-const CountdownDisplay: React.FC<{ heureFin: string; date: string; open: boolean; onExpired: () => void; tacheId: string }> = ({
-  heureFin, date, open, onExpired, tacheId
+const CountdownDisplay: React.FC<{ heureFin: string; date: string; open: boolean }> = ({
+  heureFin, date, open
 }) => {
   const remaining = useCountdown(heureFin, date, open);
-  const expiredRef = useRef(false);
-
-  useEffect(() => {
-    if (remaining === 0 && !expiredRef.current && open) {
-      expiredRef.current = true;
-      onExpired();
-    }
-    if (remaining > 0) {
-      expiredRef.current = false;
-    }
-  }, [remaining, open, onExpired]);
 
   if (remaining <= 0) {
-    return <span className="text-[10px] font-black text-red-400 animate-pulse">⏰ Terminé</span>;
+    return <span className="text-[10px] font-black text-red-400 animate-pulse">⏰ À vérifier</span>;
   }
 
   const hours = Math.floor(remaining / 3600);
   const mins = Math.floor((remaining % 3600) / 60);
   const secs = remaining % 60;
-  const isUrgent = remaining < 3600; // < 1h
+  const isUrgent = remaining < 3600;
 
   return (
     <span className={cn(
@@ -81,8 +89,9 @@ const CountdownDisplay: React.FC<{ heureFin: string; date: string; open: boolean
 };
 
 const TacheDayModal: React.FC<TacheDayModalProps> = ({
-  open, onOpenChange, selectedDay, taches, onEdit, onDelete, onAddTache, onMoveTache, onValidateTache, premiumBtnClass, mirrorShine
+  open, onOpenChange, selectedDay, taches, travailleurs, onEdit, onDelete, onAddTache, onMoveTache, onValidateTache, premiumBtnClass, mirrorShine
 }) => {
+  const { toast } = useToast();
   const dayTaches = taches.filter(t => t.date === selectedDay);
   const dragRef = useRef<{ tacheId: string; originHeure: string } | null>(null);
 
@@ -112,20 +121,76 @@ const TacheDayModal: React.FC<TacheDayModalProps> = ({
     e.preventDefault();
   };
 
-  const handleDrop = (e: React.DragEvent, hour: number) => {
+  const handleDrop = async (e: React.DragEvent, hour: number) => {
     e.preventDefault();
     const tacheId = e.dataTransfer.getData('tacheId');
-    if (tacheId) {
-      const newHeure = `${String(hour).padStart(2, '0')}:00`;
-      onMoveTache(tacheId, newHeure);
-    }
-  };
+    if (!tacheId || !selectedDay) return;
 
-  const handleTimerExpired = (tache: Tache) => {
-    // Trigger validation via parent
-    if (!tache.completed) {
-      onValidateTache(tache);
+    const tache = dayTaches.find(t => t.id === tacheId);
+    if (!tache) return;
+
+    const newHeureDebut = `${String(hour).padStart(2, '0')}:00`;
+    const duration = Math.max(1, timeToMinutes(tache.heureFin) - timeToMinutes(tache.heureDebut));
+    const newEndMinutes = timeToMinutes(newHeureDebut) + duration;
+
+    if (newEndMinutes > 23 * 60 + 59) {
+      toast({ title: 'Erreur', description: 'Ce déplacement dépasse la fin de journée autorisée.', variant: 'destructive' });
+      return;
     }
+
+    const personName = (tache.travailleurNom || '').trim().toLowerCase();
+
+    // Check conflicts for this person's taches (excluding the dragged one)
+    const personTaches = dayTaches.filter(t => {
+      if (t.id === tacheId) return false;
+      return (t.travailleurNom || '').trim().toLowerCase() === personName;
+    });
+
+    const newStart = timeToMinutes(newHeureDebut);
+    const newEnd = newStart + duration;
+
+    // Check tache conflicts for this person
+    const tacheConflict = personTaches.find(t => {
+      const s = timeToMinutes(t.heureDebut);
+      const e = timeToMinutes(t.heureFin);
+      return newStart <= e && newEnd >= s;
+    });
+
+    if (tacheConflict) {
+      toast({
+        title: '⚠️ Créneau occupé',
+        description: `${tache.travailleurNom || 'Cette personne'} a déjà une tâche "${tacheConflict.description}" (${tacheConflict.heureDebut} - ${tacheConflict.heureFin})`,
+        variant: 'destructive'
+      });
+      return;
+    }
+
+    // For admin users, also check RDV conflicts
+    if (isAdminTravailleur(tache.travailleurNom || '', travailleurs)) {
+      try {
+        const rdvs = await rdvApiService.getAll();
+        const rdvConflict = rdvs.find(r => {
+          if (r.date !== selectedDay) return false;
+          if (r.statut === 'annule' || r.statut === 'termine') return false;
+          const s = timeToMinutes(r.heureDebut);
+          const e = timeToMinutes(r.heureFin);
+          return newStart <= e && newEnd >= s;
+        });
+
+        if (rdvConflict) {
+          toast({
+            title: '⚠️ RDV en conflit',
+            description: `Un rendez-vous "${rdvConflict.titre}" occupe ce créneau (${rdvConflict.heureDebut} - ${rdvConflict.heureFin})`,
+            variant: 'destructive'
+          });
+          return;
+        }
+      } catch {
+        // If RDV check fails, let the backend validate
+      }
+    }
+
+    onMoveTache(tacheId, newHeureDebut);
   };
 
   return (
@@ -201,8 +266,6 @@ const TacheDayModal: React.FC<TacheDayModalProps> = ({
                               heureFin={tache.heureFin}
                               date={selectedDay}
                               open={open}
-                              onExpired={() => handleTimerExpired(tache)}
-                              tacheId={tache.id}
                             />
                           )}
                           {tache.completed && (
@@ -213,7 +276,6 @@ const TacheDayModal: React.FC<TacheDayModalProps> = ({
                         </div>
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
-                        {/* Validate button - always visible */}
                         {!tache.completed && (
                           <button
                             onClick={(e) => { e.stopPropagation(); onValidateTache(tache); }}
@@ -226,7 +288,6 @@ const TacheDayModal: React.FC<TacheDayModalProps> = ({
                             <Check className="h-3.5 w-3.5 text-emerald-400" />
                           </button>
                         )}
-                        {/* Edit/Delete - on hover for non-pertinent */}
                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           {tache.importance === 'pertinent' ? (
                             <AlertTriangle className="h-3.5 w-3.5 text-red-400" />

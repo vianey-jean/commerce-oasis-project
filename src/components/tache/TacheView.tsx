@@ -31,7 +31,7 @@ const TacheView: React.FC = () => {
 
   // Confirm dialogs
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [moveConfirm, setMoveConfirm] = useState<{ tacheId: string; newDate: string; newHeure: string } | null>(null);
+  const [moveConfirm, setMoveConfirm] = useState<{ tacheId: string; newDate: string; newHeure: string; newHeureFin: string } | null>(null);
 
   // Validation modal
   const [validationTache, setValidationTache] = useState<Tache | null>(null);
@@ -43,13 +43,23 @@ const TacheView: React.FC = () => {
 
   // Travailleur modal
   const [showTravailleurModal, setShowTravailleurModal] = useState(false);
-  const [travailleurForm, setTravailleurForm] = useState({ nom: '', prenom: '', adresse: '', phone: '', genre: 'homme' as 'homme' | 'femme' });
+  const [travailleurForm, setTravailleurForm] = useState({ nom: '', prenom: '', adresse: '', phone: '', genre: 'homme' as 'homme' | 'femme', role: 'autre' as 'administrateur' | 'autre' });
 
   // Follow-up form (pre-filled)
   const [followUpTache, setFollowUpTache] = useState<Tache | null>(null);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
+  const timeToMinutes = (time: string) => {
+    const [hours, minutes] = time.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+  const minutesToTime = (minutes: number) => {
+    const safeMinutes = Math.max(0, Math.min(23 * 60 + 59, minutes));
+    const hours = Math.floor(safeMinutes / 60);
+    const mins = safeMinutes % 60;
+    return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+  };
 
   const fetchData = useCallback(async () => {
     try {
@@ -107,8 +117,9 @@ const TacheView: React.FC = () => {
       setEditingTache(null);
       setFollowUpTache(null);
       fetchData();
-    } catch {
-      toast({ title: 'Erreur', description: "Impossible d'ajouter la tâche", variant: 'destructive' });
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || "Impossible d'ajouter la tâche";
+      toast({ title: 'Erreur', description: msg, variant: 'destructive' });
     }
   };
 
@@ -119,8 +130,9 @@ const TacheView: React.FC = () => {
       setShowFormModal(false);
       setEditingTache(null);
       fetchData();
-    } catch {
-      toast({ title: 'Erreur', description: "Impossible de modifier la tâche", variant: 'destructive' });
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || "Impossible de modifier la tâche";
+      toast({ title: 'Erreur', description: msg, variant: 'destructive' });
     }
   };
 
@@ -142,18 +154,28 @@ const TacheView: React.FC = () => {
     try {
       await tacheApi.update(moveConfirm.tacheId, {
         date: moveConfirm.newDate,
-        heureDebut: moveConfirm.newHeure
+        heureDebut: moveConfirm.newHeure,
+        heureFin: moveConfirm.newHeureFin
       });
       toast({ title: '✅ Tâche déplacée' });
       setMoveConfirm(null);
       fetchData();
-    } catch {
-      toast({ title: 'Erreur', variant: 'destructive' });
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || 'Impossible de déplacer la tâche';
+      toast({ title: 'Erreur', description: msg, variant: 'destructive' });
       setMoveConfirm(null);
     }
   };
 
   const handleDayClick = (dateStr: string) => {
+    setSelectedDay(dateStr);
+    setShowDayModal(true);
+  };
+
+  const handleNavigateToDate = (dateStr: string) => {
+    // Navigate calendar to the month of that date, then open day modal
+    const d = new Date(dateStr + 'T00:00:00');
+    setCurrentDate(new Date(d.getFullYear(), d.getMonth(), 1));
     setSelectedDay(dateStr);
     setShowDayModal(true);
   };
@@ -164,7 +186,12 @@ const TacheView: React.FC = () => {
       toast({ title: '⚠️ Interdit', description: 'Les tâches pertinentes ne peuvent pas être déplacées', variant: 'destructive' });
       return;
     }
-    setMoveConfirm({ tacheId, newDate, newHeure: tache.heureDebut });
+    setMoveConfirm({
+      tacheId,
+      newDate,
+      newHeure: tache.heureDebut,
+      newHeureFin: tache.heureFin
+    });
   };
 
   // Validate task as completed
@@ -175,25 +202,31 @@ const TacheView: React.FC = () => {
 
   const handleConfirmValidation = async (tache: Tache) => {
     try {
-      await tacheApi.update(tache.id, { completed: true });
-      // Also mark all related parent/child tasks as completed
-      const relatedTaches = taches.filter(t =>
-        t.parentId === tache.id || t.id === tache.parentId ||
-        (tache.parentId && t.parentId === tache.parentId)
-      );
-      for (const rt of relatedTaches) {
-        if (!rt.completed) {
-          await tacheApi.update(rt.id, { completed: true });
+      // Capture current time as heureFin if completing before scheduled end
+      const now = new Date();
+      const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const todayStr = now.toISOString().split('T')[0];
+      
+      const updateData: Partial<Tache> = { completed: true };
+      
+      // Only update heureFin if the task is for today and current time is before scheduled end
+      if (tache.date === todayStr) {
+        const currentMinutes = now.getHours() * 60 + now.getMinutes();
+        const scheduledEndMinutes = timeToMinutes(tache.heureFin);
+        if (currentMinutes < scheduledEndMinutes) {
+          updateData.heureFin = currentTime;
         }
       }
+      
+      await tacheApi.update(tache.id, updateData);
       toast({ title: '✅ Tâche validée comme terminée' });
       setShowValidationModal(false);
       setValidationTache(null);
-      // Remove related notifications
       setNotifications(prev => prev.filter(n => n.tache.id !== tache.id));
       fetchData();
-    } catch {
-      toast({ title: 'Erreur', variant: 'destructive' });
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || 'Impossible de valider la tâche';
+      toast({ title: 'Erreur', description: msg, variant: 'destructive' });
     }
   };
 
@@ -228,7 +261,7 @@ const TacheView: React.FC = () => {
       await travailleurApi.create(travailleurForm);
       toast({ title: '✅ Travailleur ajouté' });
       setShowTravailleurModal(false);
-      setTravailleurForm({ nom: '', prenom: '', adresse: '', phone: '', genre: 'homme' });
+      setTravailleurForm({ nom: '', prenom: '', adresse: '', phone: '', genre: 'homme', role: 'autre' });
       // Refresh travailleurs
       const travRes = await travailleurApi.getAll();
       setTravailleurs(travRes.data);
@@ -270,7 +303,7 @@ const TacheView: React.FC = () => {
   return (
     <>
       <TacheHero
-        totalTaches={taches.length}
+        totalTaches={taches.filter(t => !t.completed).length}
         todayCount={todayTaches.length}
         pertinentCount={pertinentCount}
         optionnelCount={optionnelCount}
@@ -280,6 +313,8 @@ const TacheView: React.FC = () => {
         onShowToday={() => { setSelectedDay(todayStr); setShowDayModal(true); }}
         onShowWeek={() => setShowWeekModal(true)}
         onAddTravailleur={() => setShowTravailleurModal(true)}
+        allTaches={taches}
+        onNavigateToDate={handleNavigateToDate}
       />
 
       <div className="max-w-7xl mx-auto px-4 pb-12">
@@ -298,6 +333,7 @@ const TacheView: React.FC = () => {
         onOpenChange={setShowDayModal}
         selectedDay={selectedDay}
         taches={taches}
+        travailleurs={travailleurs}
         onEdit={(t) => { setEditingTache(t); setFollowUpTache(null); setShowDayModal(false); setShowFormModal(true); }}
         onDelete={(id) => setDeleteConfirm(id)}
         onAddTache={() => { setEditingTache(null); setFollowUpTache(null); setShowDayModal(false); setShowFormModal(true); }}
@@ -307,7 +343,18 @@ const TacheView: React.FC = () => {
             toast({ title: '⚠️ Interdit', description: 'Tâche pertinente non modifiable', variant: 'destructive' });
             return;
           }
-          setMoveConfirm({ tacheId: id, newDate: selectedDay || '', newHeure });
+          const duration = Math.max(1, timeToMinutes(tache.heureFin) - timeToMinutes(tache.heureDebut));
+          const newEndMinutes = timeToMinutes(newHeure) + duration;
+          if (newEndMinutes > 23 * 60 + 59) {
+            toast({ title: 'Erreur', description: 'Ce déplacement dépasse la fin de journée autorisée.', variant: 'destructive' });
+            return;
+          }
+          setMoveConfirm({
+            tacheId: id,
+            newDate: selectedDay || '',
+            newHeure,
+            newHeureFin: minutesToTime(newEndMinutes)
+          });
         }}
         onValidateTache={handleValidateTache}
         premiumBtnClass={premiumBtnClass}

@@ -27,11 +27,13 @@ import {
   RdvCreationModal,
   RdvConfirmationModal
 } from '@/components/commandes';
+import TacheConflictModal from '@/components/commandes/TacheConflictModal';
 
-const CommandesPage: React.FC = () => {
+const CommandesPage: React.FC<{ embedded?: boolean }> = ({ embedded = false }) => {
   const logic = useCommandesLogic();
 
   if (logic.isLoading) {
+    if (embedded) return <PremiumLoading text="Chargement des commandes..." size="xl" overlay={false} variant="default" />;
     return (
       <Layout>
         <PremiumLoading text="Chargement des commandes..." size="xl" overlay={true} variant="default" />
@@ -39,8 +41,8 @@ const CommandesPage: React.FC = () => {
     );
   }
 
-  return (
-    <Layout>
+  const content = (
+    <>
       {/* Hero Header */}
       <CommandesHero />
 
@@ -167,8 +169,20 @@ const CommandesPage: React.FC = () => {
         } : null}
         isLoading={logic.isRdvLoading}
       />
-    </Layout>
+
+      {/* Modale conflit tâche */}
+      <TacheConflictModal
+        isOpen={logic.showTacheConflictModal}
+        onClose={logic.handleSkipTacheConflict}
+        conflictingTache={logic.conflictingTache}
+        onReschedule={logic.handleRescheduleTacheAndCreate}
+        onSkip={logic.handleSkipTacheConflict}
+      />
+    </>
   );
+
+  if (embedded) return content;
+  return <Layout>{content}</Layout>;
 };
 
 export default CommandesPage;

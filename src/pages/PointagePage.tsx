@@ -19,13 +19,13 @@ import ParPersonneModal from '@/components/pointage/modals/ParPersonneModal';
 import YearlyTotalModal from '@/components/pointage/modals/YearlyTotalModal';
 import PointageConfirmDialogs from '@/components/pointage/modals/PointageConfirmDialogs';
 import TacheView from '@/components/tache/TacheView';
-
+import NotesKanbanView from '@/components/notes/NotesKanbanView';
 const premiumBtnClass = "group relative overflow-hidden rounded-xl sm:rounded-2xl backdrop-blur-xl border transition-all duration-300 hover:scale-105 px-4 py-2 sm:px-5 sm:py-3 text-xs sm:text-sm font-semibold";
 const mirrorShine = "absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500";
 
-const PointagePage: React.FC = () => {
+const PointagePage: React.FC<{ embedded?: boolean }> = ({ embedded = false }) => {
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState<'pointage' | 'tache'>('pointage');
+  const [activeTab, setActiveTab] = useState<'pointage' | 'tache' | 'notes'>('pointage');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [entreprises, setEntreprises] = useState<Entreprise[]>([]);
   const [pointages, setPointages] = useState<PointageEntry[]>([]);
@@ -52,7 +52,7 @@ const PointagePage: React.FC = () => {
   // Forms
   const [entForm, setEntForm] = useState({ nom: '', adresse: '', typePaiement: 'journalier' as 'journalier' | 'horaire', prix: '' });
   const [ptForm, setPtForm] = useState({ date: new Date().toISOString().split('T')[0], entrepriseId: '', heures: '', prixJournalier: '', travailleurId: '', travailleurNom: '' });
-  const [travForm, setTravForm] = useState({ nom: '', prenom: '', adresse: '', phone: '', genre: 'homme' as 'homme' | 'femme' });
+  const [travForm, setTravForm] = useState({ nom: '', prenom: '', adresse: '', phone: '', genre: 'homme' as 'homme' | 'femme', role: 'autre' as 'administrateur' | 'autre' });
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -105,7 +105,7 @@ const PointagePage: React.FC = () => {
     try {
       await travailleurApi.create(travForm);
       toast({ title: '✅ Travailleur ajouté', description: `${travForm.prenom} ${travForm.nom}` });
-      setTravForm({ nom: '', prenom: '', adresse: '', phone: '', genre: 'homme' });
+      setTravForm({ nom: '', prenom: '', adresse: '', phone: '', genre: 'homme', role: 'autre' });
       setShowTravailleurModal(false);
       fetchData();
     } catch {
@@ -196,9 +196,8 @@ const PointagePage: React.FC = () => {
     }
   };
 
-  return (
-    <Layout>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 dark:from-[#030014] dark:via-[#0a0025] dark:to-[#0e0035]">
+  const content = (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 dark:from-[#030014] dark:via-[#0a0025] dark:to-[#0e0035]">
         <PointageTabNav activeTab={activeTab} onTabChange={setActiveTab} />
 
         {activeTab === 'pointage' ? (
@@ -279,12 +278,16 @@ const PointagePage: React.FC = () => {
               premiumBtnClass={premiumBtnClass} mirrorShine={mirrorShine}
             />
           </>
-        ) : (
+        ) : activeTab === 'tache' ? (
           <TacheView />
+        ) : (
+          <NotesKanbanView />
         )}
       </div>
-    </Layout>
   );
+
+  if (embedded) return content;
+  return <Layout>{content}</Layout>;
 };
 
 export default PointagePage;

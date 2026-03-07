@@ -6,7 +6,7 @@ interface TacheConfirmDialogProps {
   deleteConfirm: string | null;
   setDeleteConfirm: (v: string | null) => void;
   onDelete: (id: string) => void;
-  moveConfirm: { tacheId: string; newDate: string; newHeure: string } | null;
+  moveConfirm: { tacheId: string; newDate: string; newHeure: string; newHeureFin: string } | null;
   setMoveConfirm: (v: any) => void;
   onMoveConfirm: () => void;
   premiumBtnClass: string;
@@ -52,9 +52,13 @@ const TacheConfirmDialog: React.FC<TacheConfirmDialogProps> = ({
               <span className="font-bold text-violet-400">
                 {moveConfirm?.newDate}
               </span>
-              {' '}à{' '}
+              {' '}de{' '}
               <span className="font-bold text-violet-400">
                 {moveConfirm?.newHeure}
+              </span>
+              {' '}à{' '}
+              <span className="font-bold text-violet-400">
+                {moveConfirm?.newHeureFin}
               </span> ?
             </AlertDialogDescription>
           </AlertDialogHeader>

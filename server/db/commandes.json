@@ -596,9 +596,33 @@
       }
     ],
     "dateCommande": "2026-03-03T10:40:28.474Z",
-    "statut": "en_attente",
-    "dateEcheance": "2026-03-05",
-    "horaire": "09:00",
-    "createdAt": "2026-03-03T10:40:28.517Z"
+    "statut": "annule",
+    "dateEcheance": "2026-03-06",
+    "horaire": "14:00",
+    "createdAt": "2026-03-03T10:40:28.517Z",
+    "updatedAt": "2026-03-06T12:26:30.277Z",
+    "saleId": null
+  },
+  {
+    "id": "1772734531044",
+    "clientNom": "Princesse Princesse",
+    "clientPhone": "0692782974",
+    "clientAddress": "18 avenue Raymond Vergès, La Possession",
+    "type": "reservation",
+    "produits": [
+      {
+        "nom": "Perruque lisse noir 30 pouces",
+        "prixUnitaire": 61.26,
+        "quantite": 1,
+        "prixVente": 190
+      }
+    ],
+    "dateCommande": "2026-03-06T04:50:40.244Z",
+    "statut": "valide",
+    "dateEcheance": "2026-03-06",
+    "horaire": "08:00",
+    "createdAt": "2026-03-05T18:15:31.044Z",
+    "updatedAt": "2026-03-06T04:50:48.814Z",
+    "saleId": "1772772648792"
   }
 ]
