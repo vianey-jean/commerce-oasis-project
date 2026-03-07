@@ -100,7 +100,15 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onEdit, onDelete, onDragStart
 
         {drawingUrl && (
           <div className="mt-2 rounded-xl overflow-hidden border border-gray-200/50 dark:border-gray-600/50">
-            <img src={drawingUrl} alt="Dessin" className="w-full h-16 object-contain bg-white" />
+            <img 
+              src={drawingUrl} 
+              alt="Dessin de la note" 
+              className="w-full h-24 object-contain bg-white"
+              onError={(e) => {
+                console.error('Failed to load drawing:', drawingUrl);
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
           </div>
         )}
 
