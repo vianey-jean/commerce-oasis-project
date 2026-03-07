@@ -50,14 +50,21 @@ const NoteFormModal: React.FC<NoteFormModalProps> = ({ open, onOpenChange, note,
   const handleSaveDrawing = async (dataUrl: string) => {
     try {
       setUploadingDrawing(true);
-      // Upload the drawing to the server
+      console.log('Uploading drawing, dataUrl length:', dataUrl.length, 'starts with:', dataUrl.substring(0, 30));
       const response = await noteApi.uploadDrawing(dataUrl);
+      console.log('Drawing upload response:', response.data);
       const serverUrl = response.data.url;
-      setForm(prev => ({ ...prev, drawing: serverUrl }));
+      if (serverUrl) {
+        setForm(prev => ({ ...prev, drawing: serverUrl }));
+        console.log('Drawing saved with URL:', serverUrl);
+      } else {
+        console.error('No URL in upload response');
+        setForm(prev => ({ ...prev, drawing: dataUrl }));
+      }
       setShowDrawing(false);
     } catch (err) {
       console.error('Error uploading drawing:', err);
-      // Fallback: save as data URL
+      // Fallback: save as data URL directly
       setForm(prev => ({ ...prev, drawing: dataUrl }));
       setShowDrawing(false);
     } finally {
