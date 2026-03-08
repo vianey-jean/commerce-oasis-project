@@ -93,9 +93,9 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
     activeText: 'text-orange-600 dark:text-orange-400',
   },
   {
-    id: 'tendances',
-    label: 'Tendances',
-    shortLabel: 'Tendances',
+    id: 'comptabilite',
+    label: 'Comptabilité & Finances',
+    shortLabel: 'Compta',
     icon: TrendingUp,
     gradient: 'from-cyan-500 to-blue-600',
     iconBg: 'bg-gradient-to-br from-cyan-500 to-blue-600',
