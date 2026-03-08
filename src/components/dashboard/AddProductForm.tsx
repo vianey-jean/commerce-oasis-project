@@ -101,10 +101,16 @@ const AddProductForm: React.FC<AddProductFormProps> = ({ isOpen, onClose }) => {
     setIsSubmitting(true);
 
     try {
+      // Auto-create fournisseur if new
+      if (formData.fournisseur.trim()) {
+        try { await fournisseurApiService.create(formData.fournisseur.trim()); } catch (e) { console.error('Fournisseur create error:', e); }
+      }
+
       const newProduct = await addProduct({
         description: formData.description,
         purchasePrice: Number(formData.purchasePrice),
         quantity: Number(formData.quantity),
+        fournisseur: formData.fournisseur.trim() || undefined,
       });
 
       // Upload photos if any were selected
