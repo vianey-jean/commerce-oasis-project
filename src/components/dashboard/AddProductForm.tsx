@@ -134,6 +134,7 @@ const AddProductForm: React.FC<AddProductFormProps> = ({ isOpen, onClose }) => {
         description: '',
         purchasePrice: '',
         quantity: '',
+        fournisseur: '',
       });
       setAddPhotos({ files: [], existingUrls: [], mainIndex: 0 });
 
