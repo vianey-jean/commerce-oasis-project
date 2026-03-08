@@ -36,10 +36,19 @@ import {
  import { cn } from '@/lib/utils';
  
  const Navbar: React.FC = () => {
-   const { isAuthenticated, user, logout } = useAuth();
-   const { theme, toggleTheme } = useTheme();
-   const { unreadCount } = useMessages();
-   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { isAuthenticated, user, logout } = useAuth();
+    const { theme, toggleTheme } = useTheme();
+    const { unreadCount } = useMessages();
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+
+    useEffect(() => {
+      if (isAuthenticated) {
+        profileApi.getProfile().then(p => {
+          if (p.profilePhoto) setProfilePhoto(profileApi.getPhotoUrl(p.profilePhoto));
+        }).catch(() => {});
+      }
+    }, [isAuthenticated]);
  
    return (
      <header className="sticky top-0 z-50 backdrop-blur-2xl bg-gradient-to-r from-white/90 via-slate-50/90 to-violet-50/90 dark:from-[#030014]/95 dark:via-[#0a0020]/95 dark:to-[#0e0030]/95 border-b border-violet-200/20 dark:border-violet-800/20 shadow-2xl shadow-violet-500/5">
