@@ -85,7 +85,9 @@ router.post('/', authMiddleware, async (req, res) => {
     const productData = {
       description,
       purchasePrice: Number(purchasePrice),
-      quantity: Number(quantity)
+      quantity: Number(quantity),
+      fournisseur: req.body.fournisseur || '',
+      sellingPrice: req.body.sellingPrice !== undefined ? Number(req.body.sellingPrice) : undefined
     };
     
     const newProduct = Product.create(productData);
