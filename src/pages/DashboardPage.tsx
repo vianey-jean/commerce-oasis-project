@@ -33,9 +33,6 @@ import {
   Star,
   Menu,
   X,
-  Receipt,
-  Boxes,
-  Activity,
 } from 'lucide-react';
 import tacheApi from '@/services/api/tacheApi';
 
@@ -47,9 +44,6 @@ const TendancesPage = lazy(() => import('@/pages/TendancesPage'));
 const ClientsPage = lazy(() => import('@/pages/ClientsPage'));
 const ProduitsPage = lazy(() => import('@/pages/ProduitsPage'));
 const PointagePage = lazy(() => import('@/pages/PointagePage'));
-const FacturationPage = lazy(() => import('@/pages/FacturationPage'));
-const StocksPage = lazy(() => import('@/pages/StocksPage'));
-const KpiDashboard = lazy(() => import('@/pages/KpiDashboard'));
 
 /** Configuration sidebar items */
 interface SidebarItem {
@@ -142,39 +136,6 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
     hoverBg: 'hover:bg-indigo-500/10',
     activeText: 'text-indigo-600 dark:text-indigo-400',
   },
-  {
-    id: 'facturation',
-    label: 'Facturation & Devis',
-    shortLabel: 'Factures',
-    icon: Receipt,
-    gradient: 'from-amber-500 to-orange-600',
-    iconBg: 'bg-gradient-to-br from-amber-500 to-orange-600',
-    shadow: 'shadow-amber-500/30',
-    hoverBg: 'hover:bg-amber-500/10',
-    activeText: 'text-amber-600 dark:text-amber-400',
-  },
-  {
-    id: 'stocks',
-    label: 'Gestion des Stocks',
-    shortLabel: 'Stocks',
-    icon: Boxes,
-    gradient: 'from-teal-500 to-emerald-600',
-    iconBg: 'bg-gradient-to-br from-teal-500 to-emerald-600',
-    shadow: 'shadow-teal-500/30',
-    hoverBg: 'hover:bg-teal-500/10',
-    activeText: 'text-teal-600 dark:text-teal-400',
-  },
-  {
-    id: 'kpi',
-    label: 'Tableau de Bord KPI',
-    shortLabel: 'KPI',
-    icon: Activity,
-    gradient: 'from-rose-500 to-red-600',
-    iconBg: 'bg-gradient-to-br from-rose-500 to-red-600',
-    shadow: 'shadow-rose-500/30',
-    hoverBg: 'hover:bg-rose-500/10',
-    activeText: 'text-rose-600 dark:text-rose-400',
-  },
 ];
 
 const DashboardPage = () => {
@@ -235,12 +196,6 @@ const DashboardPage = () => {
         return <Suspense fallback={fallback}><ProduitsPage embedded /></Suspense>;
       case 'pointage':
         return <Suspense fallback={fallback}><PointagePage embedded /></Suspense>;
-      case 'facturation':
-        return <Suspense fallback={fallback}><FacturationPage embedded /></Suspense>;
-      case 'stocks':
-        return <Suspense fallback={fallback}><StocksPage embedded /></Suspense>;
-      case 'kpi':
-        return <Suspense fallback={fallback}><KpiDashboard embedded /></Suspense>;
       default:
         return <Suspense fallback={fallback}><VentesContent /></Suspense>;
     }

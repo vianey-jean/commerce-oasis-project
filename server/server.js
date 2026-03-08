@@ -273,9 +273,6 @@ const travailleurRoutes = require('./routes/travailleur');
 const tacheRoutes = require('./routes/tache');
 const notesRoutes = require('./routes/notes');
 const avanceRoutes = require('./routes/avance');
-const facturesRoutes = require('./routes/factures');
-const stocksRoutes = require('./routes/stocks');
-const notificationsRoutes = require('./routes/notifications');
 
 // Use routes
 app.use('/api/auth', authRoutes);
@@ -303,9 +300,6 @@ app.use('/api/travailleurs', travailleurRoutes);
 app.use('/api/taches', tacheRoutes);
 app.use('/api/notes', notesRoutes);
 app.use('/api/avances', avanceRoutes);
-app.use('/api/factures', facturesRoutes);
-app.use('/api/stocks', stocksRoutes);
-app.use('/api/notifications', notificationsRoutes);
 
 // Static file serving for uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

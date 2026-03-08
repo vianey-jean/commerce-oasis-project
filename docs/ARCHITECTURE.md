@@ -24,13 +24,13 @@ Le système est une application web **full-stack** de gestion commerciale compos
 │  │         FRONTEND (React SPA)           │  │
 │  │                                        │  │
 │  │  Pages ──► Composants ──► Services API │  │
-│  │    │           │              │         │  │
-│  │    │           │              ▼         │  │
-│  │    │           │         Axios HTTP     │  │
-│  │    │           │              │         │  │
-│  │    │           ▼              │         │  │
-│  │    │     Contextes React      │         │  │
-│  │    │     (état global)        │         │  │
+│  │    │           │              │        │  │
+│  │    │           │              ▼        │  │
+│  │    │           │         Axios HTTP    │  │
+│  │    │           │              │        │  │
+│  │    │           ▼              │        │  │
+│  │    │     Contextes React      │        │  │
+│  │    │     (état global)        │        │  │
 │  └────┼──────────────────────────┼────────┘  │
 │       │                          │           │
 └───────┼──────────────────────────┼───────────┘
@@ -40,29 +40,29 @@ Le système est une application web **full-stack** de gestion commerciale compos
 │  React Router │    │  BACKEND (Express.js)     │
 │  (SPA Routes) │    │                           │
 └───────────────┘    │  ┌─────────────────────┐  │
-                     │  │   Middleware         │  │
-                     │  │  • Auth JWT          │  │
-                     │  │  • CORS              │  │
-                     │  │  • Rate Limiting     │  │
-                     │  │  • Sanitization      │  │
-                     │  │  • Security Headers  │  │
+                     │  │   Middleware        │  │
+                     │  │  • Auth JWT         │  │
+                     │  │  • CORS             │  │
+                     │  │  • Rate Limiting    │  │
+                     │  │  • Sanitization     │  │
+                     │  │  • Security Headers │  │
                      │  └──────────┬──────────┘  │
-                     │             │              │
+                     │             │             │
                      │  ┌──────────▼──────────┐  │
-                     │  │   Routes API         │  │
-                     │  │  (24 fichiers)       │  │
+                     │  │   Routes API        │  │
+                     │  │  (24 fichiers)      │  │
                      │  └──────────┬──────────┘  │
-                     │             │              │
+                     │             │             │
                      │  ┌──────────▼──────────┐  │
-                     │  │   Modèles            │  │
-                     │  │  (23 fichiers)       │  │
+                     │  │   Modèles           │  │
+                     │  │  (23 fichiers)      │  │
                      │  └──────────┬──────────┘  │
-                     │             │              │
+                     │             │             │
                      │  ┌──────────▼──────────┐  │
-                     │  │   Base de données    │  │
-                     │  │  (25 fichiers JSON)  │  │
+                     │  │   Base de données   │  │
+                     │  │  (25 fichiers JSON) │  │
                      │  └─────────────────────┘  │
-                     └──────────────────────────┘
+                     └──────────────────────────-┘
 ```
 
 ---

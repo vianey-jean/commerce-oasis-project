@@ -14,9 +14,8 @@
  import { useTheme } from '@/contexts/ThemeContext';
  import { useMessages } from '@/hooks/use-messages';
  
-  import RdvNotifications from '@/components/rdv/RdvNotifications';
-  import ObjectifIndicator from '@/components/navbar/ObjectifIndicator';
-  import NotificationCenter from '@/components/notifications/NotificationCenter';
+ import RdvNotifications from '@/components/rdv/RdvNotifications';
+ import ObjectifIndicator from '@/components/navbar/ObjectifIndicator';
  
 import {
   LayoutDashboard,
@@ -108,8 +107,7 @@ import {
                    </motion.div>
                  </Link>
 
-                  <RdvNotifications />
-                  <NotificationCenter />
+                 <RdvNotifications />
                </>
              )}
 
