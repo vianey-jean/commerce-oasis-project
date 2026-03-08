@@ -273,6 +273,7 @@ const travailleurRoutes = require('./routes/travailleur');
 const tacheRoutes = require('./routes/tache');
 const notesRoutes = require('./routes/notes');
 const avanceRoutes = require('./routes/avance');
+const profileRoutes = require('./routes/profile');
 
 // Use routes
 app.use('/api/auth', authRoutes);
