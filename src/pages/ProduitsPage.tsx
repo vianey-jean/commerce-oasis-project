@@ -154,10 +154,16 @@ const ProduitsPage: React.FC<{ embedded?: boolean }> = ({ embedded = false }) =>
   const confirmAdd = async () => {
     setIsSubmitting(true);
     try {
+      // Auto-create fournisseur if new
+      if (addForm.fournisseur.trim()) {
+        try { await fournisseurApiService.create(addForm.fournisseur.trim()); } catch (e) { console.error('Fournisseur create error:', e); }
+      }
+
       const newProduct = await productService.addProduct({
         description: addForm.description,
         purchasePrice: Number(addForm.purchasePrice),
         quantity: Number(addForm.quantity),
+        fournisseur: addForm.fournisseur.trim() || undefined,
       });
 
       if (newProduct && addPhotos.files.length > 0) {
