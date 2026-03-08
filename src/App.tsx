@@ -39,6 +39,7 @@ const CommandesPage = lazy(() => import('@/pages/CommandesPage'));
 const RdvPage = lazy(() => import('@/pages/RdvPage'));
 const ProduitsPage = lazy(() => import('@/pages/ProduitsPage'));
 const PointagePage = lazy(() => import('@/pages/PointagePage'));
+const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
 function App() {
