@@ -19,4 +19,5 @@ export interface ProductFormData {
   purchasePrice: number;
   quantity: number;
   sellingPrice?: number;
+  fournisseur?: string;
 }
