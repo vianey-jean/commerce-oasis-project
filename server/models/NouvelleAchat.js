@@ -125,7 +125,8 @@ const NouvelleAchat = {
           const updatedProductData = {
             description: achatData.productDescription || existingProduct.description,
             purchasePrice: Number(achatData.purchasePrice) || existingProduct.purchasePrice,
-            quantity: existingProduct.quantity + quantityToAdd
+            quantity: existingProduct.quantity + quantityToAdd,
+            fournisseur: achatData.fournisseur || existingProduct.fournisseur || ''
           };
           
           Product.update(achatData.productId, updatedProductData);
