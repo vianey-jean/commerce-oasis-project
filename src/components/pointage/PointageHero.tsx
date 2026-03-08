@@ -18,6 +18,7 @@ interface PointageHeroProps {
   onShowParPersonne: () => void;
   onShowYearlyTotal: () => void;
   onPriseAvance: () => void;
+  onShowMonthDetail: () => void;
   year: number;
 }
 
