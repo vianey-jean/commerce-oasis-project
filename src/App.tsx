@@ -137,6 +137,30 @@ function App() {
                         </ProtectedRoute>
                       }
                     />
+                    <Route
+                      path="/facturation"
+                      element={
+                        <ProtectedRoute>
+                          <FacturationPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/stocks"
+                      element={
+                        <ProtectedRoute>
+                          <StocksPage />
+                        </ProtectedRoute>
+                      }
+                    />
+                    <Route
+                      path="/kpi"
+                      element={
+                        <ProtectedRoute>
+                          <KpiDashboard />
+                        </ProtectedRoute>
+                      }
+                    />
 
                     {/* Page 404 */}
                     <Route path="*" element={<NotFound />} />
