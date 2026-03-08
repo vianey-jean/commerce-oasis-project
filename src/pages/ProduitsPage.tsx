@@ -698,6 +698,11 @@ const ProduitsPage: React.FC<{ embedded?: boolean }> = ({ embedded = false }) =>
                     <Sparkles className="h-3 w-3 text-blue-400" /> Quantité finale: <b className="text-white/80">{editForm.quantity + editForm.additionalQuantity}</b>
                   </p>
                 </div>
+                <FournisseurAutocomplete
+                  value={editForm.fournisseur}
+                  onChange={(val) => setEditForm({ ...editForm, fournisseur: val })}
+                  variant="dark"
+                />
                 <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">
                   <PhotoUploadSection
                     existingPhotos={selectedProduct.photos || []}
