@@ -115,8 +115,13 @@ app.use(suspiciousActivityLogger);
 app.use(bodyParser.json({ limit: '10mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
-// Sanitization de tous les inputs
-app.use(sanitizeMiddleware);
+// Sanitization de tous les inputs (skip for drawing uploads - base64 data)
+app.use((req, res, next) => {
+  if (req.path === '/api/notes/upload-drawing') {
+    return next();
+  }
+  return sanitizeMiddleware(req, res, next);
+});
 
 // Create db directory if it doesn't exist
 const dbPath = path.join(__dirname, 'db');
