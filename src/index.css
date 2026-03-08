@@ -109,6 +109,20 @@
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+    
+    /* Dark glassmorphism tokens */
+    --glass-bg: 222 84% 5% / 0.6;
+    --glass-border: 0 0% 100% / 0.08;
+    --glass-shadow: 262 83% 58% / 0.15;
+    --glass-blur: 24px;
+    --glass-card-bg: 222 84% 8% / 0.8;
+    
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
   }
 }
 
