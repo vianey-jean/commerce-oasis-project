@@ -11,7 +11,6 @@ export interface Product {
   reserver?: string; // "oui" si le produit est réservé
   photos?: string[]; // URLs des photos du produit (stockées dans /uploads)
   mainPhoto?: string; // URL de la photo principale
-  fournisseur?: string; // Nom du fournisseur
 }
 
 export interface ProductFormData {
