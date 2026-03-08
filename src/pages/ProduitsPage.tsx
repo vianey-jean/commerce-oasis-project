@@ -62,7 +62,7 @@ const ProduitsPage: React.FC<{ embedded?: boolean }> = ({ embedded = false }) =>
   const [addErrors, setAddErrors] = useState<Record<string, string>>({});
 
   // Edit form
-  const [editForm, setEditForm] = useState({ description: '', purchasePrice: 0, quantity: 0, additionalQuantity: 0 });
+  const [editForm, setEditForm] = useState({ description: '', purchasePrice: 0, quantity: 0, additionalQuantity: 0, fournisseur: '' });
   const [editPhotos, setEditPhotos] = useState<{ files: File[]; existingUrls: string[]; mainIndex: number }>({ files: [], existingUrls: [], mainIndex: 0 });
 
   // Loading
