@@ -273,6 +273,9 @@ const travailleurRoutes = require('./routes/travailleur');
 const tacheRoutes = require('./routes/tache');
 const notesRoutes = require('./routes/notes');
 const avanceRoutes = require('./routes/avance');
+const facturesRoutes = require('./routes/factures');
+const stocksRoutes = require('./routes/stocks');
+const notificationsRoutes = require('./routes/notifications');
 
 // Use routes
 app.use('/api/auth', authRoutes);
