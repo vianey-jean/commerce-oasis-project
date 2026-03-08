@@ -2,6 +2,47 @@ const express = require('express');
 const router = express.Router();
 const Note = require('../models/Note');
 const auth = require('../middleware/auth');
+const fs = require('fs');
+const path = require('path');
+
+// Ensure dessin directory exists
+const dessinDir = path.join(__dirname, '..', 'uploads', 'notes', 'dessin');
+if (!fs.existsSync(dessinDir)) {
+  fs.mkdirSync(dessinDir, { recursive: true });
+}
+
+// Upload drawing endpoint
+router.post('/upload-drawing', auth, (req, res) => {
+  try {
+    const { imageData } = req.body;
+    if (!imageData) {
+      return res.status(400).json({ error: 'imageData requis' });
+    }
+
+    // Parse base64 data
+    const matches = imageData.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
+    if (!matches) {
+      return res.status(400).json({ error: 'Format image invalide' });
+    }
+
+    const ext = matches[1] === 'jpeg' ? 'jpg' : matches[1];
+    const data = matches[2];
+    const buffer = Buffer.from(data, 'base64');
+    
+    const fileName = `dessin-${Date.now()}-${Math.random().toString(36).substr(2, 6)}.${ext}`;
+    const filePath = path.join(dessinDir, fileName);
+    
+    fs.writeFileSync(filePath, buffer);
+    
+    const url = `/uploads/notes/dessin/${fileName}`;
+    console.log('Drawing saved:', url);
+    
+    res.json({ url, fileName });
+  } catch (err) {
+    console.error('Error uploading drawing:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // Notes
 router.get('/', auth, (req, res) => {
