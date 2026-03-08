@@ -278,6 +278,13 @@ const AddProductForm: React.FC<AddProductFormProps> = ({ isOpen, onClose }) => {
               </div>
             </div>
 
+            {/* Fournisseur Autocomplete */}
+            <FournisseurAutocomplete
+              value={formData.fournisseur}
+              onChange={(val) => setFormData({ ...formData, fournisseur: val })}
+              variant="light"
+            />
+
             {/* Photo Upload Section */}
             <div className="p-4 bg-gradient-to-r from-emerald-50/50 to-green-50/50 border-2 border-emerald-100 rounded-2xl">
               <PhotoUploadSection
