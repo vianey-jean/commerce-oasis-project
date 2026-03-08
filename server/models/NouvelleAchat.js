@@ -177,8 +177,9 @@ const NouvelleAchat = {
           const newProduct = Product.create({
             description: achatData.productDescription,
             purchasePrice: Number(achatData.purchasePrice),
-            quantity: quantityToAdd, // Quantité EXACTE du formulaire
-            sellingPrice: 0
+            quantity: quantityToAdd,
+            sellingPrice: 0,
+            fournisseur: achatData.fournisseur || ''
           });
           
           if (newProduct) {
