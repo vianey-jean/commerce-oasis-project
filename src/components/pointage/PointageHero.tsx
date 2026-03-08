@@ -25,7 +25,7 @@ interface PointageHeroProps {
 const PointageHero: React.FC<PointageHeroProps> = ({
   entreprisesCount, travailleursCount, pointagesCount, monthTotal,
   premiumBtnClass, mirrorShine,
-  onAddEntreprise, onAddTravailleur, onNewPointage, onShowParPersonne, onShowYearlyTotal, onPriseAvance, year
+  onAddEntreprise, onAddTravailleur, onNewPointage, onShowParPersonne, onShowYearlyTotal, onPriseAvance, onShowMonthDetail, year
 }) => {
   return (
     <div className="relative overflow-hidden py-8 sm:py-12">
