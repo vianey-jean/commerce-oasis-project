@@ -219,6 +219,7 @@ const PointagePage: React.FC<{ embedded?: boolean }> = ({ embedded = false }) =>
               onPriseAvance={() => setShowAvanceModal(true)}
               onShowParPersonne={() => setShowParPersonneModal(true)}
               onShowYearlyTotal={handleShowYearlyTotal}
+              onShowMonthDetail={() => setShowMonthDetailModal(true)}
               year={year}
             />
 
