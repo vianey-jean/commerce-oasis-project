@@ -70,6 +70,7 @@ const EditProductForm: React.FC<EditProductFormProps> = ({ isOpen, onClose }) =>
         purchasePrice: selectedProduct.purchasePrice,
         quantity: selectedProduct.quantity,
         additionalQuantity: 0,
+        fournisseur: selectedProduct.fournisseur || '',
       });
       // Reset photo state with existing product photos
       setEditPhotos({
