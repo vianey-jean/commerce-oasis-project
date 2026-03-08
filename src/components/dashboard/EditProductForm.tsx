@@ -114,11 +114,21 @@ const EditProductForm: React.FC<EditProductFormProps> = ({ isOpen, onClose }) =>
     try {
       setIsLoading(true);
 
+      // Auto-create fournisseur if provided
+      if (formData.fournisseur.trim()) {
+        try {
+          await fournisseurApiService.create(formData.fournisseur.trim());
+        } catch (e) {
+          console.error('Error creating fournisseur:', e);
+        }
+      }
+
       const updatedProduct = {
         id: formData.id,
         description: formData.description,
         purchasePrice: formData.purchasePrice,
         quantity: formData.quantity + formData.additionalQuantity,
+        fournisseur: formData.fournisseur.trim() || undefined,
       };
 
       await productService.updateProduct(updatedProduct);
