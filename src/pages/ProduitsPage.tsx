@@ -173,7 +173,7 @@ const ProduitsPage: React.FC<{ embedded?: boolean }> = ({ embedded = false }) =>
       toast({ title: 'Succès', description: 'Produit ajouté avec succès', className: 'notification-success' });
       setIsAddConfirmOpen(false);
       setIsAddOpen(false);
-      setAddForm({ description: '', purchasePrice: '', quantity: '' });
+      setAddForm({ description: '', purchasePrice: '', quantity: '', fournisseur: '' });
       setAddPhotos({ files: [], existingUrls: [], mainIndex: 0 });
       if (fetchProducts) await fetchProducts();
     } catch {
