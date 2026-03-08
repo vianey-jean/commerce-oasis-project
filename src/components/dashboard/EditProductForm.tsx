@@ -322,6 +322,13 @@ const EditProductForm: React.FC<EditProductFormProps> = ({ isOpen, onClose }) =>
                   </p>
                 </div>
 
+                {/* Fournisseur Autocomplete */}
+                <FournisseurAutocomplete
+                  value={formData.fournisseur}
+                  onChange={(val) => setFormData({ ...formData, fournisseur: val })}
+                  variant="light"
+                />
+
                 {/* Photo Upload Section */}
                 <div className="p-4 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 border-2 border-blue-100 rounded-2xl">
                   <PhotoUploadSection
