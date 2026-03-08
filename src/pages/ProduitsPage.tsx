@@ -876,6 +876,12 @@ const ProduitsPage: React.FC<{ embedded?: boolean }> = ({ embedded = false }) =>
                   </div>
                 </div>
 
+                {/* Fournisseur */}
+                <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
+                  <p className="text-white/50 text-xs font-medium">Fournisseur</p>
+                  <p className="text-cyan-400 font-bold text-lg">{selectedProduct.fournisseur || '—'}</p>
+                </div>
+
                 {/* Action buttons */}
                 <div className="flex gap-3 pt-2">
                   <Button onClick={() => { setIsViewOpen(false); openEdit(selectedProduct); }}
