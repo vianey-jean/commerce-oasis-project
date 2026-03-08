@@ -17,6 +17,7 @@ import DayDetailModal from '@/components/pointage/modals/DayDetailModal';
 import EditPointageModal from '@/components/pointage/modals/EditPointageModal';
 import ParPersonneModal from '@/components/pointage/modals/ParPersonneModal';
 import YearlyTotalModal from '@/components/pointage/modals/YearlyTotalModal';
+import MonthDetailModal from '@/components/pointage/modals/MonthDetailModal';
 import PointageConfirmDialogs from '@/components/pointage/modals/PointageConfirmDialogs';
 import AvanceModal from '@/components/pointage/modals/AvanceModal';
 import TacheView from '@/components/tache/TacheView';
