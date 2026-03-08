@@ -14,8 +14,9 @@
  import { useTheme } from '@/contexts/ThemeContext';
  import { useMessages } from '@/hooks/use-messages';
  
- import RdvNotifications from '@/components/rdv/RdvNotifications';
- import ObjectifIndicator from '@/components/navbar/ObjectifIndicator';
+import RdvNotifications from '@/components/rdv/RdvNotifications';
+import ObjectifIndicator from '@/components/navbar/ObjectifIndicator';
+import profileApi from '@/services/api/profileApi';
  
 import {
   LayoutDashboard,
