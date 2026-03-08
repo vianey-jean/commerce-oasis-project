@@ -6,6 +6,8 @@ import Layout from '@/components/Layout';
 import { useApp } from '@/contexts/AppContext';
 import { productService } from '@/service/api';
 import { Product } from '@/types';
+import { fournisseurApiService } from '@/services/api/fournisseurApi';
+import FournisseurAutocomplete from '@/components/dashboard/FournisseurAutocomplete';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import {
