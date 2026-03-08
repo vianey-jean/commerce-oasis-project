@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { GripVertical, Edit3, Trash2, Mic } from 'lucide-react';
+import { GripVertical, Edit3, Trash2, MoreVertical, Mic } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Note } from '@/services/api/noteApi';
-import { getBaseURL } from '@/services/api/api';
 
 interface NoteCardProps {
   note: Note;
@@ -10,14 +9,6 @@ interface NoteCardProps {
   onDelete: () => void;
   onDragStart: (e: React.DragEvent) => void;
 }
-
-const getDrawingUrl = (drawing: string | null) => {
-  if (!drawing) return null;
-  if (drawing.startsWith('/uploads/')) {
-    return `${getBaseURL()}${drawing}`;
-  }
-  return drawing;
-};
 
 const NoteCard: React.FC<NoteCardProps> = ({ note, onEdit, onDelete, onDragStart }) => {
   const [showMenu, setShowMenu] = useState(false);
@@ -35,8 +26,6 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onEdit, onDelete, onDragStart
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [showMenu]);
-
-  const drawingUrl = getDrawingUrl(note.drawing);
 
   return (
     <div
@@ -98,17 +87,9 @@ const NoteCard: React.FC<NoteCardProps> = ({ note, onEdit, onDelete, onDragStart
           </div>
         )}
 
-        {drawingUrl && (
+        {note.drawing && (
           <div className="mt-2 rounded-xl overflow-hidden border border-gray-200/50 dark:border-gray-600/50">
-            <img 
-              src={drawingUrl} 
-              alt="Dessin de la note" 
-              className="w-full h-24 object-contain bg-white"
-              onError={(e) => {
-                console.error('Failed to load drawing:', drawingUrl);
-                (e.target as HTMLImageElement).style.display = 'none';
-              }}
-            />
+            <img src={note.drawing} alt="Dessin" className="w-full h-16 object-contain bg-white" />
           </div>
         )}
 

@@ -196,42 +196,24 @@ const NotesKanbanView: React.FC = () => {
         </div>
       </div>
 
-      {/* Kanban Board with luxury separators */}
+      {/* Kanban Board */}
       <div className="overflow-x-auto pb-4 -mx-2 sm:-mx-4 px-2 sm:px-4">
-        <div className="flex min-w-max">
-          {sortedColumns.map((col, index) => (
-            <React.Fragment key={col.id}>
-              {/* Left separator for first column */}
-              {index === 0 && (
-                <div className="flex-shrink-0 w-[3px] mx-1 sm:mx-2 self-stretch relative">
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-b from-amber-400 via-orange-500 to-rose-500 shadow-[0_0_12px_rgba(251,146,60,0.4)]" />
-                  <div className="absolute inset-0 rounded-full bg-gradient-to-b from-white/40 via-transparent to-transparent" />
-                </div>
-              )}
-
-              <KanbanColumn
-                column={col}
-                notes={notes.filter(n => n.columnId === col.id)}
-                onAddNote={() => { setEditingNote({ columnId: col.id }); setShowNoteForm(true); }}
-                onEditNote={(note) => { setEditingNote(note); setShowNoteForm(true); }}
-                onDeleteNote={handleDeleteNote}
-                onDragStart={handleDragStart}
-                onDragOver={(e) => handleDragOver(e, col.id)}
-                onDrop={(e) => handleDrop(e, col.id)}
-                onEditColumn={() => { setEditingCol(col); setShowColForm(true); }}
-                onDeleteColumn={() => handleDeleteColumn(col)}
-                isDragOver={dragOverColId === col.id}
-              />
-
-              {/* Right separator after each column */}
-              <div className="flex-shrink-0 w-[3px] mx-1 sm:mx-2 self-stretch relative">
-                <div className="absolute inset-0 rounded-full bg-gradient-to-b from-cyan-400 via-blue-500 to-violet-600 shadow-[0_0_12px_rgba(59,130,246,0.4)]" />
-                <div className="absolute inset-0 rounded-full bg-gradient-to-b from-white/40 via-transparent to-transparent" />
-                {/* Mirror/glass effect dots */}
-                <div className="absolute top-2 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-white/70 shadow-[0_0_6px_rgba(255,255,255,0.8)]" />
-                <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-white/70 shadow-[0_0_6px_rgba(255,255,255,0.8)]" />
-              </div>
-            </React.Fragment>
+        <div className="flex gap-3 sm:gap-4 min-w-max">
+          {sortedColumns.map(col => (
+            <KanbanColumn
+              key={col.id}
+              column={col}
+              notes={notes.filter(n => n.columnId === col.id)}
+              onAddNote={() => { setEditingNote({ columnId: col.id }); setShowNoteForm(true); }}
+              onEditNote={(note) => { setEditingNote(note); setShowNoteForm(true); }}
+              onDeleteNote={handleDeleteNote}
+              onDragStart={handleDragStart}
+              onDragOver={(e) => handleDragOver(e, col.id)}
+              onDrop={(e) => handleDrop(e, col.id)}
+              onEditColumn={() => { setEditingCol(col); setShowColForm(true); }}
+              onDeleteColumn={() => handleDeleteColumn(col)}
+              isDragOver={dragOverColId === col.id}
+            />
           ))}
         </div>
       </div>

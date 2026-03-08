@@ -26,7 +26,6 @@ export interface Note {
 const noteApi = {
   // Notes
   getAll: () => api.get<Note[]>('/api/notes'),
-  uploadDrawing: (dataUrl: string) => api.post<{ url: string }>('/api/notes/upload-drawing', { dataUrl }),
   create: (data: Partial<Note>) => api.post<Note>('/api/notes', data),
   update: (id: string, data: Partial<Note>) => api.put<Note>(`/api/notes/${id}`, data),
   delete: (id: string) => api.delete(`/api/notes/${id}`),

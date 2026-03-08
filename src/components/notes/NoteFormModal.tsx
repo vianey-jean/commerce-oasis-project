@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bold, Underline, Mic, MicOff, Edit3, Palette, StickyNote, Check, Trash2, Loader2 } from 'lucide-react';
+import { Bold, Underline, Mic, MicOff, Edit3, Palette, StickyNote, Check, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { Note, NoteColumn } from '@/services/api/noteApi';
-import noteApi from '@/services/api/noteApi';
-import { getBaseURL } from '@/services/api/api';
 import { NOTE_COLORS, applySmartPunctuation } from './constants';
 import DrawingCanvas from './DrawingCanvas';
 
@@ -26,7 +24,6 @@ const NoteFormModal: React.FC<NoteFormModalProps> = ({ open, onOpenChange, note,
   });
   const [showDrawing, setShowDrawing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [uploadingDrawing, setUploadingDrawing] = useState(false);
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
@@ -36,41 +33,6 @@ const NoteFormModal: React.FC<NoteFormModalProps> = ({ open, onOpenChange, note,
       setForm({ title: '', content: '', columnId: columns[0]?.id || '', color: '#ffffff', bold: false, boldLines: [], underlineLines: [], drawing: null, voiceText: '' });
     }
   }, [note, columns, open]);
-
-  const getDrawingDisplayUrl = (drawing: string | null | undefined) => {
-    if (!drawing) return null;
-    // If it's a server path (starts with /uploads/), build full URL
-    if (drawing.startsWith('/uploads/')) {
-      return `${getBaseURL()}${drawing}`;
-    }
-    // If it's already a full URL or data URL, use as-is
-    return drawing;
-  };
-
-  const handleSaveDrawing = async (dataUrl: string) => {
-    try {
-      setUploadingDrawing(true);
-      console.log('Uploading drawing, dataUrl length:', dataUrl.length, 'starts with:', dataUrl.substring(0, 30));
-      const response = await noteApi.uploadDrawing(dataUrl);
-      console.log('Drawing upload response:', response.data);
-      const serverUrl = response.data.url;
-      if (serverUrl) {
-        setForm(prev => ({ ...prev, drawing: serverUrl }));
-        console.log('Drawing saved with URL:', serverUrl);
-      } else {
-        console.error('No URL in upload response');
-        setForm(prev => ({ ...prev, drawing: dataUrl }));
-      }
-      setShowDrawing(false);
-    } catch (err) {
-      console.error('Error uploading drawing:', err);
-      // Fallback: save as data URL directly
-      setForm(prev => ({ ...prev, drawing: dataUrl }));
-      setShowDrawing(false);
-    } finally {
-      setUploadingDrawing(false);
-    }
-  };
 
   const toggleVoice = () => {
     if (isRecording) {
@@ -259,23 +221,15 @@ const NoteFormModal: React.FC<NoteFormModalProps> = ({ open, onOpenChange, note,
 
           {/* Drawing */}
           {showDrawing && (
-            <>
-              {uploadingDrawing && (
-                <div className="flex items-center justify-center gap-2 p-3 rounded-xl bg-cyan-50 dark:bg-cyan-900/20 text-cyan-600">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span className="text-sm font-medium">Enregistrement du dessin...</span>
-                </div>
-              )}
-              <DrawingCanvas
-                initialData={getDrawingDisplayUrl(form.drawing)}
-                onSave={handleSaveDrawing}
-                onClose={() => setShowDrawing(false)}
-              />
-            </>
+            <DrawingCanvas
+              initialData={form.drawing}
+              onSave={(dataUrl) => { setForm({ ...form, drawing: dataUrl }); setShowDrawing(false); }}
+              onClose={() => setShowDrawing(false)}
+            />
           )}
           {form.drawing && !showDrawing && (
             <div className="rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm">
-              <img src={getDrawingDisplayUrl(form.drawing)!} alt="Dessin" className="w-full h-32 object-contain bg-white" />
+              <img src={form.drawing} alt="Dessin" className="w-full h-32 object-contain bg-white" />
               <button onClick={() => setForm({ ...form, drawing: null })} className="w-full py-2 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 font-medium transition-colors">
                 Supprimer le dessin
               </button>
@@ -298,7 +252,6 @@ const NoteFormModal: React.FC<NoteFormModalProps> = ({ open, onOpenChange, note,
             <Button onClick={() => onOpenChange(false)} variant="outline" className="flex-1 rounded-xl">Annuler</Button>
             <Button
               onClick={() => onSave(form)}
-              disabled={uploadingDrawing}
               className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700 rounded-xl shadow-lg"
             >
               <Check className="h-4 w-4 mr-1" /> {note?.id ? 'Modifier' : 'Créer'}
