@@ -206,11 +206,17 @@ const ProduitsPage: React.FC<{ embedded?: boolean }> = ({ embedded = false }) =>
     if (!selectedProduct) return;
     setIsSubmitting(true);
     try {
+      // Auto-create fournisseur if new
+      if (editForm.fournisseur.trim()) {
+        try { await fournisseurApiService.create(editForm.fournisseur.trim()); } catch (e) { console.error('Fournisseur create error:', e); }
+      }
+
       await productService.updateProduct({
         ...selectedProduct,
         description: editForm.description,
         purchasePrice: editForm.purchasePrice,
         quantity: editForm.quantity + editForm.additionalQuantity,
+        fournisseur: editForm.fournisseur.trim() || undefined,
       });
 
       const hasNewPhotos = editPhotos.files.length > 0;
