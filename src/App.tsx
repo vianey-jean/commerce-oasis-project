@@ -129,6 +129,15 @@ function App() {
                       }
                     />
 
+                    <Route
+                      path="/profile"
+                      element={
+                        <ProtectedRoute>
+                          <ProfilePage />
+                        </ProtectedRoute>
+                      }
+                    />
+
                     {/* Page 404 */}
                     <Route path="*" element={<NotFound />} />
                   </Routes>
