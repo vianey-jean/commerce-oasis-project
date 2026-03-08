@@ -27,6 +27,8 @@ import ProductSearchInput from './ProductSearchInput';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/contexts/AppContext';
 import PhotoUploadSection from './PhotoUploadSection';
+import FournisseurAutocomplete from './FournisseurAutocomplete';
+import { fournisseurApiService } from '@/services/api/fournisseurApi';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://server-gestion-ventes.onrender.com';
 

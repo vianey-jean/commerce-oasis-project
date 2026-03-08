@@ -372,6 +372,12 @@ const AddProductForm: React.FC<AddProductFormProps> = ({ isOpen, onClose }) => {
                   <span className="text-gray-500 text-sm">Quantité:</span>
                   <span className="font-bold text-blue-600">{formData.quantity}</span>
                 </div>
+                {formData.fournisseur && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500 text-sm">Fournisseur:</span>
+                    <span className="font-bold text-violet-600">{formData.fournisseur}</span>
+                  </div>
+                )}
                 {addPhotos.files.length > 0 && (
                   <div className="flex justify-between">
                     <span className="text-gray-500 text-sm">Photos:</span>
