@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Edit, Trash2, Phone, MapPin, Users, Sparkles, Crown, Star, Diamond, MessageSquare, PhoneCall, Navigation } from 'lucide-react';
+import { Plus, Edit, Trash2, Phone, MapPin, Users, Crown, MessageSquare, PhoneCall, Navigation } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import axios from 'axios';
 import Navbar from '@/components/Navbar';
@@ -185,18 +185,17 @@ const ClientsPage: React.FC<{ embedded?: boolean }> = ({ embedded = false }) => 
   // =========================================================================
   // Rendu
   // =========================================================================
+  const mirrorShine = "absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500";
+
   const mainContent = (
     <>
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50/30 to-indigo-50/50 dark:from-[#030014] dark:via-[#0a0020]/80 dark:to-[#0e0030]">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 dark:from-[#030014] dark:via-[#0a0025] dark:to-[#0e0035]">
       {!embedded && <Navbar />}
       {!embedded && <ScrollToTop />}
 
-      {/* Section héroïque décomposée */}
       <ClientHero clientCount={clients.length} onAddClient={handleAddClient} />
 
-      {/* Contenu principal */}
-      <div className="container mx-auto px-3 sm:px-4 md:px-6 py-8 sm:py-12 md:py-20 max-w-7xl">
-        {/* Recherche décomposée */}
+      <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
         <ClientSearchSection
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
@@ -204,152 +203,138 @@ const ClientsPage: React.FC<{ embedded?: boolean }> = ({ embedded = false }) => 
         />
 
         {/* Grille des clients */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
           {paginatedClients.map((client, index) => (
-            <Card 
-              key={client.id} 
-              className="group hover:shadow-2xl transition-all duration-700 transform hover:-translate-y-4 card-mirror-light dark:card-mirror mirror-shine backdrop-blur-sm shadow-xl hover:shadow-purple-500/25 relative"
-              style={{ animationDelay: `${index * 150}ms` }}
+            <motion.div
+              key={client.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: index * 0.05 }}
             >
-              {/* Badge ÉLITE au hover */}
-              <div className="absolute top-4 right-4 bg-gradient-to-r from-yellow-400 via-orange-400 to-red-400 text-black text-xs font-bold px-3 py-1 rounded-full opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-x-4 group-hover:translate-x-0 animate-bounce">
-                <Star className="w-3 h-3 inline mr-1" />ÉLITE
-              </div>
-              
-              {/* Mirror shine effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 z-20 pointer-events-none"></div>
-              <div className="absolute -inset-0.5 bg-gradient-to-r from-purple-500 via-pink-500 to-violet-500 rounded-3xl opacity-0 group-hover:opacity-15 blur transition-opacity duration-500 pointer-events-none"></div>
-              
-              <CardHeader className="pb-4 relative z-10">
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
-                    <CardTitle className="text-xl font-bold text-gray-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400 transition-colors duration-300">
-                      {client.nom}
-                    </CardTitle>
-                    <CardDescription className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                      <span className="inline-flex items-center gap-1">
-                        <Crown className="w-3 h-3 text-yellow-500" />
-                        Membre depuis le {new Date(client.dateCreation).toLocaleDateString('fr-FR')}
-                      </span>
-                    </CardDescription>
-                  </div>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-500 transform translate-y-2 group-hover:translate-y-0">
-                    <Button variant="ghost" size="sm" onClick={() => handleEditClient(client)} className="h-10 w-10 p-0 hover:bg-blue-100 dark:hover:bg-blue-900/20 rounded-full hover:scale-110 transition-transform duration-200">
-                      <Edit className="w-4 h-4 text-blue-600" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => handleDeleteClient(client)} className="h-10 w-10 p-0 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-full hover:scale-110 transition-transform duration-200">
-                      <Trash2 className="w-4 h-4 text-red-600" />
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              
-              <CardContent className="relative z-10">
-                <div className="space-y-4">
-                  <div onClick={() => handlePhoneClick(client.phone)} className="flex items-center gap-4 p-4 bg-gradient-to-r from-green-50 via-emerald-50 to-teal-50 dark:from-green-900/30 dark:via-emerald-900/30 dark:to-teal-900/30 rounded-xl border border-green-200/50 dark:border-green-800/50 backdrop-blur-sm cursor-pointer hover:scale-[1.02] transition-transform duration-200">
-                    <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full shadow-lg">
-                      <Phone className="w-5 h-5 text-white" />
+              <Card className="group relative overflow-hidden rounded-2xl bg-white/60 dark:bg-white/[0.06] backdrop-blur-2xl border border-white/20 dark:border-white/10 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                <div className={mirrorShine} />
+                <CardHeader className="pb-3 relative z-10">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-base font-bold text-foreground group-hover:text-violet-600 dark:group-hover:text-violet-400 transition-colors duration-300 truncate">
+                        {client.nom}
+                      </CardTitle>
+                      <CardDescription className="text-xs text-muted-foreground mt-1">
+                        <span className="inline-flex items-center gap-1">
+                          <Crown className="w-3 h-3 text-amber-500" />
+                          {new Date(client.dateCreation).toLocaleDateString('fr-FR')}
+                        </span>
+                      </CardDescription>
                     </div>
-                    <span className="text-gray-700 dark:text-gray-200 font-semibold hover:text-green-600 dark:hover:text-green-400 transition-colors">{client.phone}</span>
-                  </div>
-                  
-                  <div onClick={() => handleAddressClick(client.adresse)} className="flex items-start gap-4 p-4 bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 dark:from-blue-900/30 dark:via-indigo-900/30 dark:to-purple-900/30 rounded-xl border border-blue-200/50 dark:border-blue-800/50 backdrop-blur-sm cursor-pointer hover:scale-[1.02] transition-transform duration-200">
-                    <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full shadow-lg mt-0.5">
-                      <MapPin className="w-5 h-5 text-white" />
+                    <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-all duration-300 shrink-0">
+                      <Button variant="ghost" size="sm" onClick={() => handleEditClient(client)} className="h-8 w-8 p-0 hover:bg-violet-100 dark:hover:bg-violet-900/30 rounded-lg">
+                        <Edit className="w-3.5 h-3.5 text-violet-600 dark:text-violet-400" />
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => handleDeleteClient(client)} className="h-8 w-8 p-0 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg">
+                        <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                      </Button>
                     </div>
-                    <span className="text-gray-700 dark:text-gray-200 leading-relaxed line-clamp-2 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">{client.adresse}</span>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardHeader>
+                <CardContent className="relative z-10 pt-0">
+                  <div className="space-y-2">
+                    <div onClick={() => handlePhoneClick(client.phone)} className="flex items-center gap-3 p-2.5 rounded-xl bg-emerald-50/80 dark:bg-emerald-500/[0.08] border border-emerald-200/40 dark:border-emerald-500/10 cursor-pointer hover:bg-emerald-100/80 dark:hover:bg-emerald-500/[0.12] transition-all duration-200">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-green-600 shadow-md shadow-emerald-500/20">
+                        <Phone className="w-3.5 h-3.5 text-white" />
+                      </div>
+                      <span className="text-sm font-medium text-foreground">{client.phone}</span>
+                    </div>
+                    <div onClick={() => handleAddressClick(client.adresse)} className="flex items-start gap-3 p-2.5 rounded-xl bg-blue-50/80 dark:bg-blue-500/[0.08] border border-blue-200/40 dark:border-blue-500/10 cursor-pointer hover:bg-blue-100/80 dark:hover:bg-blue-500/[0.12] transition-all duration-200">
+                      <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 shadow-md shadow-blue-500/20 shrink-0 mt-0.5">
+                        <MapPin className="w-3.5 h-3.5 text-white" />
+                      </div>
+                      <span className="text-sm text-foreground leading-relaxed line-clamp-2">{client.adresse}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
           ))}
         </div>
 
-        {/* Empty State pour recherche sans résultat */}
         {searchQuery.length >= 3 && filteredClients.length === 0 && (
-          <div className="text-center py-20">
-            <div className="relative inline-flex items-center justify-center w-32 h-32 bg-gradient-to-br from-gray-100 via-gray-200 to-gray-100 dark:from-gray-800 dark:via-gray-700 dark:to-gray-800 rounded-full mb-8 shadow-xl">
-              <Users className="w-16 h-16 text-gray-400 dark:text-gray-500" />
+          <div className="text-center py-16">
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-white/60 dark:bg-white/[0.06] backdrop-blur-2xl border border-white/20 dark:border-white/10 shadow-lg mb-6">
+              <Users className="w-10 h-10 text-muted-foreground" />
             </div>
-            <h3 className="text-2xl sm:text-3xl font-bold text-gray-700 dark:text-gray-300 mb-4">Aucun client trouvé</h3>
-            <p className="text-lg text-gray-500 dark:text-gray-400 mb-8 max-w-2xl mx-auto">Aucun client ne correspond à votre recherche "{searchQuery}"</p>
-            <Button onClick={() => setSearchQuery('')} className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white px-8 py-4 rounded-xl">Effacer la recherche</Button>
+            <h3 className="text-xl font-bold text-foreground mb-2">Aucun client trouvé</h3>
+            <p className="text-sm text-muted-foreground mb-6">Aucun résultat pour "{searchQuery}"</p>
+            <Button onClick={() => setSearchQuery('')} className="bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white rounded-xl shadow-lg">Effacer la recherche</Button>
           </div>
         )}
 
-        {/* Pagination */}
         {filteredClients.length > 0 && totalPages > 1 && (
-          <div className="flex flex-wrap justify-center items-center gap-2 sm:gap-3 mt-12 mb-8 px-4">
-            <Button variant="outline" size="sm" onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} disabled={currentPage === 1} className="border-2 border-purple-300 dark:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-900/30 disabled:opacity-50 font-semibold">
+          <div className="flex flex-wrap justify-center items-center gap-2 mt-8 mb-4">
+            <Button variant="outline" size="sm" onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))} disabled={currentPage === 1} className="rounded-xl bg-white/60 dark:bg-white/[0.06] backdrop-blur-xl border border-white/20 dark:border-white/10 disabled:opacity-40 text-xs font-semibold">
               <span className="hidden sm:inline">← Précédent</span><span className="sm:hidden">←</span>
             </Button>
-            <div className="flex items-center gap-2">
-              <Button variant={currentPage === 1 ? 'default' : 'outline'} size="sm" onClick={() => setCurrentPage(1)} className={`min-w-[40px] font-bold transition-all ${currentPage === 1 ? 'bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 text-white shadow-lg scale-110' : 'border-2 border-purple-300 dark:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-900/30'}`}>1</Button>
-              {currentPage > 4 && <span className="px-2 text-lg font-bold text-gray-400 dark:text-gray-500">…</span>}
-              {Array.from({ length: 3 }, (_, i) => currentPage - 1 + i).filter(page => page > 1 && page < totalPages).map(page => (
-                <Button key={page} variant={currentPage === page ? 'default' : 'outline'} size="sm" onClick={() => setCurrentPage(page)} className={`min-w-[40px] font-bold transition-all ${currentPage === page ? 'bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 text-white shadow-lg scale-110' : 'border-2 border-purple-300 dark:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-900/30'}`}>{page}</Button>
-              ))}
-              {currentPage < totalPages - 3 && <span className="px-2 text-lg font-bold text-gray-400 dark:text-gray-500">…</span>}
-              {totalPages > 1 && (
-                <Button variant={currentPage === totalPages ? 'default' : 'outline'} size="sm" onClick={() => setCurrentPage(totalPages)} className={`min-w-[40px] font-bold transition-all ${currentPage === totalPages ? 'bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 text-white shadow-lg scale-110' : 'border-2 border-purple-300 dark:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-900/30'}`}>{totalPages}</Button>
-              )}
+            <div className="flex items-center gap-1.5">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                let page: number;
+                if (totalPages <= 5) { page = i + 1; }
+                else if (currentPage <= 3) { page = i + 1; }
+                else if (currentPage >= totalPages - 2) { page = totalPages - 4 + i; }
+                else { page = currentPage - 2 + i; }
+                return (
+                  <Button key={page} variant={currentPage === page ? 'default' : 'outline'} size="sm" onClick={() => setCurrentPage(page)} className={`min-w-[36px] h-9 rounded-xl text-xs font-bold transition-all ${currentPage === page ? 'bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-500/25 border-0' : 'bg-white/60 dark:bg-white/[0.06] backdrop-blur-xl border border-white/20 dark:border-white/10'}`}>{page}</Button>
+                );
+              })}
             </div>
-            <Button variant="outline" size="sm" onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} disabled={currentPage === totalPages} className="border-2 border-purple-300 dark:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-900/30 disabled:opacity-50 font-semibold">
+            <Button variant="outline" size="sm" onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))} disabled={currentPage === totalPages} className="rounded-xl bg-white/60 dark:bg-white/[0.06] backdrop-blur-xl border border-white/20 dark:border-white/10 disabled:opacity-40 text-xs font-semibold">
               <span className="hidden sm:inline">Suivant →</span><span className="sm:hidden">→</span>
             </Button>
           </div>
         )}
 
-        {/* Empty State quand aucun client */}
         {clients.length === 0 && searchQuery.length === 0 && (
-          <div className="text-center py-32">
-            <div className="relative inline-flex items-center justify-center w-48 h-48 bg-gradient-to-br from-purple-100 via-violet-100 to-indigo-100 dark:from-purple-900/20 dark:via-violet-900/20 dark:to-indigo-900/20 rounded-full mb-16 shadow-2xl">
-              <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 to-violet-400/20 rounded-full animate-pulse"></div>
-              <Users className="w-24 h-24 text-purple-600 dark:text-purple-400 relative z-10" />
-              <div className="absolute -top-6 -right-6 w-16 h-16 bg-gradient-to-r from-yellow-400 to-orange-400 rounded-full flex items-center justify-center shadow-xl animate-bounce">
-                <Crown className="w-8 h-8 text-white" />
-              </div>
+          <div className="text-center py-20">
+            <div className="inline-flex items-center justify-center w-24 h-24 rounded-2xl bg-white/60 dark:bg-white/[0.06] backdrop-blur-2xl border border-white/20 dark:border-white/10 shadow-lg mb-8">
+              <Users className="w-12 h-12 text-violet-500" />
             </div>
-            <h3 className="text-4xl font-bold text-gray-900 dark:text-white mb-6 bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">Votre Empire Clientèle vous attend</h3>
-            <p className="text-xl text-gray-600 dark:text-gray-400 mb-16 max-w-3xl mx-auto leading-relaxed">Commencez à construire votre réseau exclusif de clients VIP</p>
-            <Button onClick={handleAddClient} className="group bg-gradient-to-r from-purple-600 via-violet-600 to-indigo-600 hover:from-purple-700 hover:via-violet-700 hover:to-indigo-700 text-white text-xl px-16 py-8 rounded-2xl shadow-2xl hover:shadow-purple-500/30 transform hover:-translate-y-3 transition-all duration-500 border-2 border-purple-400/30">
-              <Crown className="w-8 h-8 mr-4 group-hover:rotate-12 transition-transform duration-300" />Créer votre Premier Client Élite<Sparkles className="w-8 h-8 ml-4 group-hover:scale-125 transition-transform duration-300" />
+            <h3 className="text-2xl font-bold text-foreground mb-3">Votre Empire Clientèle vous attend</h3>
+            <p className="text-base text-muted-foreground mb-8 max-w-lg mx-auto">Commencez à construire votre réseau de clients</p>
+            <Button onClick={handleAddClient} className="bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white px-8 py-4 rounded-xl shadow-lg shadow-violet-500/25 font-semibold">
+              <Plus className="w-5 h-5 mr-2" />Créer votre Premier Client
             </Button>
           </div>
         )}
       </div>
 
       {!embedded && <Footer />}
-      
-      {/* Dialog principal ajout/modification */}
+
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-md bg-white/95 dark:bg-[#0a0020]/95 backdrop-blur-2xl border border-violet-200/20 dark:border-violet-800/20 shadow-2xl rounded-2xl">
+        <DialogContent className="sm:max-w-md bg-white/95 dark:bg-[#0a0020]/95 backdrop-blur-2xl border border-white/20 dark:border-white/10 shadow-2xl rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <DialogTitle className="text-xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
               {editingClient ? 'Modifier le client' : 'Nouveau client'}
             </DialogTitle>
-            <DialogDescription className="text-gray-600 dark:text-gray-400">
-              {editingClient ? 'Modifiez les informations du client.' : 'Ajoutez un nouveau client à votre portefeuille.'}
+            <DialogDescription className="text-muted-foreground">
+              {editingClient ? 'Modifiez les informations du client.' : 'Ajoutez un nouveau client.'}
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleFormSubmit}>
-            <div className="grid gap-6 py-6">
-              <div className="space-y-2">
-                <Label htmlFor="nom" className="text-sm font-semibold text-gray-700 dark:text-gray-300">Nom complet</Label>
-                <Input id="nom" value={formData.nom} onChange={(e) => setFormData({ ...formData, nom: e.target.value })} placeholder="Nom et prénom" className="border-gray-200 dark:border-gray-700 focus:ring-blue-500 focus:border-blue-500" required />
+            <div className="grid gap-5 py-5">
+              <div className="space-y-1.5">
+                <Label htmlFor="nom" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Nom complet</Label>
+                <Input id="nom" value={formData.nom} onChange={(e) => setFormData({ ...formData, nom: e.target.value })} placeholder="Nom et prénom" className="bg-white/60 dark:bg-white/[0.06] backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-xl" required />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="phone" className="text-sm font-semibold text-gray-700 dark:text-gray-300">Numéro de téléphone</Label>
-                <Input id="phone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="Ex: 0692123456" className="border-gray-200 dark:border-gray-700 focus:ring-blue-500 focus:border-blue-500" required />
+              <div className="space-y-1.5">
+                <Label htmlFor="phone" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Téléphone</Label>
+                <Input id="phone" value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="Ex: 0692123456" className="bg-white/60 dark:bg-white/[0.06] backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-xl" required />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="adresse" className="text-sm font-semibold text-gray-700 dark:text-gray-300">Adresse</Label>
-                <Input id="adresse" value={formData.adresse} onChange={(e) => setFormData({ ...formData, adresse: e.target.value })} placeholder="Adresse complète" className="border-gray-200 dark:border-gray-700 focus:ring-blue-500 focus:border-blue-500" required />
+              <div className="space-y-1.5">
+                <Label htmlFor="adresse" className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Adresse</Label>
+                <Input id="adresse" value={formData.adresse} onChange={(e) => setFormData({ ...formData, adresse: e.target.value })} placeholder="Adresse complète" className="bg-white/60 dark:bg-white/[0.06] backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-xl" required />
               </div>
             </div>
-            <DialogFooter className="gap-3">
-              <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={isSubmitting} className="border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-800">Annuler</Button>
-              <Button type="submit" disabled={isSubmitting} className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white">
+            <DialogFooter className="gap-2">
+              <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)} disabled={isSubmitting} className="rounded-xl border border-white/20 dark:border-white/10">Annuler</Button>
+              <Button type="submit" disabled={isSubmitting} className="bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white rounded-xl shadow-lg">
                 {editingClient ? 'Modifier' : 'Ajouter'}
               </Button>
             </DialogFooter>
@@ -357,49 +342,46 @@ const ClientsPage: React.FC<{ embedded?: boolean }> = ({ embedded = false }) => 
         </DialogContent>
       </Dialog>
 
-      {/* Confirmations */}
       <Dialog open={showAddConfirm} onOpenChange={setShowAddConfirm}>
-        <DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Confirmer l'ajout</DialogTitle><DialogDescription>Voulez-vous vraiment ajouter ce client ?</DialogDescription></DialogHeader><DialogFooter><Button variant="outline" onClick={() => setShowAddConfirm(false)} disabled={isSubmitting}>Annuler</Button><Button onClick={confirmAdd} disabled={isSubmitting}>{isSubmitting ? 'Ajout...' : 'Oui, ajouter'}</Button></DialogFooter></DialogContent>
+        <DialogContent className="sm:max-w-md bg-white/95 dark:bg-[#0a0020]/95 backdrop-blur-2xl border border-white/20 dark:border-white/10 rounded-2xl"><DialogHeader><DialogTitle>Confirmer l'ajout</DialogTitle><DialogDescription>Voulez-vous vraiment ajouter ce client ?</DialogDescription></DialogHeader><DialogFooter><Button variant="outline" onClick={() => setShowAddConfirm(false)} disabled={isSubmitting} className="rounded-xl">Annuler</Button><Button onClick={confirmAdd} disabled={isSubmitting} className="bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl">{isSubmitting ? 'Ajout...' : 'Oui, ajouter'}</Button></DialogFooter></DialogContent>
       </Dialog>
 
       <Dialog open={showEditConfirm} onOpenChange={setShowEditConfirm}>
-        <DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Confirmer la modification</DialogTitle><DialogDescription>Voulez-vous vraiment modifier ce client ?</DialogDescription></DialogHeader><DialogFooter><Button variant="outline" onClick={() => setShowEditConfirm(false)} disabled={isSubmitting}>Annuler</Button><Button onClick={confirmEdit} disabled={isSubmitting}>{isSubmitting ? 'Modification...' : 'Oui, modifier'}</Button></DialogFooter></DialogContent>
+        <DialogContent className="sm:max-w-md bg-white/95 dark:bg-[#0a0020]/95 backdrop-blur-2xl border border-white/20 dark:border-white/10 rounded-2xl"><DialogHeader><DialogTitle>Confirmer la modification</DialogTitle><DialogDescription>Voulez-vous vraiment modifier ce client ?</DialogDescription></DialogHeader><DialogFooter><Button variant="outline" onClick={() => setShowEditConfirm(false)} disabled={isSubmitting} className="rounded-xl">Annuler</Button><Button onClick={confirmEdit} disabled={isSubmitting} className="bg-gradient-to-r from-violet-500 to-purple-600 text-white rounded-xl">{isSubmitting ? 'Modification...' : 'Oui, modifier'}</Button></DialogFooter></DialogContent>
       </Dialog>
 
       <ConfirmDeleteDialog isOpen={showDeleteConfirm} onClose={() => { setShowDeleteConfirm(false); setClientToDelete(null); }} onConfirm={confirmDelete} title="Confirmer la suppression" description={`Voulez-vous vraiment supprimer ${clientToDelete?.nom} ?`} isSubmitting={isSubmitting} />
 
-      {/* Modale téléphone */}
       <Dialog open={phoneActionOpen} onOpenChange={setPhoneActionOpen}>
-         <DialogContent className="sm:max-w-md bg-white/95 dark:bg-[#0a0020]/95 backdrop-blur-2xl border border-violet-200/20 dark:border-violet-800/20 shadow-2xl rounded-2xl">
+        <DialogContent className="sm:max-w-md bg-white/95 dark:bg-[#0a0020]/95 backdrop-blur-2xl border border-white/20 dark:border-white/10 shadow-2xl rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full"><Phone className="w-5 h-5 text-white" /></div>{selectedPhone}
+            <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-3">
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg"><Phone className="w-5 h-5 text-white" /></div>{selectedPhone}
             </DialogTitle>
-            <DialogDescription className="text-gray-600 dark:text-gray-400">Que souhaitez-vous faire ?</DialogDescription>
+            <DialogDescription className="text-muted-foreground">Que souhaitez-vous faire ?</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <Button onClick={handleCall} className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white py-6 text-lg font-semibold rounded-xl shadow-lg"><PhoneCall className="w-6 h-6" />Appeler ce numéro</Button>
-            <Button onClick={handleMessage} className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-6 text-lg font-semibold rounded-xl shadow-lg"><MessageSquare className="w-6 h-6" />{isMobile ? 'Envoyer un SMS' : 'Envoyer un message'}</Button>
+          <div className="grid gap-3 py-4">
+            <Button onClick={handleCall} className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white py-5 text-base font-semibold rounded-xl shadow-lg"><PhoneCall className="w-5 h-5" />Appeler</Button>
+            <Button onClick={handleMessage} className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white py-5 text-base font-semibold rounded-xl shadow-lg"><MessageSquare className="w-5 h-5" />{isMobile ? 'SMS' : 'Message'}</Button>
           </div>
-          <DialogFooter><Button variant="outline" onClick={() => setPhoneActionOpen(false)} className="w-full border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-800">Annuler</Button></DialogFooter>
+          <DialogFooter><Button variant="outline" onClick={() => setPhoneActionOpen(false)} className="w-full rounded-xl border border-white/20 dark:border-white/10">Annuler</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Modale adresse (mobile) */}
       <Dialog open={addressActionOpen} onOpenChange={setAddressActionOpen}>
-        <DialogContent className="sm:max-w-md bg-white/95 dark:bg-[#0a0020]/95 backdrop-blur-2xl border border-violet-200/20 dark:border-violet-800/20 shadow-2xl rounded-2xl">
+        <DialogContent className="sm:max-w-md bg-white/95 dark:bg-[#0a0020]/95 backdrop-blur-2xl border border-white/20 dark:border-white/10 shadow-2xl rounded-2xl">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-              <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full"><Navigation className="w-5 h-5 text-white" /></div>Navigation
+            <DialogTitle className="text-lg font-bold text-foreground flex items-center gap-3">
+              <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg"><Navigation className="w-5 h-5 text-white" /></div>Navigation
             </DialogTitle>
-            <DialogDescription className="text-gray-600 dark:text-gray-400">Ouvrir l'adresse dans quelle application ?</DialogDescription>
+            <DialogDescription className="text-muted-foreground">Ouvrir dans quelle application ?</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <Button onClick={openGoogleMaps} className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white py-6 text-lg font-semibold rounded-xl shadow-lg"><MapPin className="w-6 h-6" />Google Maps</Button>
-            <Button onClick={openWaze} className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-cyan-500 to-teal-600 hover:from-cyan-600 hover:to-teal-700 text-white py-6 text-lg font-semibold rounded-xl shadow-lg"><Navigation className="w-6 h-6" />Waze</Button>
-            <Button onClick={openAppleMaps} className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-gray-600 to-gray-800 hover:from-gray-700 hover:to-gray-900 text-white py-6 text-lg font-semibold rounded-xl shadow-lg"><MapPin className="w-6 h-6" />Apple Maps</Button>
+          <div className="grid gap-3 py-4">
+            <Button onClick={openGoogleMaps} className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white py-5 text-base font-semibold rounded-xl shadow-lg"><MapPin className="w-5 h-5" />Google Maps</Button>
+            <Button onClick={openWaze} className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-cyan-500 to-teal-600 hover:from-cyan-600 hover:to-teal-700 text-white py-5 text-base font-semibold rounded-xl shadow-lg"><Navigation className="w-5 h-5" />Waze</Button>
+            <Button onClick={openAppleMaps} className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-gray-600 to-gray-800 hover:from-gray-700 hover:to-gray-900 text-white py-5 text-base font-semibold rounded-xl shadow-lg"><MapPin className="w-5 h-5" />Apple Maps</Button>
           </div>
-          <DialogFooter><Button variant="outline" onClick={() => setAddressActionOpen(false)} className="w-full border-gray-300 hover:bg-gray-50 dark:border-gray-600 dark:hover:bg-gray-800">Annuler</Button></DialogFooter>
+          <DialogFooter><Button variant="outline" onClick={() => setAddressActionOpen(false)} className="w-full rounded-xl border border-white/20 dark:border-white/10">Annuler</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
