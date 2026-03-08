@@ -108,7 +108,8 @@ import {
                    </motion.div>
                  </Link>
 
-                 <RdvNotifications />
+                  <RdvNotifications />
+                  <NotificationCenter />
                </>
              )}
 

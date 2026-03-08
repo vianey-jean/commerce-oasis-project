@@ -235,6 +235,12 @@ const DashboardPage = () => {
         return <Suspense fallback={fallback}><ProduitsPage embedded /></Suspense>;
       case 'pointage':
         return <Suspense fallback={fallback}><PointagePage embedded /></Suspense>;
+      case 'facturation':
+        return <Suspense fallback={fallback}><FacturationPage embedded /></Suspense>;
+      case 'stocks':
+        return <Suspense fallback={fallback}><StocksPage embedded /></Suspense>;
+      case 'kpi':
+        return <Suspense fallback={fallback}><KpiDashboard embedded /></Suspense>;
       default:
         return <Suspense fallback={fallback}><VentesContent /></Suspense>;
     }
