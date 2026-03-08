@@ -17,7 +17,7 @@ const FournisseurAutocomplete: React.FC<FournisseurAutocompleteProps> = ({ value
   const [isSearching, setIsSearching] = useState(false);
   const [isNewFournisseur, setIsNewFournisseur] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
