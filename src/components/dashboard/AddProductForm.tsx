@@ -25,6 +25,8 @@ import { useApp } from '@/contexts/AppContext';
 import { cn } from '@/lib/utils';
 import { productService } from '@/service/api';
 import PhotoUploadSection from './PhotoUploadSection';
+import FournisseurAutocomplete from './FournisseurAutocomplete';
+import { fournisseurApiService } from '@/services/api/fournisseurApi';
 
 interface AddProductFormProps {
   isOpen: boolean;
