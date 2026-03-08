@@ -101,11 +101,21 @@ const AddProductForm: React.FC<AddProductFormProps> = ({ isOpen, onClose }) => {
     setIsSubmitting(true);
 
     try {
+      // Auto-create fournisseur if provided
+      if (formData.fournisseur.trim()) {
+        try {
+          await fournisseurApiService.create(formData.fournisseur.trim());
+        } catch (e) {
+          console.error('Error creating fournisseur:', e);
+        }
+      }
+
       const newProduct = await addProduct({
         description: formData.description,
         purchasePrice: Number(formData.purchasePrice),
         quantity: Number(formData.quantity),
-      });
+        fournisseur: formData.fournisseur.trim() || undefined,
+      } as any);
 
       // Upload photos if any were selected
       if (newProduct && addPhotos.files.length > 0) {
@@ -115,7 +125,6 @@ const AddProductForm: React.FC<AddProductFormProps> = ({ isOpen, onClose }) => {
             addPhotos.files,
             addPhotos.mainIndex
           );
-          // Refresh products to get updated photo data
           if (fetchProducts) {
             await fetchProducts();
           }
@@ -128,6 +137,7 @@ const AddProductForm: React.FC<AddProductFormProps> = ({ isOpen, onClose }) => {
         description: '',
         purchasePrice: '',
         quantity: '',
+        fournisseur: '',
       });
       setAddPhotos({ files: [], existingUrls: [], mainIndex: 0 });
 
