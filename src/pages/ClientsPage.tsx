@@ -185,18 +185,17 @@ const ClientsPage: React.FC<{ embedded?: boolean }> = ({ embedded = false }) => 
   // =========================================================================
   // Rendu
   // =========================================================================
+  const mirrorShine = "absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500";
+
   const mainContent = (
     <>
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-purple-50/30 to-indigo-50/50 dark:from-[#030014] dark:via-[#0a0020]/80 dark:to-[#0e0030]">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/20 dark:from-[#030014] dark:via-[#0a0025] dark:to-[#0e0035]">
       {!embedded && <Navbar />}
       {!embedded && <ScrollToTop />}
 
-      {/* Section héroïque décomposée */}
       <ClientHero clientCount={clients.length} onAddClient={handleAddClient} />
 
-      {/* Contenu principal */}
-      <div className="container mx-auto px-3 sm:px-4 md:px-6 py-8 sm:py-12 md:py-20 max-w-7xl">
-        {/* Recherche décomposée */}
+      <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8">
         <ClientSearchSection
           searchQuery={searchQuery}
           setSearchQuery={setSearchQuery}
