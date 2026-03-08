@@ -33,6 +33,9 @@ import {
   Star,
   Menu,
   X,
+  Receipt,
+  Boxes,
+  Activity,
 } from 'lucide-react';
 import tacheApi from '@/services/api/tacheApi';
 
