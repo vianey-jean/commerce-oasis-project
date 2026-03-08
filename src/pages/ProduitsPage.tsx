@@ -191,6 +191,7 @@ const ProduitsPage: React.FC<{ embedded?: boolean }> = ({ embedded = false }) =>
       purchasePrice: product.purchasePrice,
       quantity: product.quantity,
       additionalQuantity: 0,
+      fournisseur: product.fournisseur || '',
     });
     setEditPhotos({ files: [], existingUrls: product.photos || [], mainIndex: 0 });
     setIsEditOpen(true);
