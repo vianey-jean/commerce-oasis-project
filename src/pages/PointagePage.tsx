@@ -43,6 +43,7 @@ const PointagePage: React.FC<{ embedded?: boolean }> = ({ embedded = false }) =>
   const [showParPersonneModal, setShowParPersonneModal] = useState(false);
   const [showYearlyModal, setShowYearlyModal] = useState(false);
   const [showAvanceModal, setShowAvanceModal] = useState(false);
+  const [showMonthDetailModal, setShowMonthDetailModal] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
   const [editingPointage, setEditingPointage] = useState<PointageEntry | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
