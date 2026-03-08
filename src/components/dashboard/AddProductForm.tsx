@@ -40,6 +40,7 @@ const AddProductForm: React.FC<AddProductFormProps> = ({ isOpen, onClose }) => {
     description: '',
     purchasePrice: '',
     quantity: '',
+    fournisseur: '',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
