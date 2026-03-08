@@ -294,6 +294,7 @@ app.use('/api/pointages', pointageRoutes);
 app.use('/api/travailleurs', travailleurRoutes);
 app.use('/api/taches', tacheRoutes);
 app.use('/api/notes', notesRoutes);
+app.use('/api/avances', avanceRoutes);
 
 // Static file serving for uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
