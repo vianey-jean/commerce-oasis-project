@@ -2,13 +2,7 @@
  import { Link } from 'react-router-dom';
  import { Button } from '@/components/ui/button';
  import { Badge } from '@/components/ui/badge';
- import {
-   DropdownMenu,
-   DropdownMenuContent,
-   DropdownMenuItem,
-   DropdownMenuTrigger,
- } from '@/components/ui/dropdown-menu';
- import { motion } from 'framer-motion';
+import { motion } from 'framer-motion';
  
  import { useAuth } from '@/contexts/AuthContext';
  import { useTheme } from '@/contexts/ThemeContext';
