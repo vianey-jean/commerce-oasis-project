@@ -55,9 +55,11 @@ const PointageHero: React.FC<PointageHeroProps> = ({
               <p className="text-xs text-muted-foreground">Pointages ce mois</p>
               <p className="text-xl font-black text-blue-500">{pointagesCount}</p>
             </div>
-            <div className="px-5 py-3 rounded-2xl bg-white/60 dark:bg-white/5 backdrop-blur-xl border border-white/20 shadow-xl">
+            <div className="px-5 py-3 rounded-2xl bg-white/60 dark:bg-white/5 backdrop-blur-xl border border-white/20 shadow-xl cursor-pointer hover:scale-105 transition-transform hover:shadow-2xl hover:border-emerald-500/30"
+              onClick={onShowMonthDetail}>
               <p className="text-xs text-muted-foreground">Total du mois</p>
               <p className="text-xl font-black text-emerald-500">{monthTotal.toFixed(2)}€</p>
+              <p className="text-[10px] text-emerald-500/60 font-semibold">Cliquer pour détails</p>
             </div>
             <div className="px-5 py-3 rounded-2xl bg-white/60 dark:bg-white/5 backdrop-blur-xl border border-white/20 shadow-xl cursor-pointer hover:scale-105 transition-transform hover:shadow-2xl"
               onClick={onShowYearlyTotal}>
