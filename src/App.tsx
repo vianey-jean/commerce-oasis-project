@@ -78,14 +78,7 @@ function App() {
                         </ProtectedRoute>
                       }
                     />
-                    <Route
-                      path="/tendances"
-                      element={
-                        <ProtectedRoute>
-                          <TendancesPage />
-                        </ProtectedRoute>
-                      }
-                    />
+                    {/* Route Tendances supprimée - contenu dans Dashboard > Comptabilité & Finances */}
                     <Route
                       path="/clients"
                       element={

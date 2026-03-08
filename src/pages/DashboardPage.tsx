@@ -188,8 +188,8 @@ const DashboardPage = () => {
         return <Suspense fallback={fallback}><CommandesPage embedded /></Suspense>;
       case 'rdv':
         return <Suspense fallback={fallback}><RdvPage embedded /></Suspense>;
-      case 'tendances':
-        return <Suspense fallback={fallback}><TendancesPage embedded /></Suspense>;
+      case 'comptabilite':
+        return <Suspense fallback={fallback}><ComptabiliteFinancesContent /></Suspense>;
       case 'clients':
         return <Suspense fallback={fallback}><ClientsPage embedded /></Suspense>;
       case 'produits':
