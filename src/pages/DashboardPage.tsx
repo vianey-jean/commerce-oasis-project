@@ -44,6 +44,9 @@ const TendancesPage = lazy(() => import('@/pages/TendancesPage'));
 const ClientsPage = lazy(() => import('@/pages/ClientsPage'));
 const ProduitsPage = lazy(() => import('@/pages/ProduitsPage'));
 const PointagePage = lazy(() => import('@/pages/PointagePage'));
+const FacturationPage = lazy(() => import('@/pages/FacturationPage'));
+const StocksPage = lazy(() => import('@/pages/StocksPage'));
+const KpiDashboard = lazy(() => import('@/pages/KpiDashboard'));
 
 /** Configuration sidebar items */
 interface SidebarItem {
