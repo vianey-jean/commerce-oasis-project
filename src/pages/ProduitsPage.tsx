@@ -639,6 +639,7 @@ const ProduitsPage: React.FC<{ embedded?: boolean }> = ({ embedded = false }) =>
                 <div className="flex justify-between"><span className="text-muted-foreground text-sm">Produit:</span><span className="font-bold">{addForm.description}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground text-sm">Prix:</span><span className="font-bold text-amber-600">{addForm.purchasePrice}€</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground text-sm">Quantité:</span><span className="font-bold text-blue-600">{addForm.quantity}</span></div>
+                {addForm.fournisseur && <div className="flex justify-between"><span className="text-muted-foreground text-sm">Fournisseur:</span><span className="font-bold text-orange-600">{addForm.fournisseur}</span></div>}
                 {addPhotos.files.length > 0 && <div className="flex justify-between"><span className="text-muted-foreground text-sm">Photos:</span><span className="font-bold text-purple-600">{addPhotos.files.length}</span></div>}
               </div>
             </AlertDialogHeader>
