@@ -47,6 +47,7 @@ const EditProductForm: React.FC<EditProductFormProps> = ({ isOpen, onClose }) =>
     purchasePrice: 0,
     quantity: 0,
     additionalQuantity: 0,
+    fournisseur: '',
   });
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
