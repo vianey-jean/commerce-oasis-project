@@ -199,6 +199,9 @@ const ParPersonneModal: React.FC<ParPersonneModalProps> = ({
                     const totalHeures = pts.reduce((s, p) => s + (p.heures || 0), 0);
                     const totalJours = pts.filter(p => p.typePaiement === 'journalier').length;
                     const totalEntreprise = pts.reduce((s, p) => s + p.montantTotal, 0);
+                    const entAvances = ppAvances.filter(a => a.entrepriseNom === entName);
+                    const entAvTotal = entAvances.reduce((s, a) => s + a.montant, 0);
+                    const entReste = Math.max(0, totalEntreprise - entAvTotal);
                     return (
                       <div key={entName} className="p-4 rounded-2xl bg-white/10 border border-white/10 backdrop-blur-xl">
                         <div className="flex items-center justify-between mb-3">
@@ -228,6 +231,24 @@ const ParPersonneModal: React.FC<ParPersonneModalProps> = ({
                             </div>
                           ))}
                         </div>
+                        {/* Avances pour cette entreprise */}
+                        {entAvTotal > 0 && (
+                          <div className="mt-3 space-y-1">
+                            <div className="flex items-center gap-1 text-xs text-amber-300 font-bold px-2">
+                              <Banknote className="h-3 w-3" /> Avances reçues
+                            </div>
+                            {entAvances.map(a => (
+                              <div key={a.id} className="flex justify-between text-xs text-white/60 px-2 py-1 rounded bg-amber-500/5">
+                                <span>{new Date(a.date || a.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}</span>
+                                <span className="font-bold text-amber-400">-{a.montant.toFixed(2)}€</span>
+                              </div>
+                            ))}
+                            <div className="flex justify-between items-center px-2 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/20 text-xs mt-1">
+                              <span className="text-cyan-300 font-bold">Reste</span>
+                              <span className="text-cyan-400 font-black">{entReste.toFixed(2)}€</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
