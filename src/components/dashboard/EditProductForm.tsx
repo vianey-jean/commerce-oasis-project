@@ -27,6 +27,8 @@ import ProductSearchInput from './ProductSearchInput';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/contexts/AppContext';
 import PhotoUploadSection from './PhotoUploadSection';
+import FournisseurAutocomplete from './FournisseurAutocomplete';
+import { fournisseurApiService } from '@/services/api/fournisseurApi';
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://server-gestion-ventes.onrender.com';
 
@@ -45,6 +47,7 @@ const EditProductForm: React.FC<EditProductFormProps> = ({ isOpen, onClose }) =>
     purchasePrice: 0,
     quantity: 0,
     additionalQuantity: 0,
+    fournisseur: '',
   });
 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -68,6 +71,7 @@ const EditProductForm: React.FC<EditProductFormProps> = ({ isOpen, onClose }) =>
         purchasePrice: selectedProduct.purchasePrice,
         quantity: selectedProduct.quantity,
         additionalQuantity: 0,
+        fournisseur: selectedProduct.fournisseur || '',
       });
       // Reset photo state with existing product photos
       setEditPhotos({
@@ -110,11 +114,21 @@ const EditProductForm: React.FC<EditProductFormProps> = ({ isOpen, onClose }) =>
     try {
       setIsLoading(true);
 
+      // Auto-create fournisseur if provided
+      if (formData.fournisseur.trim()) {
+        try {
+          await fournisseurApiService.create(formData.fournisseur.trim());
+        } catch (e) {
+          console.error('Error creating fournisseur:', e);
+        }
+      }
+
       const updatedProduct = {
         id: formData.id,
         description: formData.description,
         purchasePrice: formData.purchasePrice,
         quantity: formData.quantity + formData.additionalQuantity,
+        fournisseur: formData.fournisseur.trim() || undefined,
       };
 
       await productService.updateProduct(updatedProduct);
@@ -195,6 +209,7 @@ const EditProductForm: React.FC<EditProductFormProps> = ({ isOpen, onClose }) =>
         purchasePrice: 0,
         quantity: 0,
         additionalQuantity: 0,
+        fournisseur: '',
       });
       setEditPhotos({ files: [], existingUrls: [], mainIndex: 0 });
       
@@ -313,6 +328,12 @@ const EditProductForm: React.FC<EditProductFormProps> = ({ isOpen, onClose }) =>
                 </div>
 
                 {/* Photo Upload Section */}
+                {/* Fournisseur Autocomplete */}
+                <FournisseurAutocomplete
+                  value={formData.fournisseur}
+                  onChange={(val) => setFormData({ ...formData, fournisseur: val })}
+                />
+
                 <div className="p-4 bg-gradient-to-r from-blue-50/50 to-indigo-50/50 border-2 border-blue-100 rounded-2xl">
                   <PhotoUploadSection
                     existingPhotos={selectedProduct.photos || []}
