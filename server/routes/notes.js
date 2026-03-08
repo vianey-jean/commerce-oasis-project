@@ -15,7 +15,7 @@ if (!fs.existsSync(dessinDir)) {
 router.post('/upload-drawing', auth, (req, res) => {
   try {
     const { drawing } = req.body;
-    if (!drawing) return res.status(400).json({ error: 'No drawing data' });
+    if (!drawing) return res.status(400).json({ error: 'No drawing data provided' });
 
     // Parse base64 data URL
     const match = drawing.match(/^data:image\/([a-zA-Z0-9]+);base64,(.+)$/);
