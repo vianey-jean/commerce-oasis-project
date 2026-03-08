@@ -594,6 +594,11 @@ const ProduitsPage: React.FC<{ embedded?: boolean }> = ({ embedded = false }) =>
                 />
                 {addErrors.quantity && <p className="text-sm text-red-400">{addErrors.quantity}</p>}
               </div>
+              <FournisseurAutocomplete
+                value={addForm.fournisseur}
+                onChange={(val) => setAddForm({ ...addForm, fournisseur: val })}
+                variant="dark"
+              />
               <div className="p-4 bg-white/5 border border-white/10 rounded-2xl">
                 <PhotoUploadSection
                   onPhotosChange={(files, existingUrls, mainIndex) => setAddPhotos({ files, existingUrls, mainIndex })}
