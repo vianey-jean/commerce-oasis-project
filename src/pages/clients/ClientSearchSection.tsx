@@ -1,26 +1,13 @@
 /**
- * =============================================================================
- * ClientSearchSection - Barre de recherche des clients
- * =============================================================================
- * 
- * Composant de recherche avec indicateur de résultats.
- * Recherche déclenchée après 3 caractères minimum.
- * 
- * @module ClientSearchSection
+ * ClientSearchSection - Barre de recherche (style glassmorphism pointage)
  */
-
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Button } from '@/components/ui/button';
+import { Search, X } from 'lucide-react';
 
 interface ClientSearchSectionProps {
-  /** Terme de recherche actuel */
   searchQuery: string;
-  /** Setter pour le terme de recherche */
   setSearchQuery: (value: string) => void;
-  /** Nombre de résultats filtrés */
   filteredCount: number;
 }
 
@@ -30,49 +17,38 @@ const ClientSearchSection: React.FC<ClientSearchSectionProps> = ({
   filteredCount,
 }) => {
   return (
-    <div className="mb-8 sm:mb-10 md:mb-12">
-      <Card className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-2 border-purple-200 dark:border-purple-800 shadow-xl hover:shadow-2xl transition-all duration-300">
-        <CardContent className="p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-            <Label htmlFor="search" className="text-base sm:text-lg font-semibold text-gray-700 dark:text-gray-200 whitespace-nowrap">
-              Rechercher un client
-            </Label>
-            <div className="relative w-full">
-              <Input
-                id="search"
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Saisissez au moins 3 caractères (nom, téléphone, adresse)..."
-                className="w-full pl-4 pr-12 py-3 sm:py-4 text-base sm:text-lg border-2 border-purple-300 dark:border-purple-700 focus:border-purple-500 dark:focus:border-purple-500 rounded-xl bg-white dark:bg-gray-900 transition-all duration-300"
-              />
-              {searchQuery && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 p-0 hover:bg-purple-100 dark:hover:bg-purple-900/50 rounded-full"
-                >
-                  <span className="text-xl text-gray-500 dark:text-gray-400">×</span>
-                </Button>
-              )}
-            </div>
-          </div>
-          
-          {/* Indicateur de résultats */}
-          {searchQuery.length >= 3 && (
-            <div className="mt-4 text-sm sm:text-base text-purple-700 dark:text-purple-300 font-medium">
-              {filteredCount} résultat{filteredCount > 1 ? 's' : ''} trouvé{filteredCount > 1 ? 's' : ''}
-            </div>
-          )}
-          
-          {searchQuery.length > 0 && searchQuery.length < 3 && (
-            <div className="mt-4 text-sm sm:text-base text-orange-600 dark:text-orange-400 font-medium">
-              Saisissez au moins 3 caractères pour lancer la recherche
-            </div>
-          )}
-        </CardContent>
-      </Card>
+    <div className="mb-6">
+      <div className="relative group">
+        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+          <Search className="w-4 h-4 text-muted-foreground" />
+        </div>
+        <Input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Rechercher un client (min. 3 caractères)..."
+          className="pl-10 pr-10 py-3 bg-white/60 dark:bg-white/[0.06] backdrop-blur-2xl border border-white/20 dark:border-white/10 rounded-xl shadow-lg focus:shadow-xl focus:border-violet-400/50 dark:focus:border-violet-500/50 transition-all duration-300 text-sm"
+        />
+        {searchQuery && (
+          <button
+            onClick={() => setSearchQuery('')}
+            className="absolute inset-y-0 right-0 pr-4 flex items-center text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+      
+      {searchQuery.length >= 3 && (
+        <p className="mt-2 text-xs font-medium text-violet-600 dark:text-violet-400">
+          {filteredCount} résultat{filteredCount > 1 ? 's' : ''} trouvé{filteredCount > 1 ? 's' : ''}
+        </p>
+      )}
+      {searchQuery.length > 0 && searchQuery.length < 3 && (
+        <p className="mt-2 text-xs font-medium text-amber-600 dark:text-amber-400">
+          Saisissez au moins 3 caractères
+        </p>
+      )}
     </div>
   );
 };
