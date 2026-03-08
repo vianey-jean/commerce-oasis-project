@@ -24,7 +24,8 @@ import { productService } from '@/service/api';
 import { Product } from '@/types';
 import { useToast } from '@/components/ui/use-toast';
 import ProductSearchInput from './ProductSearchInput';
-import { cn } from '@/lib/utils';
+import FournisseurAutocomplete from './FournisseurAutocomplete';
+import { fournisseurApiService } from '@/services/api/fournisseurApi';
 import { useApp } from '@/contexts/AppContext';
 import PhotoUploadSection from './PhotoUploadSection';
 
