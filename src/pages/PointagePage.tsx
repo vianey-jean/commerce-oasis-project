@@ -285,6 +285,7 @@ const PointagePage: React.FC<{ embedded?: boolean }> = ({ embedded = false }) =>
               open={showMonthDetailModal} onOpenChange={setShowMonthDetailModal}
               monthTotal={getMonthTotal()} pointages={pointages}
               year={year} month={month}
+            />
             <PointageConfirmDialogs
               deleteConfirm={deleteConfirm} setDeleteConfirm={setDeleteConfirm}
               onDelete={handleDeletePointage}
