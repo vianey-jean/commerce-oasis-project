@@ -6,10 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { Note, NoteColumn } from '@/services/api/noteApi';
-import noteApi from '@/services/api/noteApi';
 import { NOTE_COLORS, applySmartPunctuation } from './constants';
 import DrawingCanvas from './DrawingCanvas';
-import { useToast } from '@/hooks/use-toast';
 
 interface NoteFormModalProps {
   open: boolean;
@@ -20,14 +18,12 @@ interface NoteFormModalProps {
 }
 
 const NoteFormModal: React.FC<NoteFormModalProps> = ({ open, onOpenChange, note, columns, onSave }) => {
-  const { toast } = useToast();
   const [form, setForm] = useState<Partial<Note>>({
     title: '', content: '', columnId: columns[0]?.id || '', color: '#ffffff',
     bold: false, boldLines: [], underlineLines: [], drawing: null, voiceText: ''
   });
   const [showDrawing, setShowDrawing] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [savingDrawing, setSavingDrawing] = useState(false);
   const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
@@ -92,26 +88,6 @@ const NoteFormModal: React.FC<NoteFormModalProps> = ({ open, onOpenChange, note,
       const lines = prev.underlineLines || [];
       return { ...prev, underlineLines: lines.includes(lineIndex) ? lines.filter(l => l !== lineIndex) : [...lines, lineIndex] };
     });
-  };
-
-  const handleSaveDrawing = async (dataUrl: string) => {
-    setSavingDrawing(true);
-    try {
-      // Upload to server as JPEG file
-      const serverUrl = await noteApi.uploadDrawing(dataUrl);
-      console.log('Drawing uploaded to server:', serverUrl);
-      setForm(prev => ({ ...prev, drawing: serverUrl }));
-      setShowDrawing(false);
-      toast({ title: '✅ Dessin sauvegardé' });
-    } catch (err) {
-      console.error('Failed to upload drawing:', err);
-      // Fallback: save data URL directly
-      setForm(prev => ({ ...prev, drawing: dataUrl }));
-      setShowDrawing(false);
-      toast({ title: '⚠️ Dessin sauvegardé localement', description: 'Impossible de télécharger sur le serveur', variant: 'destructive' });
-    } finally {
-      setSavingDrawing(false);
-    }
   };
 
   return (
@@ -247,26 +223,13 @@ const NoteFormModal: React.FC<NoteFormModalProps> = ({ open, onOpenChange, note,
           {showDrawing && (
             <DrawingCanvas
               initialData={form.drawing}
-              onSave={handleSaveDrawing}
+              onSave={(dataUrl) => { setForm({ ...form, drawing: dataUrl }); setShowDrawing(false); }}
               onClose={() => setShowDrawing(false)}
             />
           )}
-          {savingDrawing && (
-            <div className="text-center py-3 text-sm text-cyan-500 font-bold animate-pulse">
-              ⏳ Sauvegarde du dessin en cours...
-            </div>
-          )}
-          {form.drawing && !showDrawing && !savingDrawing && (
+          {form.drawing && !showDrawing && (
             <div className="rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm">
-              <img 
-                src={form.drawing} 
-                alt="Dessin" 
-                className="w-full h-32 object-contain bg-white" 
-                onError={(e) => {
-                  console.error('Failed to load drawing image:', form.drawing);
-                  (e.target as HTMLImageElement).style.display = 'none';
-                }}
-              />
+              <img src={form.drawing} alt="Dessin" className="w-full h-32 object-contain bg-white" />
               <button onClick={() => setForm({ ...form, drawing: null })} className="w-full py-2 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 font-medium transition-colors">
                 Supprimer le dessin
               </button>
@@ -289,7 +252,6 @@ const NoteFormModal: React.FC<NoteFormModalProps> = ({ open, onOpenChange, note,
             <Button onClick={() => onOpenChange(false)} variant="outline" className="flex-1 rounded-xl">Annuler</Button>
             <Button
               onClick={() => onSave(form)}
-              disabled={savingDrawing}
               className="flex-1 bg-gradient-to-r from-cyan-500 to-blue-600 text-white hover:from-cyan-600 hover:to-blue-700 rounded-xl shadow-lg"
             >
               <Check className="h-4 w-4 mr-1" /> {note?.id ? 'Modifier' : 'Créer'}

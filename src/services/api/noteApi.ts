@@ -1,4 +1,4 @@
-import api, { getBaseURL } from './api';
+import api from './api';
 
 export interface NoteColumn {
   id: string;
@@ -31,18 +31,6 @@ const noteApi = {
   delete: (id: string) => api.delete(`/api/notes/${id}`),
   move: (id: string, columnId: string, order: number) => api.put<Note>(`/api/notes/${id}/move`, { columnId, order }),
   reorder: (updates: { id: string; columnId: string; order: number }[]) => api.put('/api/notes/batch/reorder', { updates }),
-
-  // Drawing upload
-  uploadDrawing: async (dataUrl: string): Promise<string> => {
-    try {
-      const response = await api.post<{ url: string }>('/api/notes/upload-drawing', { imageData: dataUrl });
-      // Return full URL for display
-      return `${getBaseURL()}${response.data.url}`;
-    } catch (err) {
-      console.error('Error uploading drawing:', err);
-      throw err;
-    }
-  },
 
   // Columns
   getColumns: () => api.get<NoteColumn[]>('/api/notes/columns'),

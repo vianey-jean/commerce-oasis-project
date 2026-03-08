@@ -267,7 +267,6 @@ const pointageRoutes = require('./routes/pointage');
 const travailleurRoutes = require('./routes/travailleur');
 const tacheRoutes = require('./routes/tache');
 const notesRoutes = require('./routes/notes');
-const avanceRoutes = require('./routes/avance');
 
 // Use routes
 app.use('/api/auth', authRoutes);
@@ -294,7 +293,6 @@ app.use('/api/pointages', pointageRoutes);
 app.use('/api/travailleurs', travailleurRoutes);
 app.use('/api/taches', tacheRoutes);
 app.use('/api/notes', notesRoutes);
-app.use('/api/avances', avanceRoutes);
 
 // Static file serving for uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
