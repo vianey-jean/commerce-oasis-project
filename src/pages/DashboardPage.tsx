@@ -40,7 +40,7 @@ import tacheApi from '@/services/api/tacheApi';
 const VentesContent = lazy(() => import('@/pages/VentesEmbedded'));
 const CommandesPage = lazy(() => import('@/pages/CommandesPage'));
 const RdvPage = lazy(() => import('@/pages/RdvPage'));
-const TendancesPage = lazy(() => import('@/pages/TendancesPage'));
+const ComptabiliteFinancesContent = lazy(() => import('@/components/dashboard/AdvancedDashboard'));
 const ClientsPage = lazy(() => import('@/pages/ClientsPage'));
 const ProduitsPage = lazy(() => import('@/pages/ProduitsPage'));
 const PointagePage = lazy(() => import('@/pages/PointagePage'));
