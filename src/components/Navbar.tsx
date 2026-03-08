@@ -50,7 +50,14 @@ import {
       }
     }, [isAuthenticated]);
  
-   return (
+    return (
+      <>
+      <style>{`
+        @keyframes navGreenPulse {
+          0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(52, 211, 153, 0.7); }
+          50% { opacity: 0.5; box-shadow: 0 0 10px 3px rgba(52, 211, 153, 0.3); }
+        }
+      `}</style>
      <header className="sticky top-0 z-50 backdrop-blur-2xl bg-gradient-to-r from-white/90 via-slate-50/90 to-violet-50/90 dark:from-[#030014]/95 dark:via-[#0a0020]/95 dark:to-[#0e0030]/95 border-b border-violet-200/20 dark:border-violet-800/20 shadow-2xl shadow-violet-500/5">
        {/* Mirror top reflection */}
        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/40 dark:via-white/10 to-transparent" />
