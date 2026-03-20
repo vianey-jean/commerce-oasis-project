@@ -303,6 +303,7 @@ app.use('/api/taches', tacheRoutes);
 app.use('/api/notes', notesRoutes);
 app.use('/api/avances', avanceRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/admin-chat', adminChatRoutes);
 
 // Static file serving for uploaded files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
