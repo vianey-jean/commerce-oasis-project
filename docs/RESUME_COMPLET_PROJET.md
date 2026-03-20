@@ -198,7 +198,7 @@ server/
 |--------|-----------|
 | Auth | JWT signé (8h expiration) |
 | Mots de passe | bcrypt (10 rounds salt) |
-| CORS | Whitelist + wildcard Lovable |
+| CORS | Whitelist|
 | Rate Limiting | 100 req/min par IP |
 | Sanitization | Nettoyage XSS/injection |
 | Headers | X-Frame-Options, CSP, etc. |
@@ -210,7 +210,7 @@ server/
 
 | Composant | Plateforme |
 |-----------|-----------|
-| Frontend | Lovable / Vercel |
+| Frontend |  Vercel |
 | Backend | Render (persistent disk) |
 | BDD | Fichiers JSON sur Render |
 
@@ -231,3 +231,40 @@ server/
 | `DEPLOYMENT.md` | Guide de déploiement |
 | `SECURITY.md` | Guide de sécurité |
 | `TESTS_GUIDE.md` | Guide de tests |
+
+---
+
+## 💬 Widget Messagerie Instantanée (Live Chat)
+
+Chat en direct visiteur ↔ admin avec :
+- Envoi instantané (SSE + polling 2s)
+- **Emoji picker** (20 emojis)
+- **Like ❤️** un message
+- **Modifier** ses propres messages
+- **Supprimer** ses propres messages (affiche notice)
+- Indicateur de frappe temps réel
+
+**Composants** : `LiveChatVisitor.tsx`, `LiveChatAdmin.tsx`  
+**Backend** : `server/routes/messagerie.js`  
+**Base** : `server/db/messagerie.json`
+
+---
+
+## 🏭 Fournisseurs
+
+Gestion automatique des fournisseurs (auto-créés lors d'ajout produit/achat).  
+**API** : `server/routes/fournisseurs.js` | **Base** : `server/db/fournisseurs.json`
+
+---
+
+## 👤 Profil & Paramètres
+
+Gestion complète du profil utilisateur et des paramètres de l'application.
+
+**Fonctionnalités** : Édition profil, upload photo, changement mot de passe, sauvegarde/restauration/suppression BDD (chiffrement AES-256), gestion des rôles, configuration des modules.
+
+**Composants décomposés** : `ProfileCard`, `ProfileAvatar`, `ProfileInfoCard`, `PasswordSection`, `ParametresSection`, `IndisponibiliteSection`, `ModuleSettingsSection`
+
+**Backend** : `server/routes/profile.js`, `server/routes/settings.js`  
+**Base** : `users.json`, `settings.json`, `moduleSettings.json`, `indisponible.json`, `parametretache.json`, `prixpointage.json`  
+**Note** : La sauvegarde scanne dynamiquement tous les `*.json` dans `server/db/` — les nouveaux fichiers de BDD sont automatiquement inclus.

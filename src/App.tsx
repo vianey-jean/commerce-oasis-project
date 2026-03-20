@@ -41,6 +41,8 @@ const ProduitsPage = lazy(() => import('@/pages/ProduitsPage'));
 const PointagePage = lazy(() => import('@/pages/PointagePage'));
 const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
+const SharedNotesPage = lazy(() => import('@/pages/SharedNotesPage'));
+const SharedViewPage = lazy(() => import('@/pages/SharedViewPage'));
 
 function App() {
   return (
@@ -69,6 +71,8 @@ function App() {
                     <Route path="register" element={<RegisterPage />} />
                     <Route path="reset-password" element={<ResetPasswordPage />} />
                     <Route path="contact" element={<ContactPage />} />
+                    <Route path="shared/notes/:token" element={<SharedNotesPage />} />
+                    <Route path="shared/:token" element={<SharedViewPage />} />
 
                     {/* Routes protégées */}
                     <Route

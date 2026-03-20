@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import noteApi, { Note, NoteColumn } from '@/services/api/noteApi';
-import { Plus, StickyNote, Columns3, Sparkles } from 'lucide-react';
+import { Plus, StickyNote, Columns3, Sparkles, Share2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import ShareLinkModal from '@/components/shared/ShareLinkModal';
 import KanbanColumn from './KanbanColumn';
 import NoteFormModal from './NoteFormModal';
 import ColumnFormModal from './ColumnFormModal';
@@ -30,6 +31,7 @@ const NotesKanbanView: React.FC = () => {
   const [editingCol, setEditingCol] = useState<NoteColumn | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ message: string; action: () => void } | null>(null);
   const [dragOverColId, setDragOverColId] = useState<string | null>(null);
+  const [showShareModal, setShowShareModal] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -126,6 +128,7 @@ const NotesKanbanView: React.FC = () => {
 
   const handleDragStart = (e: React.DragEvent, noteId: string) => {
     e.dataTransfer.setData('noteId', noteId);
+    e.dataTransfer.effectAllowed = 'move';
   };
 
   const handleDragOver = (e: React.DragEvent, colId: string) => {
@@ -133,13 +136,42 @@ const NotesKanbanView: React.FC = () => {
     setDragOverColId(colId);
   };
 
-  const handleDrop = (e: React.DragEvent, targetColId: string) => {
+  const handleDrop = (e: React.DragEvent, targetColId: string, dropIndex?: number) => {
     e.preventDefault();
     const noteId = e.dataTransfer.getData('noteId');
     setDragOverColId(null);
     if (!noteId) return;
     const note = notes.find(n => n.id === noteId);
-    if (!note || note.columnId === targetColId) return;
+    if (!note) return;
+
+    // Same column reorder
+    if (note.columnId === targetColId) {
+      const colNotes = notes.filter(n => n.columnId === targetColId).sort((a, b) => a.order - b.order);
+      const oldIndex = colNotes.findIndex(n => n.id === noteId);
+      const newIndex = dropIndex !== undefined ? dropIndex : colNotes.length - 1;
+      if (oldIndex === newIndex) return;
+
+      // Reorder
+      const reordered = [...colNotes];
+      const [moved] = reordered.splice(oldIndex, 1);
+      reordered.splice(newIndex, 0, moved);
+      const updates = reordered.map((n, i) => ({ id: n.id, columnId: targetColId, order: i }));
+
+      // Optimistic update
+      setNotes(prev => {
+        const other = prev.filter(n => n.columnId !== targetColId);
+        const updated = reordered.map((n, i) => ({ ...n, order: i }));
+        return [...other, ...updated];
+      });
+
+      noteApi.reorder(updates).then(() => fetchData()).catch(() => {
+        toast({ title: 'Erreur de réordonnancement', variant: 'destructive' });
+        fetchData();
+      });
+      return;
+    }
+
+    // Different column move
     const targetCol = columns.find(c => c.id === targetColId);
     setConfirmAction({
       message: `Déplacer cette note vers "${targetCol?.title}" ?`,
@@ -155,6 +187,10 @@ const NotesKanbanView: React.FC = () => {
         setConfirmAction(null);
       }
     });
+  };
+
+  const handleShareNotes = () => {
+    setShowShareModal(true);
   };
 
   const sortedColumns = [...columns].sort((a, b) => a.order - b.order);
@@ -201,6 +237,12 @@ const NotesKanbanView: React.FC = () => {
               >
                 <Columns3 className="h-4 w-4 mr-2" /> Ajouter colonne
               </Button>
+              <Button
+                onClick={handleShareNotes}
+                className="relative overflow-hidden bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-700 border border-emerald-300/40 text-white shadow-[0_20px_70px_rgba(16,185,129,0.5)] hover:shadow-[0_35px_100px_rgba(16,185,129,0.7)] rounded-2xl px-5 py-2.5 font-bold text-sm transition-all hover:scale-105 active:scale-95"
+              >
+                <Share2 className="h-4 w-4 mr-2" /> Partager notes
+              </Button>
             </div>
           </div>
         </div>
@@ -230,7 +272,7 @@ const NotesKanbanView: React.FC = () => {
                   onDeleteNote={handleDeleteNote}
                   onDragStart={handleDragStart}
                   onDragOver={(e) => handleDragOver(e, col.id)}
-                  onDrop={(e) => handleDrop(e, col.id)}
+                  onDrop={(e, dropIndex) => handleDrop(e, col.id, dropIndex)}
                   onEditColumn={() => { setEditingCol(col); setShowColForm(true); }}
                   onDeleteColumn={() => handleDeleteColumn(col)}
                   isDragOver={dragOverColId === col.id}
@@ -252,6 +294,14 @@ const NotesKanbanView: React.FC = () => {
       {confirmAction && (
         <ConfirmModal open={true} message={confirmAction.message} onConfirm={confirmAction.action} onCancel={() => setConfirmAction(null)} />
       )}
+
+      {/* Share Modal */}
+      <ShareLinkModal
+        open={showShareModal}
+        onClose={() => setShowShareModal(false)}
+        type="notes"
+        typeLabel="Notes"
+      />
     </div>
   );
 };
