@@ -137,6 +137,7 @@ class SyncManager {
       'depensefixe.json',
       'clients.json',
       'messages.json',
+      'adminChat.json',
       'rdv.json',
       'rdvNotifications.json',
       'remboursement.json'
@@ -213,6 +214,7 @@ const filesToWatch = [
   'depensefixe.json',
   'clients.json',
   'messages.json',
+  'adminChat.json',
   'rdv.json',
   'rdvNotifications.json',
   'remboursement.json'
