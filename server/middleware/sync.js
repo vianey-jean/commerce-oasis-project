@@ -214,6 +214,7 @@ const filesToWatch = [
   'depensefixe.json',
   'clients.json',
   'messages.json',
+  'adminChat.json',
   'rdv.json',
   'rdvNotifications.json',
   'remboursement.json'
