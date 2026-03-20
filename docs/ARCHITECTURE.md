@@ -219,7 +219,7 @@ Chaque client recharge les données affectées
 |--------|-----------|
 | Authentification | JWT avec expiration 8h |
 | Mots de passe | Hashés avec bcrypt (salt 10 rounds) |
-| CORS | Origins whitelist|
+| CORS | Origins whitelist + Lovable wildcard |
 | Rate Limiting | 100 req/min par IP |
 | Sanitization | Nettoyage de tous les inputs (sauf base64) |
 | Headers | Security headers (X-Frame-Options, CSP, etc.) |
@@ -231,7 +231,7 @@ Chaque client recharge les données affectées
 
 | Composant | Plateforme | URL |
 |-----------|-----------|-----|
-| Frontend |  Vercel | `https://riziky-boutic.vercel.app` |
+| Frontend | Lovable / Vercel | `https://riziky-boutic.vercel.app` |
 | Backend | Render | `https://server-gestion-ventes.onrender.com` |
 | Base de données | Fichiers JSON sur Render | Persistent disk |
 
@@ -261,65 +261,3 @@ Chaque client recharge les données affectées
 | **Avances** | (dans Pointage) | pointage/modals/ | avance.js | avance.json |
 | **Tâches** | PointagePage | tache/ | tache.js | tache.json |
 | **Notes Kanban** | PointagePage | notes/ | notes.js | notes.json, noteColumns.json |
-| **Messagerie Widget** | LiveChatVisitor/Admin | livechat/ | messagerie.js | messagerie.json |
-| **Fournisseurs** | (dans Produits/Compta) | — | fournisseurs.js | fournisseurs.json |
-
----
-
-## 📌 14. Widget Messagerie Instantanée
-
-### Architecture
-```
-┌─────────────────┐    SSE + HTTP     ┌──────────────────┐
-│ LiveChatVisitor  │ ◄──────────────► │  messagerie.js   │
-│ (Widget public)  │                  │  (Express route) │
-├─────────────────┤                  │                  │
-│ LiveChatAdmin    │ ◄──────────────► │  messagerie.json │
-│ (Widget admin)   │                  └──────────────────┘
-└─────────────────┘
-```
-
-### Fonctionnalités
-- Envoi/réception instantanée (SSE + polling fallback 2s)
-- Emoji picker intégré
-- Like/Aimer un message (toggle ❤️)
-- Modifier ses propres messages
-- Supprimer ses propres messages (affiche notice de suppression)
-- Indicateur de frappe en temps réel
-- Liste des conversations côté admin
-
-### Fournisseurs
-- Auto-créés lors d'ajout produit ou achat comptabilité
-- Recherche avec autocomplétion
-- Base de données : `server/db/fournisseurs.json`
-
----
-
-## 👤 Page Profil (ProfilePage)
-
-### Architecture des composants
-
-```
-ProfilePage.tsx
-├── ProfileCard.tsx          → Avatar + nom + email + rôle + statut en ligne
-│   └── ProfileAvatar.tsx    → Avatar animé avec anneaux pulsants verts
-├── ProfileInfoCard.tsx      → Formulaire d'édition des informations personnelles
-├── PasswordSection.tsx      → Changement de mot de passe avec vérification de force
-└── ParametresSection.tsx    → Onglet Paramètres (admin uniquement)
-    ├── IndisponibiliteSection.tsx → Gestion des congés/indisponibilités
-    └── ModuleSettingsSection.tsx  → Configuration par module (commandes, pointage, tâches, notes)
-```
-
-### Fonctionnalités
-- **Profil** : Visualisation et édition des informations personnelles avec confirmation
-- **Photo** : Upload avec aperçu et confirmation avant envoi
-- **Mot de passe** : Changement sécurisé avec vérification de force (PasswordStrengthChecker)
-- **Paramètres** (admin) : Configuration globale, gestion des rôles, sauvegarde/restauration/suppression des données
-- **Sauvegarde dynamique** : Scanne automatiquement tous les fichiers `.json` dans `server/db/` pour inclure les nouvelles bases de données
-- **Rôles** : 3 niveaux — simple utilisateur, administrateur, administrateur principale
-
-### Base de données associées
-- `server/db/users.json` — Comptes utilisateurs
-- `server/db/settings.json` — Paramètres globaux
-- `server/db/moduleSettings.json` — Paramètres par module
-- `server/db/indisponible.json` — Congés et indisponibilités

@@ -595,10 +595,12 @@ const RegisterPage: React.FC = () => {
             error={errors.password}
             className="h-12 bg-white/[0.06] border-white/[0.1] text-white rounded-xl"
           />
-          <PasswordStrengthChecker 
+          {showPasswordChecker && (
+            <PasswordStrengthChecker 
               password={formData.password} 
               onValidityChange={handlePasswordValidityChange}
             />
+          )}
         </div>
 
                       <div className="space-y-2">

@@ -306,6 +306,8 @@ app.use((req, res) => {
 http://localhost:3000         ← Développement local frontend
 http://localhost:8080         ← Développement local alternatif
 http://localhost:8081         ← Développement local alternatif
+*.lovable.app                ← Preview Lovable (wildcard)
+*.lovableproject.com         ← Lovable project (wildcard)
 https://riziky-gestion-ventes.vercel.app  ← Production Vercel
 https://riziky-boutic.vercel.app          ← Production Vercel alt
 https://server-gestion-ventes.onrender.com ← Backend Render
@@ -351,63 +353,3 @@ app.use('/api/categories', categoriesRoutes);
 # src/services/api/categorieApi.ts
 # Copier le pattern d'un API existant (ex: entrepriseApi.ts)
 ```
-
----
-
-## 📌 Widget Messagerie Instantanée (Backend)
-
-### Route : `server/routes/messagerie.js`
-
-Gère le chat en direct entre visiteurs et administrateurs.
-
-**Endpoints :**
-| Méthode | Route | Description |
-|---------|-------|-------------|
-| GET | `/events` | SSE pour temps réel |
-| GET | `/conversations` | Liste conversations (admin, auth) |
-| GET | `/messages/:visitorId/:adminId` | Messages d'une conversation |
-| POST | `/send` | Envoyer un message |
-| PUT | `/edit/:messageId` | Modifier un message (propre) |
-| DELETE | `/delete/:messageId` | Supprimer un message (propre) |
-| POST | `/like/:messageId` | Aimer/retirer like |
-| POST | `/typing` | Indicateur de frappe |
-| PUT | `/mark-read/:visitorId/:adminId` | Marquer comme lu |
-| GET | `/admin-status` | Statut admin en ligne |
-| GET | `/unread-count/:adminId` | Compteur non lus |
-
-**Événements SSE :** `new_message`, `message_edited`, `message_deleted`, `message_liked`, `typing`, `admin_status`
-
-### Route : `server/routes/fournisseurs.js`
-
-| Méthode | Route | Description |
-|---------|-------|-------------|
-| GET | `/` | Liste tous les fournisseurs |
-| GET | `/search?q=` | Recherche par nom |
-| POST | `/` | Créer si n'existe pas |
-| DELETE | `/:id` | Supprimer |
-
----
-
-### Route : `server/routes/profile.js`
-
-| Méthode | Route | Description |
-|---------|-------|-------------|
-| GET | `/` | Récupérer le profil de l'utilisateur connecté |
-| PUT | `/` | Modifier les informations personnelles |
-| PUT | `/password` | Changer le mot de passe |
-| POST | `/photo` | Upload de la photo de profil (multipart) |
-
-### Route : `server/routes/settings.js`
-
-| Méthode | Route | Description |
-|---------|-------|-------------|
-| GET | `/` | Récupérer les paramètres globaux |
-| PUT | `/` | Modifier les paramètres (admin) |
-| GET | `/users` | Liste des utilisateurs (admin principale) |
-| PUT | `/user-role` | Changer le rôle d'un utilisateur (admin principale) |
-| POST | `/backup` | Sauvegarder toutes les données (scan dynamique de `server/db/*.json`) |
-| POST | `/restore` | Restaurer des données depuis un fichier chiffré |
-| POST | `/delete-all` | Supprimer toutes les données (admin principale) |
-| POST | `/verify-password` | Vérifier le mot de passe admin |
-
-**Note** : La sauvegarde et suppression utilisent `fs.readdirSync()` pour scanner dynamiquement tous les fichiers `.json` dans `server/db/`. Tout nouveau fichier de base de données est automatiquement inclus.

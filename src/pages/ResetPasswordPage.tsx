@@ -223,10 +223,12 @@ const ResetPasswordPage: React.FC = () => {
                       disabled={isLoading}
                       className="h-14 bg-white/[0.06] border-white/[0.1] text-white rounded-xl"
                     />
-                    <PasswordStrengthChecker
+                    {showPasswordChecker && (
+                      <PasswordStrengthChecker
                         password={newPassword}
                         onValidityChange={handlePasswordValidityChange}
                       />
+                    )}
 
                     <Label htmlFor="confirmPassword" className="text-sm font-semibold text-purple-200/80">
                       Confirmer le mot de passe

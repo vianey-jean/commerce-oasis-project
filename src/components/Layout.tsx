@@ -7,7 +7,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { RealtimeWrapper } from './common/RealtimeWrapper';
 import { useAccessibility } from './accessibility/AccessibilityProvider';
-import LiveChatAdmin from './livechat/LiveChatAdmin';
 
 interface LayoutProps {
   children?: React.ReactNode;
@@ -46,7 +45,6 @@ const Layout: React.FC<LayoutProps> = ({ children, requireAuth = false }) => {
       
       <Footer />
       <ScrollToTop />
-      <LiveChatAdmin />
     </div>
   );
   

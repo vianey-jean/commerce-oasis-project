@@ -2,10 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import tacheApi, { Tache } from '@/services/api/tacheApi';
 import travailleurApi, { Travailleur } from '@/services/api/travailleurApi';
-import parametresApi, { ParametreTache } from '@/services/api/parametresApi';
 import TacheCalendar from './TacheCalendar';
 import TacheHero from './TacheHero';
-import TacheTicker from './TacheTicker';
 import TacheDayModal from './TacheDayModal';
 import TacheFormModal from './TacheFormModal';
 import TacheWeekModal from './TacheWeekModal';
@@ -13,7 +11,6 @@ import TacheConfirmDialog from './TacheConfirmDialog';
 import TacheNotificationBar, { TacheNotification } from './TacheNotificationBar';
 import TacheValidationModal from './TacheValidationModal';
 import TravailleurModal from '@/components/pointage/modals/TravailleurModal';
-import ShareLinkModal from '@/components/shared/ShareLinkModal';
 
 const premiumBtnClass = "group relative overflow-hidden rounded-xl sm:rounded-2xl backdrop-blur-xl border transition-all duration-300 hover:scale-105 px-4 py-2 sm:px-5 sm:py-3 text-xs sm:text-sm font-semibold";
 const mirrorShine = "absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500";
@@ -46,15 +43,10 @@ const TacheView: React.FC = () => {
 
   // Travailleur modal
   const [showTravailleurModal, setShowTravailleurModal] = useState(false);
-  const [showShareTachesModal, setShowShareTachesModal] = useState(false);
   const [travailleurForm, setTravailleurForm] = useState({ nom: '', prenom: '', adresse: '', phone: '', genre: 'homme' as 'homme' | 'femme', role: 'autre' as 'administrateur' | 'autre' });
 
   // Follow-up form (pre-filled)
   const [followUpTache, setFollowUpTache] = useState<Tache | null>(null);
-  
-  // Paramètre taches settings
-  const [parametreTache, setParametreTache] = useState<ParametreTache>({ autoCompleteOnDone: true, tachesTerminees: true });
-  const autoCompletedRef = useRef<Set<string>>(new Set());
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -72,14 +64,12 @@ const TacheView: React.FC = () => {
   const fetchData = useCallback(async () => {
     try {
       setLoading(true);
-      const [tRes, travRes, paramRes] = await Promise.all([
+      const [tRes, travRes] = await Promise.all([
         tacheApi.getByMonth(year, month + 1),
-        travailleurApi.getAll(),
-        parametresApi.getParametreTache().catch(() => ({ autoCompleteOnDone: true, tachesTerminees: true }))
+        travailleurApi.getAll()
       ]);
       setTaches(tRes.data);
       setTravailleurs(travRes.data);
-      setParametreTache(paramRes);
     } catch (err) {
       console.error('Error fetching taches:', err);
     } finally {
@@ -88,57 +78,6 @@ const TacheView: React.FC = () => {
   }, [year, month]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
-  
-  // Auto-complete expired taches if setting is enabled
-  useEffect(() => {
-    if (!parametreTache.autoCompleteOnDone) return;
-    
-    const autoComplete = async () => {
-      const now = new Date();
-      const todayStr = now.toISOString().split('T')[0];
-      
-      for (const tache of taches) {
-        if (tache.completed) continue;
-        if (tache.date > todayStr) continue;
-        if (autoCompletedRef.current.has(tache.id)) continue;
-        
-        let isExpired = false;
-        if (tache.date < todayStr) {
-          isExpired = true;
-        } else if (tache.date === todayStr) {
-          const [h, m] = tache.heureFin.split(':').map(Number);
-          const endMinutes = h * 60 + m;
-          const nowMinutes = now.getHours() * 60 + now.getMinutes();
-          if (nowMinutes > endMinutes) {
-            isExpired = true;
-          }
-        }
-        
-        if (isExpired) {
-          autoCompletedRef.current.add(tache.id);
-          try {
-            await tacheApi.update(tache.id, { completed: true });
-          } catch {
-            // silently fail
-          }
-        }
-      }
-      
-      // Refresh if we auto-completed anything
-      if (autoCompletedRef.current.size > 0) {
-        const prevSize = autoCompletedRef.current.size;
-        // Only refetch if we actually auto-completed new ones this cycle
-        const newlyCompleted = taches.filter(t => !t.completed && autoCompletedRef.current.has(t.id));
-        if (newlyCompleted.length > 0) {
-          fetchData();
-        }
-      }
-    };
-    
-    const interval = setInterval(autoComplete, 10000);
-    autoComplete();
-    return () => clearInterval(interval);
-  }, [taches, parametreTache.autoCompleteOnDone, fetchData]);
 
   // Check for expired taches periodically and add notifications
   useEffect(() => {
@@ -374,17 +313,14 @@ const TacheView: React.FC = () => {
         onShowToday={() => { setSelectedDay(todayStr); setShowDayModal(true); }}
         onShowWeek={() => setShowWeekModal(true)}
         onAddTravailleur={() => setShowTravailleurModal(true)}
-        onShareTaches={() => setShowShareTachesModal(true)}
         allTaches={taches}
         onNavigateToDate={handleNavigateToDate}
       />
 
-      <TacheTicker taches={taches} />
-
       <div className="max-w-7xl mx-auto px-4 pb-12">
         <TacheCalendar
           currentDate={currentDate}
-          taches={parametreTache.tachesTerminees ? taches : taches.filter(t => !t.completed)}
+          taches={taches}
           onPrevMonth={() => setCurrentDate(new Date(year, month - 1, 1))}
           onNextMonth={() => setCurrentDate(new Date(year, month + 1, 1))}
           onDayClick={handleDayClick}
@@ -487,13 +423,6 @@ const TacheView: React.FC = () => {
         notifications={notifications}
         onClickNotification={handleNotificationClick}
         onDismiss={handleDismissNotification}
-      />
-
-      <ShareLinkModal
-        open={showShareTachesModal}
-        onClose={() => setShowShareTachesModal(false)}
-        type="taches"
-        typeLabel="Tâches"
       />
     </>
   );

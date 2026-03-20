@@ -109,12 +109,8 @@ const LoginPage: React.FC = () => {
     setIsLoggingIn(false);
   };
 
-  const [showPasswordChecker, setShowPasswordChecker] = useState(true);
-
   const handlePasswordValidityChange = (isValid: boolean) => {
     setIsPasswordValid(isValid);
-    if (isValid) setShowPasswordChecker(false);
-    else setShowPasswordChecker(true);
   };
 
   if (isLoggingIn) {
@@ -315,7 +311,10 @@ const LoginPage: React.FC = () => {
                         className="h-14 bg-white/[0.06] border-white/[0.1] text-white rounded-xl"
                       />
 
-                      <PasswordStrengthChecker password={password} onValidityChange={handlePasswordValidityChange} />
+                      {/* Afficher PasswordStrengthChecker uniquement si le mot de passe n'est pas valide */}
+                      {!isPasswordValid && (
+                        <PasswordStrengthChecker password={password} onValidityChange={handlePasswordValidityChange} />
+                      )}
 
                       <div className="text-sm text-right">
                         <Link to="/reset-password" className="text-purple-400 hover:text-purple-300 font-medium hover:underline transition-colors">
