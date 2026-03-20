@@ -535,3 +535,26 @@ router.post('/like/:messageId', (req, res) => {
 });
 
 module.exports = router;
+
+// =====================
+// Admin-to-Admin Typing indicator
+// =====================
+router.post('/admin-typing', authMiddleware, (req, res) => {
+  const { receiverId, isTyping } = req.body;
+  if (!receiverId) return res.status(400).json({ message: 'receiverId requis' });
+  
+  const senderName = `${req.user.firstName} ${req.user.lastName}`;
+  
+  // Broadcast typing to the target admin
+  sseClients.forEach((client) => {
+    if (client.adminId === receiverId) {
+      try {
+        client.res.write(`event: admin_typing\ndata: ${JSON.stringify({ senderId: req.user.id, senderName, isTyping })}\n\n`);
+      } catch (e) {}
+    }
+  });
+  
+  res.json({ ok: true });
+});
+
+module.exports = router;
