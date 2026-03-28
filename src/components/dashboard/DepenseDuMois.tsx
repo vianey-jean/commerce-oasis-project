@@ -833,8 +833,8 @@ const DepenseDuMois = () => {
         {/* Débit & Crédit */}
         <div className="grid grid-cols-2 gap-4">
           {[
-            { id: 'debit', label: 'Débit (€)', icon: ArrowDown, color: 'text-red-500', value: newMouvement.debit, onChange: (v) => setNewMouvement({...newMouvement, debit: v, credit: ''}), disabled: newMouvement.categorie === 'chargeFixe' || !!newMouvement.credit },
-            { id: 'credit', label: 'Crédit (€)', icon: ArrowUp, color: 'text-emerald-500', value: newMouvement.credit, onChange: (v) => setNewMouvement({...newMouvement, credit: v, debit: ''}), disabled: newMouvement.categorie === 'chargeFixe' || !!newMouvement.debit },
+            { id: 'debit', label: 'Débit (€)', icon: ArrowDown, color: 'text-red-500', value: newMouvement.debit, onChange: (v) => setNewMouvement({...newMouvement, debit: v, credit: ''}), disabled: newMouvement.categorie === 'chargeFixe' || newMouvement.categorie === 'RSA' || !!newMouvement.credit },
+            { id: 'credit', label: 'Crédit (€)', icon: ArrowUp, color: 'text-emerald-500', value: newMouvement.credit, onChange: (v) => setNewMouvement({...newMouvement, credit: v, debit: ''}), disabled: newMouvement.categorie === 'chargeFixe' || newMouvement.categorie === 'RSA' || !!newMouvement.debit },
           ].map(({id, label, icon: Icon, color, value, onChange, disabled}) => (
             <div key={id} className="space-y-2">
               <Label htmlFor={id} className="text-sm font-semibold text-gray-700 dark:text-gray-300">{label}</Label>
