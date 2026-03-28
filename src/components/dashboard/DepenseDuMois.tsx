@@ -295,6 +295,16 @@ const DepenseDuMois = () => {
           credit: ''
         });
       });
+    } else if (value === "RSA") {
+      depenseService.getRsa().then(rsaData => {
+        setNewMouvement({
+          ...newMouvement,
+          categorie: value,
+          description: "RSA - Revenu mensuel",
+          credit: (rsaData.montant || 607.75).toString(),
+          debit: ''
+        });
+      });
     } else {
       setNewMouvement({
         ...newMouvement,
