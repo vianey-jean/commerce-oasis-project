@@ -377,6 +377,27 @@ const DepenseDuMois = () => {
     {/* Boutons ultra-luxe */}
     <div className="flex flex-wrap gap-3 sm:gap-4 w-full lg:w-auto">
 
+      {/* RSA */}
+      <Button
+        onClick={() => setIsRsaDialogOpen(true)}
+        className="group relative flex-1 sm:flex-none overflow-hidden
+                   rounded-xl sm:rounded-2xl
+                   bg-gradient-to-br from-amber-500/90 to-orange-600/90
+                   border border-amber-300/40
+                   text-white font-medium
+                   shadow-[0_20px_60px_rgba(245,158,11,0.5)]
+                   transition-all duration-300
+                   hover:scale-105 hover:shadow-[0_30px_90px_rgba(245,158,11,0.7)]
+                   px-4 py-2 sm:px-5 sm:py-3 text-xs sm:text-sm"
+      >
+        <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        <span className="relative flex items-center justify-center">
+          <HandCoins className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-white/90" />
+          <span className="hidden xs:inline">RSA</span>
+          <span className="xs:hidden">RSA</span>
+        </span>
+      </Button>
+
       {/* Dépenses fixes */}
       <Button
         onClick={() => setIsFixeDialogOpen(true)}
@@ -394,8 +415,8 @@ const DepenseDuMois = () => {
         <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
         <span className="relative flex items-center justify-center">
           <CreditCard className="h-4 w-4 sm:h-5 sm:w-5 mr-2 text-white/90" />
-          <span className="hidden xs:inline">Dépenses fixes</span>
-          <span className="xs:hidden">Fixes</span>
+          <span className="hidden xs:inline">Fixe</span>
+          <span className="xs:hidden">Fixe</span>
         </span>
       </Button>
 
@@ -776,6 +797,7 @@ const DepenseDuMois = () => {
               <SelectValue placeholder="Sélectionner une catégorie" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="RSA">RSA</SelectItem>
               <SelectItem value="chargeFixe">Charge Fixe</SelectItem>
               <SelectItem value="Autres">Autres</SelectItem>
             </SelectContent>
@@ -935,6 +957,60 @@ const DepenseDuMois = () => {
         type="button"
         onClick={handleUpdateDepensesFixe}
         className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-2xl shadow-lg transition-all duration-300 hover:scale-105 flex items-center gap-2"
+      >
+        <Save className="h-4 w-4" /> Enregistrer
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+
+{/* Dialogue RSA */}
+<Dialog open={isRsaDialogOpen} onOpenChange={setIsRsaDialogOpen}>
+  <DialogContent className="sm:max-w-md bg-gradient-to-br from-white/95 to-gray-50/95 dark:from-gray-900/95 dark:to-gray-800/95
+                             backdrop-blur-2xl border border-white/30 shadow-[0_40px_120px_rgba(0,0,0,0.25)] rounded-2xl sm:rounded-3xl">
+    <DialogHeader>
+      <DialogTitle className="flex items-center gap-3 text-xl font-extrabold text-gray-800 dark:text-gray-200">
+        <div className="rounded-full p-3 bg-gradient-to-br from-amber-500 via-orange-500 to-yellow-500 shadow-lg">
+          <HandCoins className="h-5 w-5 text-white" />
+        </div>
+        RSA - Revenu mensuel
+      </DialogTitle>
+    </DialogHeader>
+
+    <div className="space-y-6 py-6">
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Définissez le montant du RSA. Ce montant sera automatiquement ajouté comme crédit le 6 de chaque mois.
+      </p>
+      <div className="space-y-2">
+        <Label htmlFor="rsa-montant" className="text-sm font-semibold text-gray-700 dark:text-gray-300">Montant RSA (€)</Label>
+        <div className="relative">
+          <ArrowUp className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-emerald-500" />
+          <Input
+            id="rsa-montant"
+            type="number"
+            min="0"
+            step="0.01"
+            value={rsaMontant}
+            onChange={(e) => setRsaMontant(e.target.value)}
+            className="pl-10 px-4 py-3 bg-white/50 backdrop-blur-xl border border-gray-200/40 rounded-2xl shadow-inner"
+          />
+        </div>
+      </div>
+    </div>
+
+    <DialogFooter className="flex gap-3">
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => setIsRsaDialogOpen(false)}
+        className="bg-white/50 backdrop-blur-xl border border-gray-200/40 rounded-2xl shadow-inner"
+      >
+        Annuler
+      </Button>
+      <Button
+        type="button"
+        onClick={handleUpdateRsa}
+        className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-2xl shadow-lg transition-all duration-300 hover:scale-105 flex items-center gap-2"
       >
         <Save className="h-4 w-4" /> Enregistrer
       </Button>
