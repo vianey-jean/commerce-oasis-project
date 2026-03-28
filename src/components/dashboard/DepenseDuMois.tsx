@@ -36,6 +36,8 @@ const DepenseDuMois = () => {
   const [deleteId, setDeleteId] = useState(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isFixeDialogOpen, setIsFixeDialogOpen] = useState(false);
+  const [isRsaDialogOpen, setIsRsaDialogOpen] = useState(false);
+  const [rsaMontant, setRsaMontant] = useState('607.75');
   const [depensesFixe, setDepensesFixe] = useState({
     free: '',
     internetZeop: '',
