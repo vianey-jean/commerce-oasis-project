@@ -4,6 +4,7 @@ const path = require('path');
 
 const depenseDuMoisPath = path.join(__dirname, '../db/depensedumois.json');
 const depenseFixePath = path.join(__dirname, '../db/depensefixe.json');
+const rsaPath = path.join(__dirname, '../db/rsa.json');
 
 // Fonction pour lire toutes les données de la base
 const getAllData = () => {
