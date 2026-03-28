@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { useToast } from '@/components/ui/use-toast';
-import { Plus, Edit, Trash2, RotateCcw, CreditCard, Save, Wallet, ArrowUp, ArrowDown, DollarSign, Calendar, Sparkles, Award, TrendingUp, TrendingDown } from 'lucide-react';
+import { Plus, Edit, Trash2, RotateCcw, CreditCard, Save, Wallet, ArrowUp, ArrowDown, DollarSign, Calendar, Sparkles, Award, TrendingUp, TrendingDown, HandCoins } from 'lucide-react';
 import MonthlyResetHandler from './MonthlyResetHandler';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { depenseService } from '@/service/api';
