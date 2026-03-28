@@ -1,4 +1,4 @@
-import 'webrtc-adapter';
+// webrtc-adapter removed - not needed in modern browsers
 import { useState, useRef, useCallback, useEffect } from 'react';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://server-gestion-ventes.onrender.com';
