@@ -94,12 +94,52 @@ const DepenseDuMois = () => {
       });
     } catch (error) {
       console.error("Erreur lors de la récupération des dépenses fixes:", error);
+    }
+  };
+
+  const fetchRsa = async () => {
+    try {
+      const rsaData = await depenseService.getRsa();
+      setRsaMontant((rsaData.montant || 607.75).toString());
+    } catch (error) {
+      console.error("Erreur lors de la récupération du RSA:", error);
+    }
+  };
+
+  const handleUpdateRsa = async () => {
+    try {
+      await depenseService.updateRsa(parseFloat(rsaMontant) || 607.75);
+      toast({
+        title: "Succès",
+        description: "Montant RSA mis à jour avec succès",
+        className: "bg-app-green text-white",
+      });
+      setIsRsaDialogOpen(false);
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour du RSA:", error);
       toast({
         title: "Erreur",
-        description: "Impossible de récupérer les dépenses fixes",
+        description: "Impossible de mettre à jour le RSA",
         variant: "destructive",
-         className: "notification-erreur",
+        className: "notification-erreur",
       });
+    }
+  };
+
+  const triggerAutoEntries = async () => {
+    try {
+      const result = await depenseService.autoAddEntries();
+      if (result.rsa || result.chargeFixe) {
+        fetchMouvements();
+        if (result.rsa) {
+          toast({ title: "Auto-ajout", description: "RSA ajouté automatiquement (6 du mois)", className: "bg-app-blue text-white" });
+        }
+        if (result.chargeFixe) {
+          toast({ title: "Auto-ajout", description: "Charges fixes ajoutées automatiquement (10 du mois)", className: "bg-app-blue text-white" });
+        }
+      }
+    } catch (error) {
+      console.error("Erreur auto-entries:", error);
     }
   };
 
@@ -219,7 +259,9 @@ const DepenseDuMois = () => {
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([fetchMouvements(), fetchDepensesFixe()]).finally(() => setLoading(false));
+    Promise.all([fetchMouvements(), fetchDepensesFixe(), fetchRsa()]).then(() => {
+      triggerAutoEntries();
+    }).finally(() => setLoading(false));
   }, []);
 
   const handleReset = async () => {
