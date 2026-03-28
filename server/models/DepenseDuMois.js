@@ -406,11 +406,11 @@ const autoAddMonthlyEntries = () => {
     const mouvements = allData[currentEntryIndex].mouvements || [];
     const added = { rsa: false, chargeFixe: false };
 
-    // Check if RSA already added this month
-    const rsaExists = mouvements.some(m => m.categorie === 'RSA' && m.autoAdded === true);
+    // Check if RSA already added this month (manual or auto)
+    const rsaExists = mouvements.some(m => m.categorie === 'RSA');
 
-    // Check if Charge Fixe already added this month
-    const chargeFixeExists = mouvements.some(m => m.categorie === 'chargeFixe' && m.autoAdded === true);
+    // Check if Charge Fixe already added this month (manual or auto)
+    const chargeFixeExists = mouvements.some(m => m.categorie === 'chargeFixe');
 
     // Auto-add RSA on or after the 6th
     if (currentDay >= 6 && !rsaExists) {

@@ -54,6 +54,10 @@ const DepenseDuMois = () => {
     ? mouvements.reduce((total, m) => total + (parseFloat(m.credit) || 0) - (parseFloat(m.debit) || 0), 0)
     : 0;
 
+  // Vérifier si RSA ou charge fixe existent déjà dans les mouvements du mois
+  const rsaExists = Array.isArray(mouvements) && mouvements.some(m => m.categorie === 'RSA');
+  const chargeFixeExists = Array.isArray(mouvements) && mouvements.some(m => m.categorie === 'chargeFixe');
+
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return new Intl.DateTimeFormat('fr-FR').format(date);
@@ -258,10 +262,21 @@ const DepenseDuMois = () => {
   };
 
   useEffect(() => {
-    setLoading(true);
-    Promise.all([fetchMouvements(), fetchDepensesFixe(), fetchRsa()]).then(() => {
-      triggerAutoEntries();
-    }).finally(() => setLoading(false));
+    let cancelled = false;
+    const init = async () => {
+      setLoading(true);
+      try {
+        await Promise.all([fetchMouvements(), fetchDepensesFixe(), fetchRsa()]);
+        if (!cancelled) {
+          // Auto-entries only once after initial load
+          await triggerAutoEntries();
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    init();
+    return () => { cancelled = true; };
   }, []);
 
   const handleReset = async () => {
@@ -797,8 +812,12 @@ const DepenseDuMois = () => {
               <SelectValue placeholder="Sélectionner une catégorie" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="RSA">RSA</SelectItem>
-              <SelectItem value="chargeFixe">Charge Fixe</SelectItem>
+              <SelectItem value="RSA" disabled={rsaExists && !editMouvementId}>
+                RSA {rsaExists && !editMouvementId ? '(déjà ajouté)' : ''}
+              </SelectItem>
+              <SelectItem value="chargeFixe" disabled={chargeFixeExists && !editMouvementId}>
+                Charge Fixe {chargeFixeExists && !editMouvementId ? '(déjà ajouté)' : ''}
+              </SelectItem>
               <SelectItem value="Autres">Autres</SelectItem>
             </SelectContent>
           </Select>
