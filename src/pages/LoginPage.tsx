@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import axios from 'axios';
+import SEOHead from '@/components/SEOHead';
 
 const AUTH_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://server-gestion-ventes.onrender.com';
 
@@ -109,8 +110,12 @@ const LoginPage: React.FC = () => {
     setIsLoggingIn(false);
   };
 
+  const [showPasswordChecker, setShowPasswordChecker] = useState(true);
+
   const handlePasswordValidityChange = (isValid: boolean) => {
     setIsPasswordValid(isValid);
+    if (isValid) setShowPasswordChecker(false);
+    else setShowPasswordChecker(true);
   };
 
   if (isLoggingIn) {
@@ -128,6 +133,11 @@ const LoginPage: React.FC = () => {
 
   return (
     <Layout>
+      <SEOHead
+        title="Connexion"
+        description="Connectez-vous à votre espace Gestion Vente. Accédez à vos ventes, stocks et comptabilité en toute sécurité."
+        canonical="https://riziky-boutic.vercel.app/login"
+      />
       <div className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden">
         {/* Ultra-luxe animated background */}
         <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-purple-950 to-indigo-950" />
@@ -311,10 +321,7 @@ const LoginPage: React.FC = () => {
                         className="h-14 bg-white/[0.06] border-white/[0.1] text-white rounded-xl"
                       />
 
-                      {/* Afficher PasswordStrengthChecker uniquement si le mot de passe n'est pas valide */}
-                      {!isPasswordValid && (
-                        <PasswordStrengthChecker password={password} onValidityChange={handlePasswordValidityChange} />
-                      )}
+                      <PasswordStrengthChecker password={password} onValidityChange={handlePasswordValidityChange} />
 
                       <div className="text-sm text-right">
                         <Link to="/reset-password" className="text-purple-400 hover:text-purple-300 font-medium hover:underline transition-colors">

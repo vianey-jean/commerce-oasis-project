@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, X, Send, Minimize2, Loader2, User, Smile, Heart, Pencil, Trash2, Check, XCircle, Phone, Video } from 'lucide-react';
+import { MessageCircle, X, Send, Minimize2, Loader2, User, Smile, Heart, Pencil, Trash2, Check, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useWebRTC } from './useWebRTC';
-import CallOverlay from './CallOverlay';
 import { Input } from '@/components/ui/input';
+import { playNotificationSound } from '@/hooks/use-chat-notification';
+import ChatNotificationBanner, { ChatNotifItem } from '@/components/livechat/ChatNotificationBanner';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://server-gestion-ventes.onrender.com';
 
@@ -40,9 +40,13 @@ const LiveChatVisitor: React.FC<LiveChatVisitorProps> = ({ visitorNom, adminId, 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
   const [contextMenuId, setContextMenuId] = useState<string | null>(null);
+  const [notifications, setNotifications] = useState<ChatNotifItem[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const isMinimizedRef = useRef(false);
+
+  useEffect(() => { isMinimizedRef.current = isMinimized; }, [isMinimized]);
 
   const pseudo = useRef(localStorage.getItem('livechat_pseudo') || visitorNom);
   const visitorId = useRef(
@@ -50,12 +54,6 @@ const LiveChatVisitor: React.FC<LiveChatVisitorProps> = ({ visitorNom, adminId, 
     `visitor_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
   );
 
-  const webrtc = useWebRTC({
-    visitorId: visitorId.current,
-    adminId,
-    from: 'visitor',
-    eventSourceRef,
-  });
 
   useEffect(() => {
     localStorage.setItem('livechat_visitor_id', visitorId.current);
@@ -89,6 +87,20 @@ const LiveChatVisitor: React.FC<LiveChatVisitorProps> = ({ visitorNom, adminId, 
             return [...prev, msg];
           });
           if (msg.from === 'admin') {
+            // Notification if minimized
+            if (isMinimizedRef.current) {
+              playNotificationSound();
+              setNotifications(prev => [...prev, {
+                id: msg.id,
+                sender: 'Admin',
+                message: msg.contenu,
+                timestamp: Date.now()
+              }]);
+              // Auto-dismiss after 5s
+              setTimeout(() => {
+                setNotifications(prev => prev.filter(n => n.id !== msg.id));
+              }, 5000);
+            }
             fetch(`${API_BASE}/api/messagerie/mark-read/${visitorId.current}/${adminId}`, {
               method: 'PUT', headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ reader: 'visitor' })
@@ -217,18 +229,29 @@ const LiveChatVisitor: React.FC<LiveChatVisitorProps> = ({ visitorNom, adminId, 
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
   };
 
+  const dismissNotification = (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+  };
+
   if (isMinimized) {
     return (
-      <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="fixed bottom-6 right-6 z-[9999]">
-        <button onClick={() => setIsMinimized(false)} className="relative p-4 bg-gradient-to-br from-violet-600 to-fuchsia-600 rounded-full shadow-[0_8px_30px_rgba(139,92,246,0.5)] hover:scale-110 transition-transform">
-          <MessageCircle className="h-6 w-6 text-white" />
-          {messages.filter(m => m.from === 'admin' && !m.lu).length > 0 && (
-            <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center animate-pulse">
-              {messages.filter(m => m.from === 'admin' && !m.lu).length}
-            </span>
-          )}
-        </button>
-      </motion.div>
+      <>
+        <ChatNotificationBanner
+          notifications={notifications}
+          onDismiss={dismissNotification}
+          onClick={() => { setIsMinimized(false); setNotifications([]); }}
+        />
+        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="fixed bottom-6 right-6 z-[9999]">
+          <button onClick={() => { setIsMinimized(false); setNotifications([]); }} className="relative p-4 bg-gradient-to-br from-violet-600 to-fuchsia-600 rounded-full shadow-[0_8px_30px_rgba(139,92,246,0.5)] hover:scale-110 transition-transform">
+            <MessageCircle className="h-6 w-6 text-white" />
+            {messages.filter(m => m.from === 'admin' && !m.lu).length > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 rounded-full text-white text-xs flex items-center justify-center animate-pulse">
+                {messages.filter(m => m.from === 'admin' && !m.lu).length}
+              </span>
+            )}
+          </button>
+        </motion.div>
+      </>
     );
   }
 
@@ -255,12 +278,6 @@ const LiveChatVisitor: React.FC<LiveChatVisitorProps> = ({ visitorNom, adminId, 
           </div>
         </div>
         <div className="flex items-center gap-1">
-          <button onClick={() => webrtc.startCall('audio')} className="p-2 hover:bg-white/10 rounded-lg transition-colors" title="Appel audio">
-            <Phone className="h-4 w-4 text-white" />
-          </button>
-          <button onClick={() => webrtc.startCall('video')} className="p-2 hover:bg-white/10 rounded-lg transition-colors" title="Appel vidéo">
-            <Video className="h-4 w-4 text-white" />
-          </button>
           <button onClick={() => setIsMinimized(true)} className="p-2 hover:bg-white/10 rounded-lg transition-colors">
             <Minimize2 className="h-4 w-4 text-white" />
           </button>
@@ -270,24 +287,6 @@ const LiveChatVisitor: React.FC<LiveChatVisitorProps> = ({ visitorNom, adminId, 
         </div>
       </div>
 
-      {/* Call Overlay */}
-      <CallOverlay
-        callStatus={webrtc.callStatus}
-        callType={webrtc.callType}
-        isMuted={webrtc.isMuted}
-        isVideoOff={webrtc.isVideoOff}
-        callDuration={webrtc.callDuration}
-        incomingCall={webrtc.incomingCall}
-        localVideoRef={webrtc.localVideoRef}
-        remoteVideoRef={webrtc.remoteVideoRef}
-        remoteAudioRef={webrtc.remoteAudioRef}
-        callerName="Admin"
-        onAccept={webrtc.acceptCall}
-        onReject={webrtc.rejectCall}
-        onEnd={() => webrtc.endCall(true)}
-        onToggleMute={webrtc.toggleMute}
-        onToggleVideo={webrtc.toggleVideo}
-      />
 
       {/* Messages area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-gradient-to-b from-slate-900 via-slate-900/95 to-slate-950">

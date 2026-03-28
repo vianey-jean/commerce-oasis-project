@@ -5,8 +5,9 @@
 // - Utilise ErrorBoundary pour isoler les erreurs critiques
 // - Améliore les performances en chargeant les pages "à la demande"
 
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import SecurityCheckPage from '@/components/security/SecurityCheckPage';
 
 // Contexts
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -18,6 +19,7 @@ import { AccessibilityProvider } from '@/components/accessibility/AccessibilityP
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import { ErrorBoundary } from '@/components/common/ErrorBoundary';
 import { Toaster } from '@/components/ui/toaster';
+import CookieConsent from '@/components/CookieConsent';
 
 // Fallback pendant chargement des pages
 import PremiumLoading from '@/components/ui/premium-loading';
@@ -41,8 +43,38 @@ const ProduitsPage = lazy(() => import('@/pages/ProduitsPage'));
 const PointagePage = lazy(() => import('@/pages/PointagePage'));
 const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
+const SharedNotesPage = lazy(() => import('@/pages/SharedNotesPage'));
+const SharedViewPage = lazy(() => import('@/pages/SharedViewPage'));
 
 function App() {
+  const [securityVerified, setSecurityVerified] = useState(() => {
+    try {
+      const data = sessionStorage.getItem('security_verified');
+      if (data) {
+        const parsed = JSON.parse(data);
+        // Vérifier que la session est encore valide (même session navigateur)
+        if (parsed.verified && parsed.timestamp) {
+          const elapsed = Date.now() - parsed.timestamp;
+          // Valide pendant 24h max
+          if (elapsed < 24 * 60 * 60 * 1000) {
+            return true;
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return false;
+  });
+
+  if (!securityVerified) {
+    return (
+      <ThemeProvider>
+        <SecurityCheckPage onVerified={() => setSecurityVerified(true)} />
+      </ThemeProvider>
+    );
+  }
+
   return (
     <ErrorBoundary>
       <ThemeProvider>
@@ -69,6 +101,8 @@ function App() {
                     <Route path="register" element={<RegisterPage />} />
                     <Route path="reset-password" element={<ResetPasswordPage />} />
                     <Route path="contact" element={<ContactPage />} />
+                    <Route path="shared/notes/:token" element={<SharedNotesPage />} />
+                    <Route path="shared/:token" element={<SharedViewPage />} />
 
                     {/* Routes protégées */}
                     <Route
@@ -144,6 +178,7 @@ function App() {
                 </Suspense>
               </Router>
               <Toaster />
+              <CookieConsent />
             </AppProvider>
           </AuthProvider>
         </AccessibilityProvider>

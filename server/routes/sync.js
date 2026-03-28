@@ -1,6 +1,7 @@
 
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const syncManager = require('../middleware/sync');
 const authMiddleware = require('../middleware/auth');
 
@@ -18,7 +19,7 @@ const setCORSHeaders = (req, res) => {
   if (origin && allowedOrigins.includes(origin)) {
     res.header('Access-Control-Allow-Origin', origin);
   } else if (origin) {
-    // Permettre toutes les origines en développement/preview (Lovable, Vercel, etc.)
+    // Permettre toutes les origines en développement/preview ( Vercel, etc.)
     res.header('Access-Control-Allow-Origin', origin);
   } else {
     res.header('Access-Control-Allow-Origin', '*');
@@ -121,14 +122,61 @@ router.post('/force-sync', authMiddleware, (req, res) => {
 // Endpoint pour obtenir le statut de synchronisation
 router.get('/status', (req, res) => {
   try {
-    const status = {
+    const fs = require('fs');
+    const path = require('path');
+    const dbPath = path.join(__dirname, '../db');
+    
+    // Retourner un hash réel du contenu JSON pour éviter de relancer le chrono
+    // sur une simple synchronisation sans modification de données.
+    const fileStats = {};
+    const fileContentHashes = {};
+    const dataChangeEntries = [];
+
+    try {
+      const files = fs.readdirSync(dbPath).filter(f => f.endsWith('.json'));
+      files.forEach(file => {
+        try {
+          const filePath = path.join(dbPath, file);
+          const stats = fs.statSync(filePath);
+          const rawContent = fs.readFileSync(filePath, 'utf8');
+
+          let normalizedContent = rawContent;
+          try {
+            normalizedContent = JSON.stringify(JSON.parse(rawContent));
+          } catch {
+            normalizedContent = rawContent;
+          }
+
+          const contentHash = crypto
+            .createHash('sha256')
+            .update(normalizedContent)
+            .digest('hex');
+
+          fileStats[file] = stats.mtimeMs;
+          fileContentHashes[file] = contentHash;
+
+          if (file !== 'settings.json') {
+            dataChangeEntries.push(`${file}:${contentHash}`);
+          }
+        } catch {}
+      });
+    } catch {}
+
+    const dataChangeToken = crypto
+      .createHash('sha256')
+      .update(dataChangeEntries.sort().join('|'))
+      .digest('hex');
+
+    res.json({
       clients: syncManager.clients.size,
       lastSync: new Date(),
       watchers: syncManager.watchers.size,
-      isRunning: true
-    };
-    
-    res.json(status);
+      isRunning: true,
+      fileStats,
+      fileContentHashes,
+      dataChangeToken,
+      autoBackupState: syncManager.getAutoBackupState()
+    });
   } catch (error) {
     res.status(500).json({ error: 'Erreur lors de la récupération du statut' });
   }
