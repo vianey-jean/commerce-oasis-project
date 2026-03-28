@@ -812,7 +812,7 @@ const DepenseDuMois = () => {
             value={newMouvement.description}
             onChange={(e) => setNewMouvement({...newMouvement, description: e.target.value})}
             required
-            disabled={newMouvement.categorie === "chargeFixe"}
+            disabled={newMouvement.categorie === "chargeFixe" || newMouvement.categorie === "RSA"}
             className="px-4 py-3 bg-white/50 backdrop-blur-xl border border-gray-200/40 rounded-2xl shadow-inner"
           />
         </div>
