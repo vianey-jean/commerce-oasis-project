@@ -48,6 +48,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setToken(storedToken);
         setIsVerified(true);
         localStorage.setItem('user', JSON.stringify(response.user));
+        // Ensure user_name is always set for auto-backup
+        const fullName = `${response.user.firstName || ''} ${response.user.lastName || ''}`.trim();
+        if (fullName) {
+          localStorage.setItem('user_name', fullName);
+        }
         return true;
       } else {
         // User not found in database - clear session
