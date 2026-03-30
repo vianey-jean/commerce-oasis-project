@@ -28,7 +28,7 @@ interface ParametresSectionProps {
 
 const ParametresSection: React.FC<ParametresSectionProps> = ({ userRole }) => {
   const { toast } = useToast();
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isAdminPrincipal = userRole === 'administrateur principale';
