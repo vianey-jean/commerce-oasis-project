@@ -126,6 +126,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           return false;
         }
         
+        // Store user name in localStorage for auto-backup filename
+        const fullName = `${result.user.firstName || ''} ${result.user.lastName || ''}`.trim();
+        if (fullName) {
+          localStorage.setItem('user_name', fullName);
+        }
+        
         setUser(result.user);
         setToken(result.token);
         setIsVerified(true);
